@@ -15,7 +15,7 @@ func TestCompiler_CompileTypescript(t *testing.T) {
 	ctx, config, mainFile, helperFile := setupLoaderTestProject(t, "TestCompiler_CompileTypescript")
 
 	require.NoError(t, os.WriteFile(helperFile, []byte(`export const message = "compiled helper";`), 0644))
-	require.NoError(t, os.WriteFile(mainFile, []byte("import { message } from \"./helper\";\nconsole.log(message);\n"), 0644))
+	require.NoError(t, os.WriteFile(mainFile, []byte("import type { Context } from \"@ccode/types\";\nimport { message } from \"./helper\";\n\nexport default function main(ctx: Context) {\n\tctx.println(message);\n}\n"), 0644))
 
 	result, err := ctx.compileTypescript("main.ts")
 	require.NoError(t, err)
@@ -32,7 +32,8 @@ func TestCompiler_CompileTypescript(t *testing.T) {
 	require.FileExists(t, bundlePath)
 	require.FileExists(t, sourceMapPath)
 	require.Contains(t, string(bundleContent), "compiled helper")
-	require.Contains(t, string(bundleContent), "console.log")
+	require.Contains(t, string(bundleContent), "function main(ctx)")
+	require.Contains(t, string(bundleContent), "ctx.println(message)")
 	require.Len(t, result.OutputFiles, 2)
 	require.Equal(t, bundlePath, result.OutputFiles[0].Path)
 	require.Equal(t, sourceMapPath, result.OutputFiles[1].Path)
@@ -61,7 +62,7 @@ func TestCompiler_CompileTypescript_RebuildsForChangedSources(t *testing.T) {
 	ctx, config, mainFile, helperFile := setupLoaderTestProject(t, "TestCompiler_CompileTypescript_RebuildsForChangedSources")
 
 	require.NoError(t, os.WriteFile(helperFile, []byte(`export const message = "first build";`), 0644))
-	require.NoError(t, os.WriteFile(mainFile, []byte("import { message } from \"./helper\";\nconsole.log(message);\n"), 0644))
+	require.NoError(t, os.WriteFile(mainFile, []byte("import type { Context } from \"@ccode/types\";\nimport { message } from \"./helper\";\n\nexport default function main(ctx: Context) {\n\tctx.println(message);\n}\n"), 0644))
 
 	_, err := ctx.compileTypescript("main.ts")
 	require.NoError(t, err)
@@ -100,26 +101,15 @@ func TestCompiler_CompileTypescript_RebuildsForChangedSources(t *testing.T) {
 func setupLoaderTestProject(t *testing.T, folderName string) (*Context, *Config, string, string) {
 	t.Helper()
 
-	workingDir, err := os.Getwd()
-	require.NoError(t, err)
-
-	projectRoot := filepath.Dir(workingDir)
-	tempDir := filepath.Join(projectRoot, "temp")
+	tempDir := t.TempDir()
 	projectDir := filepath.Join(tempDir, folderName)
-	hiddenPath := filepath.Join(projectDir, ".ccode")
-	configFile := filepath.Join(projectDir, "config.yaml")
+	configFile := filepath.Join(tempDir, DefaultConfigFileName)
 
-	require.NoError(t, os.MkdirAll(tempDir, 0755))
-	require.NoError(t, os.RemoveAll(projectDir))
-	require.NoError(t, os.MkdirAll(projectDir, 0755))
-	require.NoError(t, os.MkdirAll(projectDir, 0755))
-	require.NoError(t, os.MkdirAll(hiddenPath, 0755))
-
-	configContent := fmt.Sprintf("path: %q\nhidden_path: %q\n", projectDir, hiddenPath)
-	require.NoError(t, os.WriteFile(configFile, []byte(configContent), 0644))
+	require.NoError(t, Init(projectDir, configFile))
 
 	config, err := LoadConfig(configFile)
 	require.NoError(t, err)
+	config.HiddenPath = filepath.Join(projectDir, DefaultHiddenFolderName)
 
 	mainFile := filepath.Join(config.Path, "main.ts")
 	helperFile := filepath.Join(config.Path, "helper.ts")
