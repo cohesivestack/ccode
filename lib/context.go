@@ -1,16 +1,30 @@
 package ccode
 
-import "log"
+import (
+	"io"
+	"log"
+	"os"
+	"path/filepath"
+)
 
 type Context struct {
 	config *Config
 	logger *log.Logger
+	stdout io.Writer
 }
 
 func NewContext(config *Config) *Context {
-	return &Context{config: config}
-}
+	resolvedConfig := &Config{}
+	if config != nil {
+		*resolvedConfig = *config
+	}
 
-type RunnerContext struct {
-	context *Context
+	if !filepath.IsAbs(resolvedConfig.HiddenPath) && !isStringBlank(resolvedConfig.HiddenPath) {
+		resolvedConfig.HiddenPath = filepath.Join(resolvedConfig.Path, resolvedConfig.HiddenPath)
+	}
+
+	return &Context{
+		config: resolvedConfig,
+		stdout: os.Stdout,
+	}
 }

@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/evanw/esbuild/pkg/api"
 )
@@ -21,30 +22,87 @@ func (ctx *Context) compileTypescript(entryPointPath string) (api.BuildResult, e
 	bundlePath := filepath.Join(ctx.config.HiddenPath, fmt.Sprintf("bundle.%s.js", sourceHash))
 	sourceMapPath := bundlePath + ".map"
 
+	return ctx.compileTypescriptBundle(
+		entryPointPath,
+		bundlePath,
+		sourceMapPath,
+		ctx.config.HiddenPath,
+		[]string{
+			filepath.Join(ctx.config.HiddenPath, "bundle.*.js"),
+			filepath.Join(ctx.config.HiddenPath, "bundle.*.js.map"),
+			filepath.Join(ctx.config.HiddenPath, "bundle.js"),
+			filepath.Join(ctx.config.HiddenPath, "bundle.js.map"),
+		},
+		api.BuildOptions{
+			AbsWorkingDir: ctx.config.Path,
+			EntryPoints:   []string{entryPointPath},
+			Bundle:        true,
+			Platform:      api.PlatformBrowser,
+			Format:        api.FormatESModule,
+			Sourcemap:     api.SourceMapLinked,
+			Write:         true,
+			Outfile:       bundlePath,
+		},
+	)
+}
+
+func (ctx *Context) compileTypescriptForRunner(entryPointPath string) (api.BuildResult, error) {
+	sourceHash, err := ctx.getSourceHash()
+	if err != nil {
+		return api.BuildResult{}, err
+	}
+
+	entryPointHash := hashString(entryPointPath)
+	buildPath := filepath.Join(ctx.config.HiddenPath, "build")
+	bundlePrefix := fmt.Sprintf("process.%s", entryPointHash)
+	bundlePath := filepath.Join(buildPath, fmt.Sprintf("%s.%s.js", bundlePrefix, sourceHash))
+	sourceMapPath := bundlePath + ".map"
+
+	return ctx.compileTypescriptBundle(
+		entryPointPath,
+		bundlePath,
+		sourceMapPath,
+		buildPath,
+		[]string{
+			filepath.Join(buildPath, fmt.Sprintf("%s.*.js", bundlePrefix)),
+			filepath.Join(buildPath, fmt.Sprintf("%s.*.js.map", bundlePrefix)),
+		},
+		api.BuildOptions{
+			AbsWorkingDir: ctx.config.Path,
+			EntryPoints:   []string{entryPointPath},
+			Bundle:        true,
+			Platform:      api.PlatformNeutral,
+			Format:        api.FormatCommonJS,
+			Sourcemap:     api.SourceMapLinked,
+			Write:         true,
+			Outfile:       bundlePath,
+		},
+	)
+}
+
+func (ctx *Context) compileTypescriptBundle(
+	entryPointPath string,
+	bundlePath string,
+	sourceMapPath string,
+	outputDir string,
+	cleanupPatterns []string,
+	options api.BuildOptions,
+) (api.BuildResult, error) {
 	if fileExists(bundlePath) && fileExists(sourceMapPath) {
 		return buildResultFromPaths(bundlePath, sourceMapPath)
 	}
 
-	if err := os.MkdirAll(ctx.config.HiddenPath, 0755); err != nil {
-		return api.BuildResult{}, fmt.Errorf("create hidden path: %w", err)
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return api.BuildResult{}, fmt.Errorf("create output path %s: %w", outputDir, err)
 	}
 
-	if err := removeExistingBundles(ctx.config.HiddenPath); err != nil {
+	if err := removeMatchingFiles(cleanupPatterns...); err != nil {
 		return api.BuildResult{}, err
 	}
 
-	result := api.Build(api.BuildOptions{
-		AbsWorkingDir: ctx.config.Path,
-		EntryPoints:   []string{entryPointPath},
-		Bundle:        true,
-		Platform:      api.PlatformBrowser, // or api.PlatformNode
-		Format:        api.FormatESModule,  // or api.FormatCommonJS
-		Sourcemap:     api.SourceMapLinked,
-		Write:         true,
-		Outfile:       bundlePath,
-	})
+	result := api.Build(options)
 	if len(result.Errors) > 0 {
-		return result, nil
+		return result, fmt.Errorf("compile %s: %s", entryPointPath, formatBuildMessages(result.Errors))
 	}
 
 	outputFiles, err := readOutputFiles(bundlePath, sourceMapPath)
@@ -133,28 +191,45 @@ func readOutputFiles(paths ...string) ([]api.OutputFile, error) {
 	return outputFiles, nil
 }
 
-func removeExistingBundles(hiddenPath string) error {
-	patterns := []string{
-		filepath.Join(hiddenPath, "bundle.*.js"),
-		filepath.Join(hiddenPath, "bundle.*.js.map"),
-		filepath.Join(hiddenPath, "bundle.js"),
-		filepath.Join(hiddenPath, "bundle.js.map"),
-	}
-
+func removeMatchingFiles(patterns ...string) error {
 	for _, pattern := range patterns {
 		matches, err := filepath.Glob(pattern)
 		if err != nil {
-			return fmt.Errorf("glob existing bundles with pattern %s: %w", pattern, err)
+			return fmt.Errorf("glob files with pattern %s: %w", pattern, err)
 		}
 
 		for _, match := range matches {
 			if err := os.Remove(match); err != nil && !os.IsNotExist(err) {
-				return fmt.Errorf("remove existing bundle %s: %w", match, err)
+				return fmt.Errorf("remove file %s: %w", match, err)
 			}
 		}
 	}
 
 	return nil
+}
+
+func formatBuildMessages(messages []api.Message) string {
+	if len(messages) == 0 {
+		return "unknown build error"
+	}
+
+	formatted := make([]string, 0, len(messages))
+	for _, message := range messages {
+		text := message.Text
+		if message.Location == nil {
+			formatted = append(formatted, text)
+			continue
+		}
+
+		formatted = append(formatted, fmt.Sprintf("%s:%d:%d: %s", message.Location.File, message.Location.Line, message.Location.Column, text))
+	}
+
+	return strings.Join(formatted, "; ")
+}
+
+func hashString(value string) string {
+	sum := sha256.Sum256([]byte(value))
+	return hex.EncodeToString(sum[:8])
 }
 
 func fileExists(path string) bool {
