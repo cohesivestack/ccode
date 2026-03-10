@@ -3,12 +3,10 @@ package main
 import (
 	"errors"
 	"fmt"
-	"strings"
+	"os"
 
 	ccode "github.com/cohesivestack/ccode/lib"
-	"github.com/go-viper/mapstructure/v2"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
@@ -18,26 +16,7 @@ func main() {
 	}
 }
 
-// loadConfigFromViper builds a Config using the given viper instance,
-// applies defaults and validations via NewConfig, and returns it.
-// It respects `yaml` struct tags when unmarshalling.
-func loadConfigFromViper(v *viper.Viper) (*ccode.Config, error) {
-	raw := &ccode.Config{}
-
-	if err := v.Unmarshal(raw, func(dc *mapstructure.DecoderConfig) {
-		dc.TagName = "yaml"
-	}); err != nil {
-		return nil, fmt.Errorf("unable to decode configuration: %w", err)
-	}
-
-	cfg, err := ccode.NewConfig(raw)
-	if err != nil {
-		return nil, err
-	}
-	return cfg, nil
-}
-
-// initViper sets up viper with config file (optional), env prefix + replacer.
+// initViper sets up viper with config file discovery.
 func initViper(cmd *cobra.Command) (*viper.Viper, error) {
 	v := viper.New()
 
@@ -59,67 +38,75 @@ func initViper(cmd *cobra.Command) (*viper.Viper, error) {
 		}
 	}
 
-	v.SetEnvPrefix("CCODE")
-	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
-	v.AutomaticEnv()
-
 	return v, nil
 }
 
-// applyChangedFlagsToViper sets only flags explicitly provided by the user.
-func applyChangedFlagsToViper(cmd *cobra.Command, v *viper.Viper) error {
-	get := func(name string) (any, error) {
-		f := cmd.Flags().Lookup(name)
-		if f == nil {
-			return nil, fmt.Errorf("flag %q not found", name)
-		}
-		switch f.Value.Type() {
-		case "bool":
-			return cmd.Flags().GetBool(name)
-		case "string":
-			return cmd.Flags().GetString(name)
-		case "stringSlice":
-			return cmd.Flags().GetStringSlice(name)
-		case "int":
-			return cmd.Flags().GetInt(name)
-		default:
-			return f.Value.String(), nil
+func loadConfig(cmd *cobra.Command) (*ccode.Config, error) {
+	v, err := initViper(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	cfg := &ccode.Config{}
+	if configFile := v.ConfigFileUsed(); configFile != "" {
+		cfg, err = ccode.LoadConfig(configFile)
+		if err != nil {
+			return nil, err
 		}
 	}
 
-	cmd.Flags().Visit(func(f *pflag.Flag) {
-		if f.Name == "config" {
-			return
-		}
+	applyEnvOverrides(cfg)
+	if err := applyFlagOverrides(cmd, cfg); err != nil {
+		return nil, err
+	}
 
-		val, err := get(f.Name)
+	return ccode.NewConfig(cfg)
+}
+
+func applyEnvOverrides(cfg *ccode.Config) {
+	if value, ok := lookupEnv("CCODE_CCODE_PATH", "CCODE_PATH"); ok {
+		cfg.CCodePath = value
+	}
+	if value, ok := os.LookupEnv("CCODE_OUTPUT_PATH"); ok {
+		cfg.OutputPath = value
+	}
+	if value, ok := os.LookupEnv("CCODE_HIDDEN_PATH"); ok {
+		cfg.HiddenPath = value
+	}
+}
+
+func applyFlagOverrides(cmd *cobra.Command, cfg *ccode.Config) error {
+	if cmd.Flags().Changed("ccode-path") {
+		value, err := cmd.Flags().GetString("ccode-path")
 		if err != nil {
-			return
+			return err
 		}
-
-		key := f.Name
-		switch key {
-		case "output-path":
-			key = "output_path"
+		cfg.CCodePath = value
+	}
+	if cmd.Flags().Changed("path") {
+		value, err := cmd.Flags().GetString("path")
+		if err != nil {
+			return err
 		}
-
-		switch valType := val.(type) {
-		case string:
-			if valType != "" {
-				v.Set(key, val)
-			}
-		case []string:
-			if len(valType) > 0 {
-				v.Set(key, val)
-			}
-		case bool:
-			v.Set(key, val)
-		default:
-			v.Set(key, val)
+		cfg.CCodePath = value
+	}
+	if cmd.Flags().Changed("output-path") {
+		value, err := cmd.Flags().GetString("output-path")
+		if err != nil {
+			return err
 		}
-	})
-
+		cfg.OutputPath = value
+	}
 	return nil
+}
+
+func lookupEnv(names ...string) (string, bool) {
+	for _, name := range names {
+		if value, ok := os.LookupEnv(name); ok {
+			return value, true
+		}
+	}
+	return "", false
 }
 
 // newRootCmd creates the Cobra CLI and wires viper + config loading.
@@ -130,28 +117,22 @@ func newRootCmd(run func(*ccode.Config, string) error, initProject func(string, 
 		Long: `Cohesive Code is an AI-enabled code generator.
 
 Syntax:
-  ccode --config [config-path] --path [path] --output-path [output-path] run [process]
+  ccode --config [config-path] --ccode-path [path] --output-path [output-path] run [process]
   ccode --config [config-path] init [path]`,
 	}
 
 	rootCmd.PersistentFlags().String("config", "", "Path to YAML config file")
-	rootCmd.PersistentFlags().String("path", "", "Path where the project structure resides")
+	rootCmd.PersistentFlags().String("ccode-path", "", "Path where the project structure resides")
+	rootCmd.PersistentFlags().String("path", "", "Deprecated alias for --ccode-path")
 	rootCmd.PersistentFlags().String("output-path", "", "Root path where generated artifacts are written")
+	_ = rootCmd.PersistentFlags().MarkDeprecated("path", "use --ccode-path instead")
 
 	runCmd := &cobra.Command{
 		Use:   "run [process]",
 		Short: "Run a process",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			v, err := initViper(cmd)
-			if err != nil {
-				return err
-			}
-			if err := applyChangedFlagsToViper(cmd, v); err != nil {
-				return err
-			}
-
-			cfg, err := loadConfigFromViper(v)
+			cfg, err := loadConfig(cmd)
 			if err != nil {
 				return err
 			}

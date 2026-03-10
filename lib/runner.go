@@ -55,7 +55,7 @@ func (ctx *Context) resolveProcessEntryPoint(process string) (string, string, er
 		entryPointPath += ".ts"
 	}
 
-	sourcePath := filepath.Join(ctx.config.Path, entryPointPath)
+	sourcePath := filepath.Join(ctx.config.CCodePath, entryPointPath)
 	if !fileExists(sourcePath) {
 		return "", "", fmt.Errorf("process %q not found: expected %s", process, sourcePath)
 	}

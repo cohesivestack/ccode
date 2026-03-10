@@ -111,8 +111,8 @@ func setupLoaderTestProject(t *testing.T, folderName string) (*Context, *Config,
 	require.NoError(t, err)
 	config.HiddenPath = filepath.Join(projectDir, DefaultHiddenFolderName)
 
-	mainFile := filepath.Join(config.Path, "main.ts")
-	helperFile := filepath.Join(config.Path, "helper.ts")
+	mainFile := filepath.Join(config.CCodePath, "main.ts")
+	helperFile := filepath.Join(config.CCodePath, "helper.ts")
 
 	return NewContext(config), config, mainFile, helperFile
 }

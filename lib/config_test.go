@@ -14,14 +14,17 @@ func TestNewConfig_Defaults(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 
-	assert.Equal(t, "ccode", cfg.Path)
+	assert.Equal(t, "ccode", cfg.CCodePath)
 	assert.Equal(t, ".", cfg.OutputPath)
 }
 
 func TestLoadConfig(t *testing.T) {
 	tmp := t.TempDir()
-	cfgFile := filepath.Join(tmp, "ccode.yaml")
-	content := `path: "my-ccode"
+	configDir := filepath.Join(tmp, "configs")
+	require.NoError(t, os.MkdirAll(configDir, 0755))
+
+	cfgFile := filepath.Join(configDir, "ccode.yaml")
+	content := `ccode_path: "my-ccode"
 output_path: "dist"
 `
 	require.NoError(t, os.WriteFile(cfgFile, []byte(content), 0644))
@@ -30,8 +33,22 @@ output_path: "dist"
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 
-	assert.Equal(t, "my-ccode", cfg.Path)
+	assert.Equal(t, filepath.Join(configDir, "my-ccode"), cfg.CCodePath)
 	assert.Equal(t, "dist", cfg.OutputPath)
+}
+
+func TestLoadConfig_LegacyPathKey(t *testing.T) {
+	tmp := t.TempDir()
+	cfgFile := filepath.Join(tmp, "ccode.yaml")
+	content := `path: "legacy-ccode"
+`
+	require.NoError(t, os.WriteFile(cfgFile, []byte(content), 0644))
+
+	cfg, err := LoadConfig(cfgFile)
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+
+	assert.Equal(t, filepath.Join(tmp, "legacy-ccode"), cfg.CCodePath)
 }
 
 func TestLoadConfig_MissingFile(t *testing.T) {

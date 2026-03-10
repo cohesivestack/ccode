@@ -50,5 +50,5 @@ func setupRunnerTestProject(t *testing.T, folderName string) (*Context, string) 
 	config, err := LoadConfig(configFile)
 	require.NoError(t, err)
 
-	return NewContext(config), config.Path
+	return NewContext(config), config.CCodePath
 }

@@ -41,7 +41,7 @@ func TestInit_CreatesProjectStructure(t *testing.T) {
 
 	configContent, err := os.ReadFile(configPath)
 	require.NoError(t, err)
-	assert.Equal(t, "path: cohesive\n", string(configContent))
+	assert.Equal(t, "ccode_path: cohesive\n", string(configContent))
 
 	typesContent, err := os.ReadFile(typesPath)
 	require.NoError(t, err)
@@ -69,7 +69,7 @@ func TestInit_UsesDefaultsAndDoesNotOverwriteExistingFiles(t *testing.T) {
 	tsconfigPath := filepath.Join(projectPath, "tsconfig.json")
 
 	require.NoError(t, os.MkdirAll(hiddenLibPath, 0755))
-	require.NoError(t, os.WriteFile(configPath, []byte("path: existing"), 0644))
+	require.NoError(t, os.WriteFile(configPath, []byte("ccode_path: existing"), 0644))
 	require.NoError(t, os.WriteFile(typesPath, []byte("existing types"), 0644))
 	require.NoError(t, os.WriteFile(tsconfigPath, []byte(`{"existing":true}`), 0644))
 
@@ -84,7 +84,7 @@ func TestInit_UsesDefaultsAndDoesNotOverwriteExistingFiles(t *testing.T) {
 
 	configContent, err := os.ReadFile(configPath)
 	require.NoError(t, err)
-	assert.Equal(t, "path: existing", string(configContent))
+	assert.Equal(t, "ccode_path: existing", string(configContent))
 
 	typesContent, err := os.ReadFile(typesPath)
 	require.NoError(t, err)

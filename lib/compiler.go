@@ -34,7 +34,7 @@ func (ctx *Context) compileTypescript(entryPointPath string) (api.BuildResult, e
 			filepath.Join(ctx.config.HiddenPath, "bundle.js.map"),
 		},
 		api.BuildOptions{
-			AbsWorkingDir: ctx.config.Path,
+			AbsWorkingDir: ctx.config.CCodePath,
 			EntryPoints:   []string{entryPointPath},
 			Bundle:        true,
 			Platform:      api.PlatformBrowser,
@@ -68,7 +68,7 @@ func (ctx *Context) compileTypescriptForRunner(entryPointPath string) (api.Build
 			filepath.Join(buildPath, fmt.Sprintf("%s.*.js.map", bundlePrefix)),
 		},
 		api.BuildOptions{
-			AbsWorkingDir: ctx.config.Path,
+			AbsWorkingDir: ctx.config.CCodePath,
 			EntryPoints:   []string{entryPointPath},
 			Bundle:        true,
 			Platform:      api.PlatformNeutral,
@@ -116,7 +116,7 @@ func (ctx *Context) compileTypescriptBundle(
 func (ctx *Context) getSourceHash() (string, error) {
 	var sourceFiles []string
 
-	err := filepath.WalkDir(ctx.config.Path, func(path string, d fs.DirEntry, walkErr error) error {
+	err := filepath.WalkDir(ctx.config.CCodePath, func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
@@ -130,14 +130,14 @@ func (ctx *Context) getSourceHash() (string, error) {
 		return "", fmt.Errorf("walk TypeScript sources: %w", err)
 	}
 	if len(sourceFiles) == 0 {
-		return "", fmt.Errorf("no TypeScript files found in %s", ctx.config.Path)
+		return "", fmt.Errorf("no TypeScript files found in %s", ctx.config.CCodePath)
 	}
 
 	sort.Strings(sourceFiles)
 	hasher := sha256.New()
 
 	for _, sourceFile := range sourceFiles {
-		relativePath, err := filepath.Rel(ctx.config.Path, sourceFile)
+		relativePath, err := filepath.Rel(ctx.config.CCodePath, sourceFile)
 		if err != nil {
 			return "", fmt.Errorf("build relative path for %s: %w", sourceFile, err)
 		}

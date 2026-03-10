@@ -13,7 +13,7 @@ import (
 func TestNewRootCmd_LoadsConfigFile(t *testing.T) {
 	tmp := t.TempDir()
 	cfgFile := filepath.Join(tmp, "ccode.yaml")
-	configYAML := `path: "from-config"
+	configYAML := `ccode_path: "from-config"
 output_path: "build/from-config"
 `
 	require.NoError(t, os.WriteFile(cfgFile, []byte(configYAML), 0644))
@@ -31,14 +31,14 @@ output_path: "build/from-config"
 	require.NoError(t, cmd.Execute())
 	require.NotNil(t, captured)
 	assert.Equal(t, "openapi/generate", process)
-	assert.Equal(t, "from-config", captured.Path)
+	assert.Equal(t, filepath.Join(tmp, "from-config"), captured.CCodePath)
 	assert.Equal(t, "build/from-config", captured.OutputPath)
 }
 
 func TestNewRootCmd_FlagsOverrideConfig(t *testing.T) {
 	tmp := t.TempDir()
 	cfgFile := filepath.Join(tmp, "ccode.yaml")
-	configYAML := `path: "from-config"
+	configYAML := `ccode_path: "from-config"
 output_path: "build/from-config"
 `
 	require.NoError(t, os.WriteFile(cfgFile, []byte(configYAML), 0644))
@@ -51,14 +51,14 @@ output_path: "build/from-config"
 	}, nil)
 	cmd.SetArgs([]string{
 		"--config", cfgFile,
-		"--path", "from-cli",
+		"--ccode-path", "from-cli",
 		"--output-path", "build/from-cli",
 		"run", "openapi/generate",
 	})
 
 	require.NoError(t, cmd.Execute())
 	require.NotNil(t, captured)
-	assert.Equal(t, "from-cli", captured.Path)
+	assert.Equal(t, "from-cli", captured.CCodePath)
 	assert.Equal(t, "build/from-cli", captured.OutputPath)
 }
 
@@ -85,7 +85,7 @@ func TestNewRootCmd_DefaultConfigWhenNoFile(t *testing.T) {
 
 	require.NoError(t, cmd.Execute())
 	require.NotNil(t, captured)
-	assert.Equal(t, "ccode", captured.Path)
+	assert.Equal(t, "ccode", captured.CCodePath)
 	assert.Equal(t, ".", captured.OutputPath)
 }
 

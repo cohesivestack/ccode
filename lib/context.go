@@ -19,8 +19,16 @@ func NewContext(config *Config) *Context {
 		*resolvedConfig = *config
 	}
 
+	if !filepath.IsAbs(resolvedConfig.CCodePath) && !isStringBlank(resolvedConfig.CCodePath) {
+		if absolutePath, err := filepath.Abs(resolvedConfig.CCodePath); err == nil {
+			resolvedConfig.CCodePath = absolutePath
+		} else {
+			resolvedConfig.CCodePath = filepath.Clean(resolvedConfig.CCodePath)
+		}
+	}
+
 	if !filepath.IsAbs(resolvedConfig.HiddenPath) && !isStringBlank(resolvedConfig.HiddenPath) {
-		resolvedConfig.HiddenPath = filepath.Join(resolvedConfig.Path, resolvedConfig.HiddenPath)
+		resolvedConfig.HiddenPath = filepath.Join(resolvedConfig.CCodePath, resolvedConfig.HiddenPath)
 	}
 
 	return &Context{
