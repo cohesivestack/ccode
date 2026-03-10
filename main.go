@@ -13,11 +13,7 @@ import (
 )
 
 func main() {
-	if err := newRootCmd(func(cfg *ccode.Config, process string) error {
-		_ = cfg
-		_ = process
-		return nil
-	}, ccode.Init).Execute(); err != nil {
+	if err := newRootCmd(ccode.Run, ccode.Init).Execute(); err != nil {
 		panic(err)
 	}
 }
