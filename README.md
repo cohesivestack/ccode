@@ -38,12 +38,12 @@ Details to be determined.
 **Config sample**
 
 ```yaml
-path: ccode # The path where the structure of the project resides. This is relative to the path where ccode command runs By default is `ccode`.
+ccode_path: ccode # The path where the structure of the project resides. This accepts relative paths. Relative paths are resolved from the config file directory. By default is `ccode`.
 output_path: . # The root path where will be saved the produced artifacts. This is relative to the path where ccode command runs. By default is `.`
 ```
 
 ## CLI
 
 ```bash
-ccode --config [config-path] --path [path] --output-path [output-path] run [process]
+ccode --config [config-path] --ccode-path [path] --output-path [output-path] run [process]
 ```

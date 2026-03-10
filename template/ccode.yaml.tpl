@@ -1,1 +1,1 @@
-path: {{.ProjectPath}}
+ccode_path: {{.ProjectPath}}
