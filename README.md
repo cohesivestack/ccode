@@ -9,12 +9,12 @@ This intent will evolve in different stages:
   * Process are typescript functions executed from the CLI or from another process
   * Templates which are Jinja template and are called from a Process
   * A process has a typescript API:
-    * The object cohesive is the package that has the API to communicate with the model and API offer by the Cohesive Code library
-    * The type `cohesive.OpenAPI` is an openAPI model
-    * The function `cohesive.GetOpenAPI(filePath: string): cohesive.OpenAPI` parse a yaml or json file to an OpenAPI model
-    * The function `cohesive.TemplateToString(templatePath: string, model: any): string` return a string from a parsed template
-    * The function `cohesive.TemplateToFile(templatePath: string, model: any, filePath: string, override: bool = true)` save a file from parsed template 
-    * The function `cohesive.StringToFile(input: string, filePath: string, override: bool = true)` save a file from a string
+    * The object ccode is the package that has the API to communicate with the model and API offer by the Cohesive Code library
+    * The type `ccode.OpenAPI` is an openAPI model
+    * The function `ccode.GetOpenAPI(filePath: string): ccode.OpenAPI` parse a yaml or json file to an OpenAPI model
+    * The function `ccode.TemplateToString(templatePath: string, model: any): string` return a string from a parsed template
+    * The function `ccode.TemplateToFile(templatePath: string, model: any, filePath: string, override: bool = true)` save a file from parsed template 
+    * The function `ccode.StringToFile(input: string, filePath: string, override: bool = true)` save a file from a string
 
 ## Stage 2 - Add MCP server to the tool
 
