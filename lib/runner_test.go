@@ -74,6 +74,48 @@ func TestContext_Run_TemplateErrorsCanBeCaughtInTypescript(t *testing.T) {
 	assert.Contains(t, output.String(), "parse template \"templates/missing.tpl\"")
 }
 
+func TestContext_Run_ParsesJSONThroughRunnerContext(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestContext_Run_ParsesJSONThroughRunnerContext")
+	processFile := filepath.Join(projectDir, "x", "generate.ts")
+
+	originalWD, err := os.Getwd()
+	require.NoError(t, err)
+
+	tempRoot := filepath.Dir(projectDir)
+	require.NoError(t, os.Chdir(tempRoot))
+	t.Cleanup(func() {
+		_ = os.Chdir(originalWD)
+	})
+
+	require.NoError(t, os.MkdirAll(filepath.Join(tempRoot, "data"), 0755))
+	require.NoError(t, os.MkdirAll(filepath.Join(projectDir, "data"), 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(tempRoot, "data", "input.json"), []byte(`{"source":"cwd"}`), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(projectDir, "data", "input.json"), []byte(`{"source":"file","enabled":true}`), 0644))
+	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
+	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/types\";\n\nexport default function main(ctx: Context) {\n\tconst bytes = '{\"source\":\"bytes\",\"count\":2}'.split('').map((char) => char.charCodeAt(0));\n\tconst fromBytes = ctx.parseJSONFromBytes(bytes);\n\tconst fromString = ctx.parseJSONFromString('{\"source\":\"string\",\"items\":[\"a\",\"b\"]}');\n\tconst fromFile = ctx.parseJSONFromFile('data/input.json');\n\tctx.println(JSON.stringify({ fromBytes, fromString, fromFile }));\n}\n"), 0644))
+
+	var output bytes.Buffer
+	ctx.stdout = &output
+
+	require.NoError(t, ctx.Run("x/generate"))
+	assert.JSONEq(t, `{"fromBytes":{"source":"bytes","count":2},"fromString":{"source":"string","items":["a","b"]},"fromFile":{"source":"file","enabled":true}}`, output.String())
+}
+
+func TestContext_Run_ParseJSONErrorsCanBeCaughtInTypescript(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestContext_Run_ParseJSONErrorsCanBeCaughtInTypescript")
+	processFile := filepath.Join(projectDir, "x", "generate.ts")
+
+	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
+	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/types\";\n\nexport default function main(ctx: Context) {\n\tfor (const run of [\n\t\t() => ctx.parseJSONFromBytes([123]),\n\t\t() => ctx.parseJSONFromString('{'),\n\t\t() => ctx.parseJSONFromFile('missing.json'),\n\t]) {\n\t\ttry {\n\t\t\trun();\n\t\t} catch (e: any) {\n\t\t\tif (!(e instanceof GoError)) {\n\t\t\t\tthrow e;\n\t\t\t}\n\t\t\tctx.println(e.value.Error());\n\t\t}\n\t}\n}\n"), 0644))
+
+	var output bytes.Buffer
+	ctx.stdout = &output
+
+	require.NoError(t, ctx.Run("x/generate"))
+	assert.Contains(t, output.String(), "unexpected end of JSON input")
+	assert.Contains(t, output.String(), "file not found: missing.json")
+}
+
 func setupRunnerTestProject(t *testing.T, folderName string) (*Context, string) {
 	t.Helper()
 

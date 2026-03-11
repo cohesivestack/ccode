@@ -135,6 +135,15 @@ func (ctx *RunnerContext) toValue(runtime *goja.Runtime) (goja.Value, error) {
 	if err := object.Set("templateToFile", ctx.TemplateToFile); err != nil {
 		return nil, fmt.Errorf("set runner context functions: %w", err)
 	}
+	if err := object.Set("parseJSONFromBytes", ctx.ParseJSONFromBytes); err != nil {
+		return nil, fmt.Errorf("set runner context functions: %w", err)
+	}
+	if err := object.Set("parseJSONFromString", ctx.ParseJSONFromString); err != nil {
+		return nil, fmt.Errorf("set runner context functions: %w", err)
+	}
+	if err := object.Set("parseJSONFromFile", ctx.ParseJSONFromFile); err != nil {
+		return nil, fmt.Errorf("set runner context functions: %w", err)
+	}
 	return object, nil
 }
 
