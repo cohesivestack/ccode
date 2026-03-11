@@ -15,7 +15,8 @@ import (
 var runnerEntryPointPattern = regexp.MustCompile(`(?s)export\s+default\s+function(?:\s+\w+)?\s*\(\s*\w+\s*:\s*Context\s*\)`)
 
 type RunnerContext struct {
-	stdout io.Writer
+	ccodeContext *Context
+	stdout       io.Writer
 }
 
 func Run(config *Config, process string) error {
@@ -107,7 +108,10 @@ func (ctx *Context) executeRunnerBundle(outputFiles []api.OutputFile) error {
 		return fmt.Errorf("runner bundle must export a default function")
 	}
 
-	runnerContext := &RunnerContext{stdout: ctx.stdout}
+	runnerContext := &RunnerContext{
+		ccodeContext: ctx,
+		stdout:       ctx.stdout,
+	}
 	jsContext, err := runnerContext.toValue(runtime)
 	if err != nil {
 		return err
@@ -125,6 +129,12 @@ func (ctx *RunnerContext) toValue(runtime *goja.Runtime) (goja.Value, error) {
 	if err := object.Set("println", ctx.Println); err != nil {
 		return nil, fmt.Errorf("set runner context functions: %w", err)
 	}
+	if err := object.Set("templateToString", ctx.TemplateToString); err != nil {
+		return nil, fmt.Errorf("set runner context functions: %w", err)
+	}
+	if err := object.Set("templateToFile", ctx.TemplateToFile); err != nil {
+		return nil, fmt.Errorf("set runner context functions: %w", err)
+	}
 	return object, nil
 }
 
@@ -134,4 +144,18 @@ func (ctx *RunnerContext) Println(args ...any) {
 		target = os.Stdout
 	}
 	fmt.Fprintln(target, args...)
+}
+
+func (ctx *RunnerContext) TemplateToString(templatePath string, data map[string]any) (string, error) {
+	if ctx == nil || ctx.ccodeContext == nil {
+		return "", fmt.Errorf("runner context is not initialized")
+	}
+	return ctx.ccodeContext.TemplateToString(templatePath, data)
+}
+
+func (ctx *RunnerContext) TemplateToFile(templatePath string, filePath string, data map[string]any) error {
+	if ctx == nil || ctx.ccodeContext == nil {
+		return fmt.Errorf("runner context is not initialized")
+	}
+	return ctx.ccodeContext.TemplateToFile(templatePath, filePath, data)
 }
