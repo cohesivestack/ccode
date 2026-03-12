@@ -167,6 +167,15 @@ func (ctx *RunnerContext) toValue(runtime *goja.Runtime) (goja.Value, error) {
 	if err := object.Set("parseJSONFromFile", ctx.ParseJSONFromFile); err != nil {
 		return nil, fmt.Errorf("set runner context functions: %w", err)
 	}
+	if err := object.Set("parseOpenAPIFromBytes", ctx.ParseOpenAPIFromBytes); err != nil {
+		return nil, fmt.Errorf("set runner context functions: %w", err)
+	}
+	if err := object.Set("parseOpenAPIFromString", ctx.ParseOpenAPIFromString); err != nil {
+		return nil, fmt.Errorf("set runner context functions: %w", err)
+	}
+	if err := object.Set("parseOpenAPIFromFile", ctx.ParseOpenAPIFromFile); err != nil {
+		return nil, fmt.Errorf("set runner context functions: %w", err)
+	}
 	return object, nil
 }
 
@@ -178,16 +187,28 @@ func (ctx *RunnerContext) Println(args ...any) {
 	fmt.Fprintln(target, args...)
 }
 
-func (ctx *RunnerContext) TemplateToString(templatePath string, data map[string]any) (string, error) {
+func (ctx *RunnerContext) TemplateToString(templatePath string, data goja.Value) (string, error) {
 	if ctx == nil || ctx.ccodeContext == nil {
 		return "", fmt.Errorf("runner context is not initialized")
 	}
-	return ctx.ccodeContext.TemplateToString(templatePath, data)
+
+	templateData, err := gojaValueToTemplateData(data)
+	if err != nil {
+		return "", fmt.Errorf("convert template data: %w", err)
+	}
+
+	return ctx.renderTemplate(templatePath, templateData)
 }
 
-func (ctx *RunnerContext) TemplateToFile(templatePath string, filePath string, data map[string]any) error {
+func (ctx *RunnerContext) TemplateToFile(templatePath string, filePath string, data goja.Value) error {
 	if ctx == nil || ctx.ccodeContext == nil {
 		return fmt.Errorf("runner context is not initialized")
 	}
-	return ctx.ccodeContext.TemplateToFile(templatePath, filePath, data)
+
+	templateData, err := gojaValueToTemplateData(data)
+	if err != nil {
+		return fmt.Errorf("convert template data: %w", err)
+	}
+
+	return ctx.renderTemplateToFile(templatePath, filePath, templateData)
 }

@@ -60,6 +60,28 @@ func TestContext_Run_RendersTemplates(t *testing.T) {
 	assert.Equal(t, "Hello Carlos!", string(content))
 }
 
+func TestContext_Run_RendersTemplatesWithDeterministicObjectOrder(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestContext_Run_RendersTemplatesWithDeterministicObjectOrder")
+	processFile := filepath.Join(projectDir, "x", "generate.ts")
+	templateFile := filepath.Join(projectDir, "templates", "ordered.tpl")
+
+	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
+	require.NoError(t, os.MkdirAll(filepath.Dir(templateFile), 0755))
+	require.NoError(t, os.WriteFile(templateFile, []byte("{% for key, value in data %}{{ key }} {% endfor %}|{% for key, value in data.nested %}{{ key }} {% endfor %}"), 0644))
+	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/types\";\n\nexport default function main(ctx: Context) {\n\tconst model = { z: 1, nested: { beta: 1, alpha: 2 }, a: 3 };\n\tconst rendered = ctx.templateToString(\"templates/ordered.tpl\", model);\n\tctx.templateToFile(\"templates/ordered.tpl\", \"generated/ordered.txt\", model);\n\tctx.println(rendered);\n}\n"), 0644))
+
+	var output bytes.Buffer
+	ctx.stdout = &output
+
+	require.NoError(t, ctx.Run("x/generate"))
+	assert.Equal(t, "z nested a |beta alpha \n", output.String())
+
+	renderedFilePath := filepath.Join(filepath.Dir(projectDir), "output", "generated", "ordered.txt")
+	content, err := os.ReadFile(renderedFilePath)
+	require.NoError(t, err)
+	assert.Equal(t, "z nested a |beta alpha ", string(content))
+}
+
 func TestContext_Run_TemplateErrorsCanBeCaughtInTypescript(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestContext_Run_TemplateErrorsCanBeCaughtInTypescript")
 	processFile := filepath.Join(projectDir, "x", "generate.ts")
@@ -131,6 +153,38 @@ func TestContext_Run_ParseJSONErrorsCanBeCaughtInTypescript(t *testing.T) {
 	require.NoError(t, ctx.Run("x/generate"))
 	assert.Contains(t, output.String(), "Unexpected end of JSON input")
 	assert.Contains(t, output.String(), "file not found: missing.json")
+}
+
+func TestContext_Run_ParsesOpenAPIThroughRunnerContextWithDeterministicOrder(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestContext_Run_ParsesOpenAPIThroughRunnerContextWithDeterministicOrder")
+	processFile := filepath.Join(projectDir, "x", "generate.ts")
+	specFile := filepath.Join(projectDir, "specs", "api.yaml")
+
+	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
+	require.NoError(t, os.MkdirAll(filepath.Dir(specFile), 0755))
+	require.NoError(t, os.WriteFile(specFile, []byte(testOpenAPI3Document), 0644))
+	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/types\";\n\nexport default function main(ctx: Context) {\n\tconst spec = ctx.parseOpenAPIFromFile(\"specs/api.yaml\");\n\tctx.println(JSON.stringify({\n\t\tpathKeys: Object.keys(spec.paths),\n\t\tpropertyKeys: Object.keys(spec.components.schemas.Sample.properties),\n\t}));\n}\n"), 0644))
+
+	var output bytes.Buffer
+	ctx.stdout = &output
+
+	require.NoError(t, ctx.Run("x/generate"))
+	assert.JSONEq(t, `{"pathKeys":["/z","/a","/m"],"propertyKeys":["beta","alpha"]}`, output.String())
+}
+
+func TestContext_Run_OpenAPIErrorsCanBeCaughtInTypescript(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestContext_Run_OpenAPIErrorsCanBeCaughtInTypescript")
+	processFile := filepath.Join(projectDir, "x", "generate.ts")
+
+	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
+	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/types\";\n\nexport default function main(ctx: Context) {\n\tfor (const run of [\n\t\t() => ctx.parseOpenAPIFromString(\"swagger: '2.0'\\ninfo:\\n  title: Legacy\\n  version: 1.0.0\\npaths: {}\\n\"),\n\t\t() => ctx.parseOpenAPIFromFile(\"missing.yaml\"),\n\t]) {\n\t\ttry {\n\t\t\trun();\n\t\t} catch (e: any) {\n\t\t\tif (!(e instanceof GoError)) {\n\t\t\t\tthrow e;\n\t\t\t}\n\t\t\tctx.println(e.value.Error());\n\t\t}\n\t}\n}\n"), 0644))
+
+	var output bytes.Buffer
+	ctx.stdout = &output
+
+	require.NoError(t, ctx.Run("x/generate"))
+	assert.Contains(t, output.String(), "swagger is not supported")
+	assert.Contains(t, output.String(), "file not found: missing.yaml")
 }
 
 func setupRunnerTestProject(t *testing.T, folderName string) (*Context, string) {
