@@ -29,6 +29,7 @@ func TestInit_CreatesProjectStructure(t *testing.T) {
 	hiddenPath := filepath.Join(projectPath, DefaultHiddenFolderName)
 	buildPath := filepath.Join(hiddenPath, "build")
 	contextPath := filepath.Join(hiddenPath, "lib", "context.ts")
+	openapiPath := filepath.Join(hiddenPath, "lib", "openapi.ts")
 	tsconfigPath := filepath.Join(projectPath, "tsconfig.json")
 
 	require.DirExists(t, projectPath)
@@ -37,6 +38,7 @@ func TestInit_CreatesProjectStructure(t *testing.T) {
 	require.DirExists(t, buildPath)
 	require.FileExists(t, configPath)
 	require.FileExists(t, contextPath)
+	require.FileExists(t, openapiPath)
 	require.FileExists(t, tsconfigPath)
 
 	configContent, err := os.ReadFile(configPath)
@@ -46,6 +48,10 @@ func TestInit_CreatesProjectStructure(t *testing.T) {
 	contextContent, err := os.ReadFile(contextPath)
 	require.NoError(t, err)
 	assert.Equal(t, templateassets.ContextTemplate, string(contextContent))
+
+	openapiContent, err := os.ReadFile(openapiPath)
+	require.NoError(t, err)
+	assert.Equal(t, templateassets.OpenAPITemplate, string(openapiContent))
 
 	tsconfigContent, err := os.ReadFile(tsconfigPath)
 	require.NoError(t, err)
@@ -66,11 +72,13 @@ func TestInit_UsesDefaultsAndDoesNotOverwriteExistingFiles(t *testing.T) {
 	hiddenLibPath := filepath.Join(projectPath, DefaultHiddenFolderName, "lib")
 	configPath := filepath.Join(tmp, DefaultConfigFileName)
 	contextPath := filepath.Join(hiddenLibPath, "context.ts")
+	openapiPath := filepath.Join(hiddenLibPath, "openapi.ts")
 	tsconfigPath := filepath.Join(projectPath, "tsconfig.json")
 
 	require.NoError(t, os.MkdirAll(hiddenLibPath, 0755))
 	require.NoError(t, os.WriteFile(configPath, []byte("ccode_path: existing"), 0644))
 	require.NoError(t, os.WriteFile(contextPath, []byte("existing context"), 0644))
+	require.NoError(t, os.WriteFile(openapiPath, []byte("existing openapi"), 0644))
 	require.NoError(t, os.WriteFile(tsconfigPath, []byte(`{"existing":true}`), 0644))
 
 	var logs bytes.Buffer
@@ -90,12 +98,17 @@ func TestInit_UsesDefaultsAndDoesNotOverwriteExistingFiles(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "existing context", string(contextContent))
 
+	openapiContent, err := os.ReadFile(openapiPath)
+	require.NoError(t, err)
+	assert.Equal(t, "existing openapi", string(openapiContent))
+
 	tsconfigContent, err := os.ReadFile(tsconfigPath)
 	require.NoError(t, err)
 	assert.Equal(t, `{"existing":true}`, string(tsconfigContent))
 
 	assert.Contains(t, logs.String(), "config file already exists; not overwriting")
 	assert.Contains(t, logs.String(), "context template already exists; not overwriting")
+	assert.Contains(t, logs.String(), "openapi template already exists; not overwriting")
 	assert.Contains(t, logs.String(), "tsconfig already exists; not overwriting")
 	require.DirExists(t, filepath.Join(projectPath, DefaultHiddenFolderName, "build"))
 }

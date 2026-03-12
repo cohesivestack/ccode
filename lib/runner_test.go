@@ -163,7 +163,7 @@ func TestContext_Run_ParsesOpenAPIThroughRunnerContextWithDeterministicOrder(t *
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
 	require.NoError(t, os.MkdirAll(filepath.Dir(specFile), 0755))
 	require.NoError(t, os.WriteFile(specFile, []byte(testOpenAPI3Document), 0644))
-	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/context\";\n\nexport default function main(ctx: Context) {\n\tconst spec = ctx.parseOpenAPIFromFile(\"specs/api.yaml\");\n\tctx.println(JSON.stringify({\n\t\tpathKeys: Object.keys(spec.paths),\n\t\tpropertyKeys: Object.keys(spec.components.schemas.Sample.properties),\n\t}));\n}\n"), 0644))
+	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/context\";\n\nexport default function main(ctx: Context) {\n\tconst spec = ctx.parseOpenAPIFromFile(\"specs/api.yaml\");\n\tconst pathKeys = Object.keys(spec.paths ?? {});\n\tconst sample = spec.components?.schemas?.Sample;\n\tif (!sample || sample === true || sample === false || \"$ref\" in sample) {\n\t\tthrow new Error(\"unexpected schema shape\");\n\t}\n\tconst propertyKeys = Object.keys(sample.properties ?? {});\n\tctx.println(JSON.stringify({ pathKeys, propertyKeys }));\n}\n"), 0644))
 
 	var output bytes.Buffer
 	ctx.stdout = &output

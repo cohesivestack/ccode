@@ -10,3 +10,6 @@ var TSConfigTemplate string
 
 //go:embed context.ts
 var ContextTemplate string
+
+//go:embed openapi.ts
+var OpenAPITemplate string
