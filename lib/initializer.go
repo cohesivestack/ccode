@@ -81,7 +81,7 @@ func Init(projectPath string, configPath string) error {
 	if err := writeConfigIfMissing(options.ConfigPath, options.ProjectPath); err != nil {
 		return err
 	}
-	if err := writeFileIfMissing(filepath.Join(hiddenLibPath, "types.ts"), templateassets.TypesTemplate, "types template"); err != nil {
+	if err := writeFileIfMissing(filepath.Join(hiddenLibPath, "context.ts"), templateassets.ContextTemplate, "context template"); err != nil {
 		return err
 	}
 	if err := writeFileIfMissing(filepath.Join(options.ProjectPath, "tsconfig.json"), templateassets.TSConfigTemplate, "tsconfig"); err != nil {

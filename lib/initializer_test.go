@@ -28,7 +28,7 @@ func TestInit_CreatesProjectStructure(t *testing.T) {
 	configPath := filepath.Join(tmp, "configs", "ccode.yaml")
 	hiddenPath := filepath.Join(projectPath, DefaultHiddenFolderName)
 	buildPath := filepath.Join(hiddenPath, "build")
-	typesPath := filepath.Join(hiddenPath, "lib", "types.ts")
+	contextPath := filepath.Join(hiddenPath, "lib", "context.ts")
 	tsconfigPath := filepath.Join(projectPath, "tsconfig.json")
 
 	require.DirExists(t, projectPath)
@@ -36,16 +36,16 @@ func TestInit_CreatesProjectStructure(t *testing.T) {
 	require.DirExists(t, filepath.Join(hiddenPath, "lib"))
 	require.DirExists(t, buildPath)
 	require.FileExists(t, configPath)
-	require.FileExists(t, typesPath)
+	require.FileExists(t, contextPath)
 	require.FileExists(t, tsconfigPath)
 
 	configContent, err := os.ReadFile(configPath)
 	require.NoError(t, err)
 	assert.Equal(t, "ccode_path: cohesive\n", string(configContent))
 
-	typesContent, err := os.ReadFile(typesPath)
+	contextContent, err := os.ReadFile(contextPath)
 	require.NoError(t, err)
-	assert.Equal(t, templateassets.TypesTemplate, string(typesContent))
+	assert.Equal(t, templateassets.ContextTemplate, string(contextContent))
 
 	tsconfigContent, err := os.ReadFile(tsconfigPath)
 	require.NoError(t, err)
@@ -65,12 +65,12 @@ func TestInit_UsesDefaultsAndDoesNotOverwriteExistingFiles(t *testing.T) {
 	projectPath := filepath.Join(tmp, "ccode")
 	hiddenLibPath := filepath.Join(projectPath, DefaultHiddenFolderName, "lib")
 	configPath := filepath.Join(tmp, DefaultConfigFileName)
-	typesPath := filepath.Join(hiddenLibPath, "types.ts")
+	contextPath := filepath.Join(hiddenLibPath, "context.ts")
 	tsconfigPath := filepath.Join(projectPath, "tsconfig.json")
 
 	require.NoError(t, os.MkdirAll(hiddenLibPath, 0755))
 	require.NoError(t, os.WriteFile(configPath, []byte("ccode_path: existing"), 0644))
-	require.NoError(t, os.WriteFile(typesPath, []byte("existing types"), 0644))
+	require.NoError(t, os.WriteFile(contextPath, []byte("existing context"), 0644))
 	require.NoError(t, os.WriteFile(tsconfigPath, []byte(`{"existing":true}`), 0644))
 
 	var logs bytes.Buffer
@@ -86,16 +86,16 @@ func TestInit_UsesDefaultsAndDoesNotOverwriteExistingFiles(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "ccode_path: existing", string(configContent))
 
-	typesContent, err := os.ReadFile(typesPath)
+	contextContent, err := os.ReadFile(contextPath)
 	require.NoError(t, err)
-	assert.Equal(t, "existing types", string(typesContent))
+	assert.Equal(t, "existing context", string(contextContent))
 
 	tsconfigContent, err := os.ReadFile(tsconfigPath)
 	require.NoError(t, err)
 	assert.Equal(t, `{"existing":true}`, string(tsconfigContent))
 
 	assert.Contains(t, logs.String(), "config file already exists; not overwriting")
-	assert.Contains(t, logs.String(), "types template already exists; not overwriting")
+	assert.Contains(t, logs.String(), "context template already exists; not overwriting")
 	assert.Contains(t, logs.String(), "tsconfig already exists; not overwriting")
 	require.DirExists(t, filepath.Join(projectPath, DefaultHiddenFolderName, "build"))
 }
