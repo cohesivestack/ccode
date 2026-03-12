@@ -29,7 +29,7 @@ func TestContext_Run_ExecutesDefaultExport(t *testing.T) {
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
 	require.NoError(t, os.WriteFile(helperFile, []byte(`export const message = "runner executed";`), 0644))
-	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/types\";\nimport { message } from \"./helper\";\n\nexport default function main(ctx: Context) {\n\tctx.println(message);\n}\n"), 0644))
+	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/context\";\nimport { message } from \"./helper\";\n\nexport default function main(ctx: Context) {\n\tctx.println(message);\n}\n"), 0644))
 
 	var output bytes.Buffer
 	ctx.stdout = &output
@@ -46,7 +46,7 @@ func TestContext_Run_RendersTemplates(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
 	require.NoError(t, os.MkdirAll(filepath.Dir(templateFile), 0755))
 	require.NoError(t, os.WriteFile(templateFile, []byte("Hello {{ data.name }}!"), 0644))
-	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/types\";\n\nexport default function main(ctx: Context) {\n\tconst rendered = ctx.templateToString(\"templates/greeting.tpl\", { name: \"Carlos\" });\n\tctx.templateToFile(\"templates/greeting.tpl\", \"generated/greeting.txt\", { name: \"Carlos\" });\n\tctx.println(rendered);\n}\n"), 0644))
+	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/context\";\n\nexport default function main(ctx: Context) {\n\tconst rendered = ctx.templateToString(\"templates/greeting.tpl\", { name: \"Carlos\" });\n\tctx.templateToFile(\"templates/greeting.tpl\", \"generated/greeting.txt\", { name: \"Carlos\" });\n\tctx.println(rendered);\n}\n"), 0644))
 
 	var output bytes.Buffer
 	ctx.stdout = &output
@@ -68,7 +68,7 @@ func TestContext_Run_RendersTemplatesWithDeterministicObjectOrder(t *testing.T) 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
 	require.NoError(t, os.MkdirAll(filepath.Dir(templateFile), 0755))
 	require.NoError(t, os.WriteFile(templateFile, []byte("{% for key, value in data %}{{ key }} {% endfor %}|{% for key, value in data.nested %}{{ key }} {% endfor %}"), 0644))
-	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/types\";\n\nexport default function main(ctx: Context) {\n\tconst model = { z: 1, nested: { beta: 1, alpha: 2 }, a: 3 };\n\tconst rendered = ctx.templateToString(\"templates/ordered.tpl\", model);\n\tctx.templateToFile(\"templates/ordered.tpl\", \"generated/ordered.txt\", model);\n\tctx.println(rendered);\n}\n"), 0644))
+	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/context\";\n\nexport default function main(ctx: Context) {\n\tconst model = { z: 1, nested: { beta: 1, alpha: 2 }, a: 3 };\n\tconst rendered = ctx.templateToString(\"templates/ordered.tpl\", model);\n\tctx.templateToFile(\"templates/ordered.tpl\", \"generated/ordered.txt\", model);\n\tctx.println(rendered);\n}\n"), 0644))
 
 	var output bytes.Buffer
 	ctx.stdout = &output
@@ -87,7 +87,7 @@ func TestContext_Run_TemplateErrorsCanBeCaughtInTypescript(t *testing.T) {
 	processFile := filepath.Join(projectDir, "x", "generate.ts")
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
-	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/types\";\n\nexport default function main(ctx: Context) {\n\ttry {\n\t\tctx.templateToString(\"templates/missing.tpl\", { name: \"Carlos\" });\n\t} catch (e: any) {\n\t\tif (!(e instanceof GoError)) {\n\t\t\tthrow e;\n\t\t}\n\t\tctx.println(e.value.Error());\n\t}\n}\n"), 0644))
+	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/context\";\n\nexport default function main(ctx: Context) {\n\ttry {\n\t\tctx.templateToString(\"templates/missing.tpl\", { name: \"Carlos\" });\n\t} catch (e: any) {\n\t\tif (!(e instanceof GoError)) {\n\t\t\tthrow e;\n\t\t}\n\t\tctx.println(e.value.Error());\n\t}\n}\n"), 0644))
 
 	var output bytes.Buffer
 	ctx.stdout = &output
@@ -114,7 +114,7 @@ func TestContext_Run_ParsesJSONThroughRunnerContext(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(tempRoot, "data", "input.json"), []byte(`{"source":"cwd"}`), 0644))
 	require.NoError(t, os.WriteFile(filepath.Join(projectDir, "data", "input.json"), []byte(`{"source":"file","enabled":true}`), 0644))
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
-	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/types\";\n\nexport default function main(ctx: Context) {\n\tconst bytes = '{\"source\":\"bytes\",\"count\":2}'.split('').map((char) => char.charCodeAt(0));\n\tconst fromBytes = ctx.parseJSONFromBytes(bytes);\n\tconst fromString = ctx.parseJSONFromString('{\"source\":\"string\",\"items\":[\"a\",\"b\"]}');\n\tconst fromFile = ctx.parseJSONFromFile('data/input.json');\n\tctx.println(JSON.stringify({ fromBytes, fromString, fromFile }));\n}\n"), 0644))
+	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/context\";\n\nexport default function main(ctx: Context) {\n\tconst bytes = '{\"source\":\"bytes\",\"count\":2}'.split('').map((char) => char.charCodeAt(0));\n\tconst fromBytes = ctx.parseJSONFromBytes(bytes);\n\tconst fromString = ctx.parseJSONFromString('{\"source\":\"string\",\"items\":[\"a\",\"b\"]}');\n\tconst fromFile = ctx.parseJSONFromFile('data/input.json');\n\tctx.println(JSON.stringify({ fromBytes, fromString, fromFile }));\n}\n"), 0644))
 
 	var output bytes.Buffer
 	ctx.stdout = &output
@@ -131,7 +131,7 @@ func TestContext_Run_ParseJSONPreservesDeterministicObjectKeyOrder(t *testing.T)
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
 	require.NoError(t, os.MkdirAll(filepath.Dir(dataFile), 0755))
 	require.NoError(t, os.WriteFile(dataFile, []byte("{\n  \"z\": 1,\n  \"a\": {\n    \"beta\": 1,\n    \"alpha\": 2\n  },\n  \"m\": 3\n}\n"), 0644))
-	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/types\";\n\nexport default function main(ctx: Context) {\n\tconst model = ctx.parseJSONFromFile(\"data/input.json\");\n\tctx.println(JSON.stringify({\n\t\trootKeys: Object.keys(model),\n\t\tnestedKeys: Object.keys(model.a),\n\t}));\n}\n"), 0644))
+	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/context\";\n\nexport default function main(ctx: Context) {\n\tconst model = ctx.parseJSONFromFile(\"data/input.json\");\n\tctx.println(JSON.stringify({\n\t\trootKeys: Object.keys(model),\n\t\tnestedKeys: Object.keys(model.a),\n\t}));\n}\n"), 0644))
 
 	var output bytes.Buffer
 	ctx.stdout = &output
@@ -145,7 +145,7 @@ func TestContext_Run_ParseJSONErrorsCanBeCaughtInTypescript(t *testing.T) {
 	processFile := filepath.Join(projectDir, "x", "generate.ts")
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
-	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/types\";\n\nexport default function main(ctx: Context) {\n\tfor (const run of [\n\t\t() => ctx.parseJSONFromBytes([123]),\n\t\t() => ctx.parseJSONFromString('{'),\n\t\t() => ctx.parseJSONFromFile('missing.json'),\n\t]) {\n\t\ttry {\n\t\t\trun();\n\t\t} catch (e: any) {\n\t\t\tif (!(e instanceof GoError)) {\n\t\t\t\tthrow e;\n\t\t\t}\n\t\t\tctx.println(e.value.Error());\n\t\t}\n\t}\n}\n"), 0644))
+	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/context\";\n\nexport default function main(ctx: Context) {\n\tfor (const run of [\n\t\t() => ctx.parseJSONFromBytes([123]),\n\t\t() => ctx.parseJSONFromString('{'),\n\t\t() => ctx.parseJSONFromFile('missing.json'),\n\t]) {\n\t\ttry {\n\t\t\trun();\n\t\t} catch (e: any) {\n\t\t\tif (!(e instanceof GoError)) {\n\t\t\t\tthrow e;\n\t\t\t}\n\t\t\tctx.println(e.value.Error());\n\t\t}\n\t}\n}\n"), 0644))
 
 	var output bytes.Buffer
 	ctx.stdout = &output
@@ -163,7 +163,7 @@ func TestContext_Run_ParsesOpenAPIThroughRunnerContextWithDeterministicOrder(t *
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
 	require.NoError(t, os.MkdirAll(filepath.Dir(specFile), 0755))
 	require.NoError(t, os.WriteFile(specFile, []byte(testOpenAPI3Document), 0644))
-	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/types\";\n\nexport default function main(ctx: Context) {\n\tconst spec = ctx.parseOpenAPIFromFile(\"specs/api.yaml\");\n\tctx.println(JSON.stringify({\n\t\tpathKeys: Object.keys(spec.paths),\n\t\tpropertyKeys: Object.keys(spec.components.schemas.Sample.properties),\n\t}));\n}\n"), 0644))
+	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/context\";\n\nexport default function main(ctx: Context) {\n\tconst spec = ctx.parseOpenAPIFromFile(\"specs/api.yaml\");\n\tctx.println(JSON.stringify({\n\t\tpathKeys: Object.keys(spec.paths),\n\t\tpropertyKeys: Object.keys(spec.components.schemas.Sample.properties),\n\t}));\n}\n"), 0644))
 
 	var output bytes.Buffer
 	ctx.stdout = &output
@@ -177,7 +177,7 @@ func TestContext_Run_OpenAPIErrorsCanBeCaughtInTypescript(t *testing.T) {
 	processFile := filepath.Join(projectDir, "x", "generate.ts")
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
-	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/types\";\n\nexport default function main(ctx: Context) {\n\tfor (const run of [\n\t\t() => ctx.parseOpenAPIFromString(\"swagger: '2.0'\\ninfo:\\n  title: Legacy\\n  version: 1.0.0\\npaths: {}\\n\"),\n\t\t() => ctx.parseOpenAPIFromFile(\"missing.yaml\"),\n\t]) {\n\t\ttry {\n\t\t\trun();\n\t\t} catch (e: any) {\n\t\t\tif (!(e instanceof GoError)) {\n\t\t\t\tthrow e;\n\t\t\t}\n\t\t\tctx.println(e.value.Error());\n\t\t}\n\t}\n}\n"), 0644))
+	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/context\";\n\nexport default function main(ctx: Context) {\n\tfor (const run of [\n\t\t() => ctx.parseOpenAPIFromString(\"swagger: '2.0'\\ninfo:\\n  title: Legacy\\n  version: 1.0.0\\npaths: {}\\n\"),\n\t\t() => ctx.parseOpenAPIFromFile(\"missing.yaml\"),\n\t]) {\n\t\ttry {\n\t\t\trun();\n\t\t} catch (e: any) {\n\t\t\tif (!(e instanceof GoError)) {\n\t\t\t\tthrow e;\n\t\t\t}\n\t\t\tctx.println(e.value.Error());\n\t\t}\n\t}\n}\n"), 0644))
 
 	var output bytes.Buffer
 	ctx.stdout = &output

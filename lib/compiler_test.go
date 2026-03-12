@@ -15,7 +15,7 @@ func TestCompiler_CompileTypescript(t *testing.T) {
 	ctx, config, mainFile, helperFile := setupLoaderTestProject(t, "TestCompiler_CompileTypescript")
 
 	require.NoError(t, os.WriteFile(helperFile, []byte(`export const message = "compiled helper";`), 0644))
-	require.NoError(t, os.WriteFile(mainFile, []byte("import type { Context } from \"@ccode/types\";\nimport { message } from \"./helper\";\n\nexport default function main(ctx: Context) {\n\tctx.println(message);\n}\n"), 0644))
+	require.NoError(t, os.WriteFile(mainFile, []byte("import type { Context } from \"@ccode/context\";\nimport { message } from \"./helper\";\n\nexport default function main(ctx: Context) {\n\tctx.println(message);\n}\n"), 0644))
 
 	result, err := ctx.compileTypescript("main.ts")
 	require.NoError(t, err)
@@ -62,7 +62,7 @@ func TestCompiler_CompileTypescript_RebuildsForChangedSources(t *testing.T) {
 	ctx, config, mainFile, helperFile := setupLoaderTestProject(t, "TestCompiler_CompileTypescript_RebuildsForChangedSources")
 
 	require.NoError(t, os.WriteFile(helperFile, []byte(`export const message = "first build";`), 0644))
-	require.NoError(t, os.WriteFile(mainFile, []byte("import type { Context } from \"@ccode/types\";\nimport { message } from \"./helper\";\n\nexport default function main(ctx: Context) {\n\tctx.println(message);\n}\n"), 0644))
+	require.NoError(t, os.WriteFile(mainFile, []byte("import type { Context } from \"@ccode/context\";\nimport { message } from \"./helper\";\n\nexport default function main(ctx: Context) {\n\tctx.println(message);\n}\n"), 0644))
 
 	_, err := ctx.compileTypescript("main.ts")
 	require.NoError(t, err)
