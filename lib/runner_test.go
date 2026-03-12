@@ -101,6 +101,23 @@ func TestContext_Run_ParsesJSONThroughRunnerContext(t *testing.T) {
 	assert.JSONEq(t, `{"fromBytes":{"source":"bytes","count":2},"fromString":{"source":"string","items":["a","b"]},"fromFile":{"source":"file","enabled":true}}`, output.String())
 }
 
+func TestContext_Run_ParseJSONPreservesDeterministicObjectKeyOrder(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestContext_Run_ParseJSONPreservesDeterministicObjectKeyOrder")
+	processFile := filepath.Join(projectDir, "x", "generate.ts")
+	dataFile := filepath.Join(projectDir, "data", "input.json")
+
+	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
+	require.NoError(t, os.MkdirAll(filepath.Dir(dataFile), 0755))
+	require.NoError(t, os.WriteFile(dataFile, []byte("{\n  \"z\": 1,\n  \"a\": {\n    \"beta\": 1,\n    \"alpha\": 2\n  },\n  \"m\": 3\n}\n"), 0644))
+	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/types\";\n\nexport default function main(ctx: Context) {\n\tconst model = ctx.parseJSONFromFile(\"data/input.json\");\n\tctx.println(JSON.stringify({\n\t\trootKeys: Object.keys(model),\n\t\tnestedKeys: Object.keys(model.a),\n\t}));\n}\n"), 0644))
+
+	var output bytes.Buffer
+	ctx.stdout = &output
+
+	require.NoError(t, ctx.Run("x/generate"))
+	assert.JSONEq(t, `{"rootKeys":["z","a","m"],"nestedKeys":["beta","alpha"]}`, output.String())
+}
+
 func TestContext_Run_ParseJSONErrorsCanBeCaughtInTypescript(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestContext_Run_ParseJSONErrorsCanBeCaughtInTypescript")
 	processFile := filepath.Join(projectDir, "x", "generate.ts")
@@ -112,7 +129,7 @@ func TestContext_Run_ParseJSONErrorsCanBeCaughtInTypescript(t *testing.T) {
 	ctx.stdout = &output
 
 	require.NoError(t, ctx.Run("x/generate"))
-	assert.Contains(t, output.String(), "unexpected end of JSON input")
+	assert.Contains(t, output.String(), "Unexpected end of JSON input")
 	assert.Contains(t, output.String(), "file not found: missing.json")
 }
 

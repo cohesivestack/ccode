@@ -16,6 +16,9 @@ var runnerEntryPointPattern = regexp.MustCompile(`(?s)export\s+default\s+functio
 
 type RunnerContext struct {
 	ccodeContext *Context
+	runtime      *goja.Runtime
+	jsonObject   *goja.Object
+	jsonParse    goja.Callable
 	stdout       io.Writer
 }
 
@@ -110,7 +113,11 @@ func (ctx *Context) executeRunnerBundle(outputFiles []api.OutputFile) error {
 
 	runnerContext := &RunnerContext{
 		ccodeContext: ctx,
+		runtime:      runtime,
 		stdout:       ctx.stdout,
+	}
+	if err := runnerContext.initializeJSONParser(); err != nil {
+		return err
 	}
 	jsContext, err := runnerContext.toValue(runtime)
 	if err != nil {
@@ -121,6 +128,22 @@ func (ctx *Context) executeRunnerBundle(outputFiles []api.OutputFile) error {
 		return fmt.Errorf("run default export: %w", err)
 	}
 
+	return nil
+}
+
+func (ctx *RunnerContext) initializeJSONParser() error {
+	if ctx == nil || ctx.runtime == nil {
+		return fmt.Errorf("runner context runtime is not initialized")
+	}
+
+	jsonObject := ctx.runtime.Get("JSON").ToObject(ctx.runtime)
+	jsonParse, ok := goja.AssertFunction(jsonObject.Get("parse"))
+	if !ok {
+		return fmt.Errorf("JSON.parse is not available")
+	}
+
+	ctx.jsonObject = jsonObject
+	ctx.jsonParse = jsonParse
 	return nil
 }
 
