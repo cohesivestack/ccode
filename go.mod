@@ -7,6 +7,7 @@ require (
 	github.com/dop251/goja v0.0.0-20260305124333-6a7976c22267
 	github.com/evanw/esbuild v0.27.3
 	github.com/nikolalohinski/gonja/v2 v2.7.0
+	github.com/pb33f/libopenapi v0.34.2
 	github.com/spf13/cobra v1.10.1
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
@@ -28,7 +29,6 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pb33f/jsonpath v0.8.1 // indirect
-	github.com/pb33f/libopenapi v0.34.2 // indirect
 	github.com/pb33f/ordered-map/v2 v2.3.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
