@@ -8,5 +8,5 @@ var ConfigTemplate string
 //go:embed tsconfig.json
 var TSConfigTemplate string
 
-//go:embed types.ts
-var TypesTemplate string
+//go:embed context.ts
+var ContextTemplate string
