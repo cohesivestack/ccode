@@ -1,0 +1,106 @@
+# Project layout
+
+## What `ccode init` creates
+
+Running `ccode init [path]` creates a project directory and a config file.
+
+Default result:
+
+```text
+./ccode.yaml
+./ccode/
+  tsconfig.json
+  .ccode/
+    build/
+    lib/
+      context.ts
+      openapi.ts
+```
+
+If a target file already exists, `init` leaves it in place. It does not overwrite the config file, the generated context typings, the generated OpenAPI typings, or `tsconfig.json`.
+
+## Config and path resolution
+
+Current config keys:
+
+```yaml
+ccode_path: ccode
+output_path: .
+hidden_path: .ccode
+```
+
+Notes:
+
+- `path` is still accepted as a legacy alias for `ccode_path`.
+- `ccode_path` is resolved relative to the config file directory.
+- `output_path` is used as written. Relative values resolve from the directory where the CLI runs.
+- `hidden_path` defaults to `.ccode`. When relative, the runtime resolves it under `ccode_path`.
+
+Config precedence:
+
+1. Built-in defaults
+2. `ccode.yaml`
+3. Environment variables
+4. CLI flags
+
+Supported environment overrides:
+
+- `CCODE_CCODE_PATH`
+- `CCODE_PATH` as a legacy alias
+- `CCODE_OUTPUT_PATH`
+- `CCODE_HIDDEN_PATH`
+
+Supported CLI overrides:
+
+- `--config`
+- `--ccode-path`
+- `--output-path`
+- `--path` as a deprecated alias for `--ccode-path`
+
+## Recommended source layout inside `ccode_path`
+
+The runtime does not force folders beyond the process file path, but this layout keeps projects readable:
+
+```text
+ccode/
+  api/
+    generate.ts
+  data/
+    seed.json
+  specs/
+    service.yaml
+  templates/
+    docs/
+      operation.tpl
+    sdk/
+      client.tpl
+```
+
+Recommended conventions:
+
+- Store process entrypoints in a stable folder such as `api/`, `codegen/`, or `processes/`.
+- Keep template files under `templates/`.
+- Keep OpenAPI files under `specs/`.
+- Keep test or seed JSON under `data/`.
+- Leave `.ccode/build/` to the compiler cache.
+
+## Process path rules
+
+The CLI expects `ccode run <process>`, where `<process>` is:
+
+- relative to `ccode_path`
+- written without the `.ts` extension
+- not absolute
+- not `.` or `..`
+- not a path that escapes the workspace with `../...`
+
+Example:
+
+- File: `ccode/api/generate.ts`
+- Command: `ccode run api/generate`
+
+## Practical agent rules
+
+- Read `ccode.yaml` before creating files.
+- Keep templates and spec files inside `ccode_path` unless the user explicitly wants external inputs.
+- Do not edit `.ccode/lib/context.ts` in application repos; regenerate it through `ccode init` or change the CLI templates in the source repo instead.

@@ -1,0 +1,7 @@
+interface:
+  display_name: "Cohesive Code"
+  short_description: "Build or fix cohesive-code workspaces"
+  default_prompt: "Use $cohesive-code to inspect, extend, or repair this ccode workspace and validate the target generation flow."
+
+policy:
+  allow_implicit_invocation: true
