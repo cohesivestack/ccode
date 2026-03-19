@@ -1,3 +1,5 @@
+// Source: https://github.com/kogosoftwarellc/open-api/blob/main/packages/openapi-types/index.ts
+
 /* tslint:disable:no-namespace no-empty-interface */
 export namespace OpenAPI {
   // OpenAPI extensions can be declared using generics
