@@ -2,7 +2,7 @@
 set -eu
 
 if [ "$#" -lt 1 ]; then
-  echo "usage: sh skill/scripts/smoke_run.sh <process>" >&2
+  echo "usage: sh skills/cohesive-code/scripts/smoke_run.sh <process>" >&2
   echo "optional env: CCODE_RUNNER='ccode' or CCODE_RUNNER='go run .'" >&2
   echo "optional env: CCODE_CONFIG=path/to/ccode.yaml" >&2
   exit 1

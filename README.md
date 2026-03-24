@@ -47,3 +47,17 @@ output_path: . # The root path where will be saved the produced artifacts. This 
 ```bash
 ccode --config [config-path] --ccode-path [path] --output-path [output-path] run [process]
 ```
+
+## Agent skill installation
+
+This repository includes an installable Agent Skill package for the `skills` CLI:
+
+```bash
+npx skills add cohesivestack/ccode
+```
+
+To install only the Cohesive Code skill:
+
+```bash
+npx skills add cohesivestack/ccode --skill cohesive-code
+```

@@ -1,6 +1,9 @@
 ---
 name: cohesive-code
 description: Use when working with Cohesive Code or ccode projects, including initializing a workspace, editing ccode.yaml config, authoring or fixing TypeScript processes, rendering Gonja templates, using OpenAPI-driven generators, and validating ccode run workflows across editors and agents.
+metadata:
+  author: cohesivestack
+  version: "1.0.0"
 ---
 
 # Cohesive Code
