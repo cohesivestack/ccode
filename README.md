@@ -48,6 +48,34 @@ output_path: . # The root path where will be saved the produced artifacts. This 
 ccode --config [config-path] --ccode-path [path] --output-path [output-path] run [process]
 ```
 
+## Releases
+
+Releases are automated with GoReleaser through GitHub Actions.
+
+* Trigger: push a Git tag matching `v*`
+* Accepted format: `vMAJOR.MINOR.PATCH` (for example, `v1.2.3`) and prereleases (for example, `v1.3.0-rc1`)
+* Published assets:
+  * `linux/amd64`
+  * `linux/arm64`
+  * `darwin/amd64`
+  * `darwin/arm64`
+  * `windows/amd64`
+* Each release includes platform archives and `checksums.txt` (SHA-256)
+
+**Create a release**
+
+```bash
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+## Install from release assets
+
+1. Open the GitHub Releases page: `https://github.com/cohesivestack/ccode/releases`
+2. Download the archive for your platform
+3. Verify the downloaded file with `checksums.txt`
+4. Extract and place the `ccode` binary in your `PATH`
+
 ## Agent skill installation
 
 This repository includes an installable Agent Skill package for the `skills` CLI:
