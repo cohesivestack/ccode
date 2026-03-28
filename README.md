@@ -33,6 +33,22 @@ Details to be determined.
 * Use https://github.com/pb33f/libopenapi as the OpenApi model parser
 * Tests with testify package
 
+## Installation
+
+### Wrapper installer (recommended)
+
+Install the wrapper to `~/.local/bin/ccode` with `curl`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cohesivestack/ccode/main/installer/install.sh | bash
+```
+
+Or run the installer from this repository clone:
+
+```bash
+bash installer/install.sh
+```
+
 ## Config
 
 **Config sample**
@@ -69,16 +85,9 @@ git tag v1.2.3
 git push origin v1.2.3
 ```
 
-## Install from release assets
+### How the wrapper works
 
-1. Open the GitHub Releases page: `https://github.com/cohesivestack/ccode/releases`
-2. Download the archive for your platform
-3. Verify the downloaded file with `checksums.txt`
-4. Extract and place the `ccode` binary in your `PATH`
-
-## Wrapper installer command
-
-The repository includes a Bash wrapper at `installer/bin/ccode` that:
+The wrapper at `installer/bin/ccode`:
 
 * Resolves version precedence in this order:
   * `CCODE_VERSION`
@@ -89,14 +98,18 @@ The repository includes a Bash wrapper at `installer/bin/ccode` that:
 * Caches binaries under `~/.cache/ccode/releases`
 * For normal execution, does not modify `.ccode/version` or `~/.config/ccode/version`
 * Supports pinning:
-  * `ccode pin <version>` writes `.ccode/version` in the current directory
-  * `ccode pin <version> --global` writes `~/.config/ccode/version`
+  * `ccode pin`
+  * `ccode pin <version>`
+  * `ccode pin latest`
+  * `ccode pin --global`
+  * `ccode pin <version> --global`
 
-Install the wrapper to `~/.local/bin/ccode` with:
+## Install from release assets
 
-```bash
-bash installer/install.sh
-```
+1. Open the GitHub Releases page: `https://github.com/cohesivestack/ccode/releases`
+2. Download the archive for your platform
+3. Verify the downloaded file with `checksums.txt`
+4. Extract and place the `ccode` binary in your `PATH`
 
 ## Agent skill installation
 
