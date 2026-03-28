@@ -76,6 +76,22 @@ git push origin v1.2.3
 3. Verify the downloaded file with `checksums.txt`
 4. Extract and place the `ccode` binary in your `PATH`
 
+## Wrapper installer command
+
+The repository includes a Bash wrapper at `installer/bin/ccode` that:
+
+* Resolves version precedence in this order:
+  * `CCODE_VERSION`
+  * nearest `.ccode/version` (searching upward from the current directory)
+  * `~/.config/ccode/version`
+  * highest cached version in `~/.cache/ccode/releases`
+  * latest stable GitHub release (non-draft, non-prerelease)
+* Caches binaries under `~/.cache/ccode/releases`
+* For normal execution, does not modify `.ccode/version` or `~/.config/ccode/version`
+* Supports pinning:
+  * `ccode pin <version>` writes `.ccode/version` in the current directory
+  * `ccode pin <version> --global` writes `~/.config/ccode/version`
+
 ## Agent skill installation
 
 This repository includes an installable Agent Skill package for the `skills` CLI:

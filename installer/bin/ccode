@@ -1,0 +1,382 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ccode wrapper behavior:
+# - Version precedence: CCODE_VERSION -> nearest .ccode/version (walk up) -> ~/.config/ccode/version
+# - If no version is configured: use highest cached semantic version under ~/.cache/ccode/releases
+# - If cache has no installed versions: resolve latest stable (non-draft, non-prerelease) from GitHub Releases
+# - Normal command execution is read-only for version config files (.ccode/version and ~/.config/ccode/version)
+# - Cache/install writes are only under ~/.cache/ccode/releases
+# - Built-in `pin` writes version atomically to .ccode/version (local) or ~/.config/ccode/version (--global)
+
+GITHUB_REPO="cohesivestack/ccode"
+GITHUB_API_BASE="https://api.github.com/repos/${GITHUB_REPO}"
+CACHE_BASE="${XDG_CACHE_HOME:-$HOME/.cache}/ccode/releases"
+GLOBAL_VERSION_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/ccode/version"
+
+OS=""
+ARCH=""
+PLATFORM=""
+ASSET_EXT=""
+BINARY_NAME="ccode"
+
+log_err() {
+  printf 'ccode wrapper: %s\n' "$*" >&2
+}
+
+die() {
+  log_err "$*"
+  exit 1
+}
+
+trim_line() {
+  local value="$1"
+  value="${value#"${value%%[![:space:]]*}"}"
+  value="${value%"${value##*[![:space:]]}"}"
+  printf '%s' "$value"
+}
+
+normalize_version() {
+  local input
+  input="$(trim_line "${1:-}")"
+  if [[ -z "$input" ]]; then
+    printf ''
+    return 0
+  fi
+  if [[ "$input" == "latest" ]]; then
+    printf 'latest'
+    return 0
+  fi
+  if [[ "$input" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([\-+][0-9A-Za-z.-]+)?$ ]]; then
+    printf '%s' "$input"
+    return 0
+  fi
+  if [[ "$input" =~ ^[0-9]+\.[0-9]+\.[0-9]+([\-+][0-9A-Za-z.-]+)?$ ]]; then
+    printf 'v%s' "$input"
+    return 0
+  fi
+  if [[ "$input" =~ ^v.+$ ]]; then
+    printf '%s' "$input"
+    return 0
+  fi
+  printf 'v%s' "$input"
+}
+
+read_version_file() {
+  local file="$1"
+  [[ -f "$file" ]] || return 1
+  local line value
+  line="$(tr -d '\r' <"$file" | sed -n '1p')"
+  value="$(trim_line "$line")"
+  [[ -n "$value" ]] || return 1
+  printf '%s' "$value"
+}
+
+find_project_version_file() {
+  local dir="$PWD"
+  while true; do
+    local candidate="${dir}/.ccode/version"
+    if [[ -f "$candidate" ]]; then
+      printf '%s' "$candidate"
+      return 0
+    fi
+    if [[ "$dir" == "/" ]]; then
+      return 1
+    fi
+    dir="$(dirname "$dir")"
+  done
+}
+
+is_semver_tag() {
+  local version="$1"
+  [[ "$version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([\-+][0-9A-Za-z.-]+)?$ ]]
+}
+
+detect_platform() {
+  local uname_s uname_m
+  uname_s="$(uname -s)"
+  uname_m="$(uname -m)"
+
+  case "$uname_s" in
+    Linux) OS="linux" ;;
+    Darwin) OS="darwin" ;;
+    MINGW*|MSYS*|CYGWIN*) OS="windows" ;;
+    *) die "unsupported operating system: ${uname_s}" ;;
+  esac
+
+  case "$uname_m" in
+    x86_64|amd64) ARCH="amd64" ;;
+    arm64|aarch64) ARCH="arm64" ;;
+    *) die "unsupported architecture: ${uname_m}" ;;
+  esac
+
+  case "${OS}/${ARCH}" in
+    linux/amd64|linux/arm64|darwin/amd64|darwin/arm64|windows/amd64) ;;
+    *) die "unsupported platform: ${OS}/${ARCH}" ;;
+  esac
+
+  PLATFORM="${OS}_${ARCH}"
+  if [[ "$OS" == "windows" ]]; then
+    ASSET_EXT="zip"
+    BINARY_NAME="ccode.exe"
+  else
+    ASSET_EXT="tar.gz"
+    BINARY_NAME="ccode"
+  fi
+}
+
+cache_install_dir() {
+  local version="$1"
+  printf '%s/%s/%s' "$CACHE_BASE" "$version" "$PLATFORM"
+}
+
+installed_binary_path() {
+  local version="$1"
+  printf '%s/%s' "$(cache_install_dir "$version")" "$BINARY_NAME"
+}
+
+version_has_any_cached_binary() {
+  local version="$1"
+  local version_dir="${CACHE_BASE}/${version}"
+  [[ -d "$version_dir" ]] || return 1
+  local found
+  found="$(find "$version_dir" -type f \( -name 'ccode' -o -name 'ccode.exe' \) -print -quit 2>/dev/null || true)"
+  [[ -n "$found" ]]
+}
+
+find_highest_cached_version() {
+  [[ -d "$CACHE_BASE" ]] || return 1
+
+  local versions=()
+  local path version
+  shopt -s nullglob
+  for path in "$CACHE_BASE"/v*; do
+    [[ -d "$path" ]] || continue
+    version="$(basename "$path")"
+    is_semver_tag "$version" || continue
+    version_has_any_cached_binary "$version" || continue
+    versions+=("$version")
+  done
+  shopt -u nullglob
+
+  [[ "${#versions[@]}" -gt 0 ]] || return 1
+  printf '%s\n' "${versions[@]}" | sort -V | tail -n1
+}
+
+github_api_get() {
+  local path="$1"
+  curl -fsSL \
+    -H "Accept: application/vnd.github+json" \
+    -H "X-GitHub-Api-Version: 2022-11-28" \
+    "${GITHUB_API_BASE}${path}"
+}
+
+json_get_first_string_field() {
+  local json="$1"
+  local field="$2"
+  printf '%s\n' "$json" | sed -n "s/.*\"${field}\":[[:space:]]*\"\\([^\"]*\\)\".*/\\1/p" | head -n1
+}
+
+find_asset_download_url() {
+  local json="$1"
+  local asset_name="$2"
+  local url
+  url="$(
+    printf '%s\n' "$json" | awk -v wanted="$asset_name" '
+      {
+        line=$0
+        if (line ~ /"name":[[:space:]]*"/) {
+          name=line
+          sub(/^.*"name":[[:space:]]*"/, "", name)
+          sub(/".*$/, "", name)
+          in_wanted=(name == wanted)
+        } else if (in_wanted && line ~ /"browser_download_url":[[:space:]]*"/) {
+          out=line
+          sub(/^.*"browser_download_url":[[:space:]]*"/, "", out)
+          sub(/".*$/, "", out)
+          print out
+          exit
+        }
+      }
+    '
+  )"
+  [[ -n "$url" ]] || return 1
+  printf '%s' "$url"
+}
+
+latest_stable_release_tag() {
+  local json tag
+  json="$(github_api_get '/releases/latest')"
+  tag="$(json_get_first_string_field "$json" "tag_name")"
+  [[ -n "$tag" ]] || die "failed to resolve latest stable release tag from GitHub"
+  normalize_version "$tag"
+}
+
+release_asset_name_for_version() {
+  local version="$1"
+  local bare_version="${version#v}"
+  printf 'ccode_%s_%s.%s' "$bare_version" "$PLATFORM" "$ASSET_EXT"
+}
+
+download_release_asset_url() {
+  local version="$1"
+  local asset_name="$2"
+  local json url
+
+  json="$(github_api_get "/releases/tags/${version}")"
+  if url="$(find_asset_download_url "$json" "$asset_name" 2>/dev/null)"; then
+    printf '%s' "$url"
+    return 0
+  fi
+
+  printf 'https://github.com/%s/releases/download/%s/%s' "$GITHUB_REPO" "$version" "$asset_name"
+}
+
+ensure_dependency() {
+  local cmd="$1"
+  command -v "$cmd" >/dev/null 2>&1 || die "required command not found: ${cmd}"
+}
+
+install_version_if_needed() {
+  local version="$1"
+  local target_bin
+  target_bin="$(installed_binary_path "$version")"
+  if [[ -x "$target_bin" ]]; then
+    printf '%s' "$target_bin"
+    return 0
+  fi
+
+  local install_dir
+  install_dir="$(cache_install_dir "$version")"
+  mkdir -p "$install_dir"
+
+  local tmp_dir
+  tmp_dir="$(mktemp -d)"
+  (
+    set -euo pipefail
+    trap 'rm -rf "$tmp_dir"' EXIT
+
+    local asset_name asset_url archive extract_dir extracted_bin temp_bin
+    asset_name="$(release_asset_name_for_version "$version")"
+    asset_url="$(download_release_asset_url "$version" "$asset_name")"
+    archive="${tmp_dir}/${asset_name}"
+    extract_dir="${tmp_dir}/extract"
+    mkdir -p "$extract_dir"
+
+    curl -fL --retry 3 --retry-delay 1 -o "$archive" "$asset_url"
+
+    if [[ "$ASSET_EXT" == "zip" ]]; then
+      ensure_dependency unzip
+      unzip -q "$archive" -d "$extract_dir"
+    else
+      tar -xzf "$archive" -C "$extract_dir"
+    fi
+
+    extracted_bin="$(find "$extract_dir" -type f -name "$BINARY_NAME" -print -quit)"
+    [[ -n "$extracted_bin" ]] || die "downloaded asset did not contain ${BINARY_NAME}"
+
+    temp_bin="${install_dir}/.${BINARY_NAME}.tmp.$$"
+    cp "$extracted_bin" "$temp_bin"
+    chmod +x "$temp_bin"
+    mv -f "$temp_bin" "$target_bin"
+  )
+
+  printf '%s' "$target_bin"
+}
+
+pin_usage() {
+  cat >&2 <<'EOF'
+Usage:
+  ccode pin <version>
+  ccode pin <version> --global
+EOF
+}
+
+pin_command() {
+  shift
+  local input_version="${1:-}"
+  [[ -n "$input_version" ]] || {
+    pin_usage
+    die "missing version argument for pin"
+  }
+  shift || true
+
+  local global_scope=0
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --global) global_scope=1 ;;
+      *) pin_usage; die "unknown argument for pin: $1" ;;
+    esac
+    shift
+  done
+
+  local normalized target_dir target_file temp_file
+  normalized="$(normalize_version "$input_version")"
+  [[ -n "$normalized" ]] || die "invalid pin version: ${input_version}"
+
+  if [[ "$global_scope" -eq 1 ]]; then
+    target_dir="$(dirname "$GLOBAL_VERSION_FILE")"
+    target_file="$GLOBAL_VERSION_FILE"
+  else
+    target_dir="${PWD}/.ccode"
+    target_file="${target_dir}/version"
+  fi
+
+  mkdir -p "$target_dir"
+  temp_file="$(mktemp "${target_dir}/version.tmp.XXXXXX")"
+  printf '%s\n' "$normalized" >"$temp_file"
+  mv -f "$temp_file" "$target_file"
+
+  printf '%s\n' "$normalized"
+}
+
+resolve_requested_version() {
+  local value project_version_file cached
+
+  if [[ -n "${CCODE_VERSION:-}" ]]; then
+    normalize_version "$CCODE_VERSION"
+    return 0
+  fi
+
+  if project_version_file="$(find_project_version_file 2>/dev/null)"; then
+    if value="$(read_version_file "$project_version_file" 2>/dev/null)"; then
+      normalize_version "$value"
+      return 0
+    fi
+  fi
+
+  if value="$(read_version_file "$GLOBAL_VERSION_FILE" 2>/dev/null)"; then
+    normalize_version "$value"
+    return 0
+  fi
+
+  if cached="$(find_highest_cached_version 2>/dev/null)"; then
+    printf '%s' "$cached"
+    return 0
+  fi
+
+  latest_stable_release_tag
+}
+
+main() {
+  detect_platform
+  mkdir -p "$CACHE_BASE"
+
+  if [[ "${1:-}" == "pin" ]]; then
+    pin_command "$@"
+    return 0
+  fi
+
+  local requested_version resolved_version real_binary
+  requested_version="$(resolve_requested_version)"
+  if [[ "$requested_version" == "latest" ]]; then
+    resolved_version="$(latest_stable_release_tag)"
+  else
+    resolved_version="$requested_version"
+  fi
+
+  real_binary="$(install_version_if_needed "$resolved_version")"
+  exec "$real_binary" "$@"
+}
+
+main "$@"
