@@ -92,6 +92,12 @@ The repository includes a Bash wrapper at `installer/bin/ccode` that:
   * `ccode pin <version>` writes `.ccode/version` in the current directory
   * `ccode pin <version> --global` writes `~/.config/ccode/version`
 
+Install the wrapper to `~/.local/bin/ccode` with:
+
+```bash
+bash installer/install.sh
+```
+
 ## Agent skill installation
 
 This repository includes an installable Agent Skill package for the `skills` CLI:
