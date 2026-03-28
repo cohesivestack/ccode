@@ -287,47 +287,88 @@ install_version_if_needed() {
 pin_usage() {
   cat >&2 <<'EOF'
 Usage:
+  ccode pin
   ccode pin <version>
+  ccode pin latest
+  ccode pin --global
+  ccode pin latest --global
   ccode pin <version> --global
 EOF
 }
 
+find_git_repo_root() {
+  command -v git >/dev/null 2>&1 || return 1
+  git -C "$PWD" rev-parse --show-toplevel 2>/dev/null
+}
+
+resolve_local_pin_target_file() {
+  local existing_file git_root
+  if existing_file="$(find_project_version_file 2>/dev/null)"; then
+    printf '%s' "$existing_file"
+    return 0
+  fi
+
+  if git_root="$(find_git_repo_root 2>/dev/null)"; then
+    printf '%s/.ccode/version' "$git_root"
+    return 0
+  fi
+
+  printf '%s/.ccode/version' "$PWD"
+}
+
 pin_command() {
   shift
-  local input_version="${1:-}"
-  [[ -n "$input_version" ]] || {
-    pin_usage
-    die "missing version argument for pin"
-  }
-  shift || true
-
+  local input_version=""
   local global_scope=0
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --global) global_scope=1 ;;
-      *) pin_usage; die "unknown argument for pin: $1" ;;
+      -*)
+        pin_usage
+        die "unknown argument for pin: $1"
+        ;;
+      *)
+        if [[ -n "$input_version" ]]; then
+          pin_usage
+          die "too many positional arguments for pin"
+        fi
+        input_version="$1"
+        ;;
     esac
     shift
   done
 
-  local normalized target_dir target_file temp_file
-  normalized="$(normalize_version "$input_version")"
-  [[ -n "$normalized" ]] || die "invalid pin version: ${input_version}"
+  local resolved_version target_dir target_file temp_file
+  if [[ -z "$input_version" ]]; then
+    if resolved_version="$(find_highest_cached_version 2>/dev/null)"; then
+      :
+    else
+      resolved_version="$(latest_stable_release_tag)"
+    fi
+  elif [[ "$input_version" == "latest" ]]; then
+    resolved_version="$(latest_stable_release_tag)"
+  else
+    resolved_version="$(normalize_version "$input_version")"
+    if ! is_semver_tag "$resolved_version"; then
+      pin_usage
+      die "invalid version for pin: ${input_version}"
+    fi
+  fi
 
   if [[ "$global_scope" -eq 1 ]]; then
     target_dir="$(dirname "$GLOBAL_VERSION_FILE")"
     target_file="$GLOBAL_VERSION_FILE"
   else
-    target_dir="${PWD}/.ccode"
-    target_file="${target_dir}/version"
+    target_file="$(resolve_local_pin_target_file)"
+    target_dir="$(dirname "$target_file")"
   fi
 
   mkdir -p "$target_dir"
   temp_file="$(mktemp "${target_dir}/version.tmp.XXXXXX")"
-  printf '%s\n' "$normalized" >"$temp_file"
+  printf '%s\n' "$resolved_version" >"$temp_file"
   mv -f "$temp_file" "$target_file"
 
-  printf '%s\n' "$normalized"
+  printf '%s\n' "$resolved_version"
 }
 
 resolve_requested_version() {
