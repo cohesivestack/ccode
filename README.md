@@ -40,7 +40,7 @@ Details to be determined.
 Install the wrapper to `~/.local/bin/ccode` with `curl`:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/cohesivestack/ccode/main/installer/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/cohesivestack/ccode/master/installer/install.sh | bash
 ```
 
 Or run the installer from this repository clone:
