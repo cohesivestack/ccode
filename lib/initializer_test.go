@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestInit_CreatesProjectStructure(t *testing.T) {
+func TestInitializer_InitCreatesProjectStructure(t *testing.T) {
 	originalWD, err := os.Getwd()
 	require.NoError(t, err)
 
@@ -58,7 +58,7 @@ func TestInit_CreatesProjectStructure(t *testing.T) {
 	assert.Equal(t, templateassets.TSConfigTemplate, string(tsconfigContent))
 }
 
-func TestInit_UsesDefaultsAndDoesNotOverwriteExistingFiles(t *testing.T) {
+func TestInitializer_InitUsesDefaultsAndDoesNotOverwriteExistingFiles(t *testing.T) {
 	originalWD, err := os.Getwd()
 	require.NoError(t, err)
 

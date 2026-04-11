@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestContext_Run_ValidatesDefaultExportContextSignature(t *testing.T) {
-	ctx, projectDir := setupRunnerTestProject(t, "TestContext_Run_ValidatesDefaultExportContextSignature")
+func TestRunner_RunValidatesDefaultExportContextSignature(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunValidatesDefaultExportContextSignature")
 	processFile := filepath.Join(projectDir, "x", "generate.ts")
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
@@ -22,8 +22,8 @@ func TestContext_Run_ValidatesDefaultExportContextSignature(t *testing.T) {
 	assert.Contains(t, err.Error(), "must export a default function with a single Context-typed parameter")
 }
 
-func TestContext_Run_ExecutesDefaultExport(t *testing.T) {
-	ctx, projectDir := setupRunnerTestProject(t, "TestContext_Run_ExecutesDefaultExport")
+func TestRunner_RunExecutesDefaultExport(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunExecutesDefaultExport")
 	processFile := filepath.Join(projectDir, "x", "generate.ts")
 	helperFile := filepath.Join(projectDir, "x", "helper.ts")
 
@@ -38,8 +38,8 @@ func TestContext_Run_ExecutesDefaultExport(t *testing.T) {
 	assert.Equal(t, "runner executed\n", output.String())
 }
 
-func TestContext_Run_RendersTemplates(t *testing.T) {
-	ctx, projectDir := setupRunnerTestProject(t, "TestContext_Run_RendersTemplates")
+func TestRunner_RunRendersTemplates(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunRendersTemplates")
 	processFile := filepath.Join(projectDir, "x", "generate.ts")
 	templateFile := filepath.Join(projectDir, "templates", "greeting.tpl")
 
@@ -60,8 +60,8 @@ func TestContext_Run_RendersTemplates(t *testing.T) {
 	assert.Equal(t, "Hello Carlos!", string(content))
 }
 
-func TestContext_Run_RendersTemplatesWithDeterministicObjectOrder(t *testing.T) {
-	ctx, projectDir := setupRunnerTestProject(t, "TestContext_Run_RendersTemplatesWithDeterministicObjectOrder")
+func TestRunner_RunRendersTemplatesWithDeterministicObjectOrder(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunRendersTemplatesWithDeterministicObjectOrder")
 	processFile := filepath.Join(projectDir, "x", "generate.ts")
 	templateFile := filepath.Join(projectDir, "templates", "ordered.tpl")
 
@@ -82,8 +82,8 @@ func TestContext_Run_RendersTemplatesWithDeterministicObjectOrder(t *testing.T) 
 	assert.Equal(t, "z nested a |beta alpha ", string(content))
 }
 
-func TestContext_Run_TemplateErrorsCanBeCaughtInTypescript(t *testing.T) {
-	ctx, projectDir := setupRunnerTestProject(t, "TestContext_Run_TemplateErrorsCanBeCaughtInTypescript")
+func TestRunner_RunTemplateErrorsCanBeCaughtInTypescript(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunTemplateErrorsCanBeCaughtInTypescript")
 	processFile := filepath.Join(projectDir, "x", "generate.ts")
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
@@ -96,8 +96,8 @@ func TestContext_Run_TemplateErrorsCanBeCaughtInTypescript(t *testing.T) {
 	assert.Contains(t, output.String(), "parse template \"templates/missing.tpl\"")
 }
 
-func TestContext_Run_ParsesJSONThroughRunnerContext(t *testing.T) {
-	ctx, projectDir := setupRunnerTestProject(t, "TestContext_Run_ParsesJSONThroughRunnerContext")
+func TestRunner_RunParsesJSONThroughRunnerContext(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunParsesJSONThroughRunnerContext")
 	processFile := filepath.Join(projectDir, "x", "generate.ts")
 
 	originalWD, err := os.Getwd()
@@ -123,8 +123,8 @@ func TestContext_Run_ParsesJSONThroughRunnerContext(t *testing.T) {
 	assert.JSONEq(t, `{"fromBytes":{"source":"bytes","count":2},"fromString":{"source":"string","items":["a","b"]},"fromFile":{"source":"file","enabled":true}}`, output.String())
 }
 
-func TestContext_Run_ParseJSONPreservesDeterministicObjectKeyOrder(t *testing.T) {
-	ctx, projectDir := setupRunnerTestProject(t, "TestContext_Run_ParseJSONPreservesDeterministicObjectKeyOrder")
+func TestRunner_RunParseJSONPreservesDeterministicObjectKeyOrder(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunParseJSONPreservesDeterministicObjectKeyOrder")
 	processFile := filepath.Join(projectDir, "x", "generate.ts")
 	dataFile := filepath.Join(projectDir, "data", "input.json")
 
@@ -140,8 +140,8 @@ func TestContext_Run_ParseJSONPreservesDeterministicObjectKeyOrder(t *testing.T)
 	assert.JSONEq(t, `{"rootKeys":["z","a","m"],"nestedKeys":["beta","alpha"]}`, output.String())
 }
 
-func TestContext_Run_ParseJSONErrorsCanBeCaughtInTypescript(t *testing.T) {
-	ctx, projectDir := setupRunnerTestProject(t, "TestContext_Run_ParseJSONErrorsCanBeCaughtInTypescript")
+func TestRunner_RunParseJSONErrorsCanBeCaughtInTypescript(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunParseJSONErrorsCanBeCaughtInTypescript")
 	processFile := filepath.Join(projectDir, "x", "generate.ts")
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
@@ -155,8 +155,8 @@ func TestContext_Run_ParseJSONErrorsCanBeCaughtInTypescript(t *testing.T) {
 	assert.Contains(t, output.String(), "file not found: missing.json")
 }
 
-func TestContext_Run_ParsesOpenAPIThroughRunnerContextWithDeterministicOrder(t *testing.T) {
-	ctx, projectDir := setupRunnerTestProject(t, "TestContext_Run_ParsesOpenAPIThroughRunnerContextWithDeterministicOrder")
+func TestRunner_RunParsesOpenAPIThroughRunnerContextWithDeterministicOrder(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunParsesOpenAPIThroughRunnerContextWithDeterministicOrder")
 	processFile := filepath.Join(projectDir, "x", "generate.ts")
 	specFile := filepath.Join(projectDir, "specs", "api.yaml")
 
@@ -172,8 +172,8 @@ func TestContext_Run_ParsesOpenAPIThroughRunnerContextWithDeterministicOrder(t *
 	assert.JSONEq(t, `{"pathKeys":["/z","/a","/m"],"propertyKeys":["beta","alpha"]}`, output.String())
 }
 
-func TestContext_Run_OpenAPIErrorsCanBeCaughtInTypescript(t *testing.T) {
-	ctx, projectDir := setupRunnerTestProject(t, "TestContext_Run_OpenAPIErrorsCanBeCaughtInTypescript")
+func TestRunner_RunOpenAPIErrorsCanBeCaughtInTypescript(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunOpenAPIErrorsCanBeCaughtInTypescript")
 	processFile := filepath.Join(projectDir, "x", "generate.ts")
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))

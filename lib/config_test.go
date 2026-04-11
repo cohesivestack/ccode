@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewConfig_Defaults(t *testing.T) {
+func TestConfig_NewConfigDefaults(t *testing.T) {
 	cfg, err := NewConfig(&Config{})
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
@@ -18,7 +18,7 @@ func TestNewConfig_Defaults(t *testing.T) {
 	assert.Equal(t, ".", cfg.OutputPath)
 }
 
-func TestLoadConfig(t *testing.T) {
+func TestConfig_LoadConfig(t *testing.T) {
 	tmp := t.TempDir()
 	configDir := filepath.Join(tmp, "configs")
 	require.NoError(t, os.MkdirAll(configDir, 0755))
@@ -37,7 +37,7 @@ output_path: "dist"
 	assert.Equal(t, "dist", cfg.OutputPath)
 }
 
-func TestLoadConfig_LegacyPathKey(t *testing.T) {
+func TestConfig_LoadConfigLegacyPathKey(t *testing.T) {
 	tmp := t.TempDir()
 	cfgFile := filepath.Join(tmp, "ccode.yaml")
 	content := `path: "legacy-ccode"
@@ -51,7 +51,7 @@ func TestLoadConfig_LegacyPathKey(t *testing.T) {
 	assert.Equal(t, filepath.Join(tmp, "legacy-ccode"), cfg.CCodePath)
 }
 
-func TestLoadConfig_MissingFile(t *testing.T) {
+func TestConfig_LoadConfigMissingFile(t *testing.T) {
 	cfg, err := LoadConfig("missing.yaml")
 	require.Error(t, err)
 	assert.Nil(t, cfg)
