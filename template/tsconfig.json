@@ -1,8 +1,7 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
     "paths": {
-      "@ccode/*": [".ccode/lib/*"]
+      "@ccode/*": ["./.ccode/lib/*"]
     }
   }
 }
