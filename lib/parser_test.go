@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRunnerContext_ParseJSONFromBytes(t *testing.T) {
+func TestParser_ParseJSONFromBytes(t *testing.T) {
 	ctx := newRunnerJSONTestContext(t)
 
 	value, err := ctx.ParseJSONFromBytes([]byte(`{"name":"Carlos","count":2,"active":true}`))
@@ -23,7 +23,7 @@ func TestRunnerContext_ParseJSONFromBytes(t *testing.T) {
 	assert.True(t, object.Get("active").ToBoolean())
 }
 
-func TestRunnerContext_ParseJSONFromBytes_ReturnsErrorForInvalidJSON(t *testing.T) {
+func TestParser_ParseJSONFromBytesReturnsErrorForInvalidJSON(t *testing.T) {
 	ctx := newRunnerJSONTestContext(t)
 
 	result, err := ctx.ParseJSONFromBytes([]byte(`{"name":`))
@@ -32,7 +32,7 @@ func TestRunnerContext_ParseJSONFromBytes_ReturnsErrorForInvalidJSON(t *testing.
 	assert.Contains(t, err.Error(), "Unexpected end of JSON input")
 }
 
-func TestRunnerContext_ParseJSONFromString(t *testing.T) {
+func TestParser_ParseJSONFromString(t *testing.T) {
 	ctx := newRunnerJSONTestContext(t)
 
 	value, err := ctx.ParseJSONFromString(`{"source":"string","items":["a","b"]}`)
@@ -47,7 +47,7 @@ func TestRunnerContext_ParseJSONFromString(t *testing.T) {
 	assert.Equal(t, "b", items.Get("1").String())
 }
 
-func TestRunnerContext_ParseJSONFromFile_UsesConfigCCodePath(t *testing.T) {
+func TestParser_ParseJSONFromFileUsesConfigCCodePath(t *testing.T) {
 	ctx := newRunnerJSONTestContext(t)
 
 	require.NoError(t, os.MkdirAll(filepath.Join(ctx.ccodeContext.config.CCodePath, "data"), 0755))
@@ -62,7 +62,7 @@ func TestRunnerContext_ParseJSONFromFile_UsesConfigCCodePath(t *testing.T) {
 	assert.True(t, object.Get("enabled").ToBoolean())
 }
 
-func TestRunnerContext_ParseJSONFromFile_ReturnsErrorForMissingFile(t *testing.T) {
+func TestParser_ParseJSONFromFileReturnsErrorForMissingFile(t *testing.T) {
 	ctx := newRunnerJSONTestContext(t)
 
 	result, err := ctx.ParseJSONFromFile("missing.json")
@@ -71,7 +71,7 @@ func TestRunnerContext_ParseJSONFromFile_ReturnsErrorForMissingFile(t *testing.T
 	assert.Contains(t, err.Error(), "file not found: missing.json")
 }
 
-func TestRunnerContext_ParseJSONFromFile_PreservesNestedObjectOrder(t *testing.T) {
+func TestParser_ParseJSONFromFilePreservesNestedObjectOrder(t *testing.T) {
 	ctx := newRunnerJSONTestContext(t)
 
 	require.NoError(t, os.MkdirAll(filepath.Join(ctx.ccodeContext.config.CCodePath, "data"), 0755))

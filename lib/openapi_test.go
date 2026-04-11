@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRunnerContext_ParseOpenAPIFromBytes(t *testing.T) {
+func TestOpenAPI_ParseOpenAPIFromBytes(t *testing.T) {
 	ctx := newRunnerOpenAPITestContext(t)
 
 	value, err := ctx.ParseOpenAPIFromBytes([]byte(testOpenAPI3Document))
@@ -21,7 +21,7 @@ func TestRunnerContext_ParseOpenAPIFromBytes(t *testing.T) {
 	assert.Equal(t, []string{"/z", "/a", "/m"}, document.Get("paths").ToObject(ctx.runtime).Keys())
 }
 
-func TestRunnerContext_ParseOpenAPIFromString(t *testing.T) {
+func TestOpenAPI_ParseOpenAPIFromString(t *testing.T) {
 	ctx := newRunnerOpenAPITestContext(t)
 
 	value, err := ctx.ParseOpenAPIFromString(testOpenAPI3Document)
@@ -32,7 +32,7 @@ func TestRunnerContext_ParseOpenAPIFromString(t *testing.T) {
 	assert.Equal(t, []string{"beta", "alpha"}, document.Get("components").ToObject(ctx.runtime).Get("schemas").ToObject(ctx.runtime).Get("Sample").ToObject(ctx.runtime).Get("properties").ToObject(ctx.runtime).Keys())
 }
 
-func TestRunnerContext_ParseOpenAPIFromFile_UsesConfigCCodePath(t *testing.T) {
+func TestOpenAPI_ParseOpenAPIFromFileUsesConfigCCodePath(t *testing.T) {
 	ctx := newRunnerOpenAPITestContext(t)
 
 	require.NoError(t, os.MkdirAll(filepath.Join(ctx.ccodeContext.config.CCodePath, "specs"), 0755))
@@ -47,7 +47,7 @@ func TestRunnerContext_ParseOpenAPIFromFile_UsesConfigCCodePath(t *testing.T) {
 	assert.Equal(t, []string{"/z", "/a", "/m"}, document.Get("paths").ToObject(ctx.runtime).Keys())
 }
 
-func TestRunnerContext_ParseOpenAPIFromFile_ReturnsErrorForMissingFile(t *testing.T) {
+func TestOpenAPI_ParseOpenAPIFromFileReturnsErrorForMissingFile(t *testing.T) {
 	ctx := newRunnerOpenAPITestContext(t)
 
 	result, err := ctx.ParseOpenAPIFromFile("missing.yaml")
@@ -56,7 +56,7 @@ func TestRunnerContext_ParseOpenAPIFromFile_ReturnsErrorForMissingFile(t *testin
 	assert.Contains(t, err.Error(), "file not found: missing.yaml")
 }
 
-func TestRunnerContext_ParseOpenAPIFromString_ReturnsErrorForSwaggerV2(t *testing.T) {
+func TestOpenAPI_ParseOpenAPIFromStringReturnsErrorForSwaggerV2(t *testing.T) {
 	ctx := newRunnerOpenAPITestContext(t)
 
 	result, err := ctx.ParseOpenAPIFromString("swagger: '2.0'\ninfo:\n  title: Legacy\n  version: 1.0.0\npaths: {}\n")
@@ -65,7 +65,7 @@ func TestRunnerContext_ParseOpenAPIFromString_ReturnsErrorForSwaggerV2(t *testin
 	assert.Contains(t, err.Error(), "swagger is not supported")
 }
 
-func TestRunnerContext_ParseOpenAPIFromFile_PreservesDeterministicOrder(t *testing.T) {
+func TestOpenAPI_ParseOpenAPIFromFilePreservesDeterministicOrder(t *testing.T) {
 	ctx := newRunnerOpenAPITestContext(t)
 
 	require.NoError(t, os.MkdirAll(filepath.Join(ctx.ccodeContext.config.CCodePath, "specs"), 0755))

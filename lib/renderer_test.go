@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGojaValueToTemplateData_PreservesObjectOrder(t *testing.T) {
+func TestRenderer_GojaValueToTemplateDataPreservesObjectOrder(t *testing.T) {
 	runtime := goja.New()
 
 	value, err := runtime.RunString(`({ z: 1, nested: { beta: 1, alpha: 2 }, a: 3 })`)
@@ -33,7 +33,7 @@ func TestGojaValueToTemplateData_PreservesObjectOrder(t *testing.T) {
 	assert.Equal(t, "alpha", nested.Pairs[1].Key.String())
 }
 
-func TestRunnerContext_TemplateToString_UsesConfigCCodePath(t *testing.T) {
+func TestRenderer_RenderTemplateUsesConfigCCodePath(t *testing.T) {
 	ctx := newRunnerTemplateTestContext(t)
 
 	require.NoError(t, os.MkdirAll(filepath.Join(ctx.ccodeContext.config.CCodePath, "templates"), 0755))
@@ -42,29 +42,9 @@ func TestRunnerContext_TemplateToString_UsesConfigCCodePath(t *testing.T) {
 	value, err := ctx.runtime.RunString(`({ name: "Carlos" })`)
 	require.NoError(t, err)
 
-	rendered, err := ctx.TemplateToString("templates/greeting.tpl", value)
+	rendered, err := ctx.RenderTemplate("templates/greeting.tpl", value)
 	require.NoError(t, err)
 	assert.Equal(t, "Hello Carlos!", rendered)
-}
-
-func TestRunnerContext_TemplateToFile_UsesConfigOutputPath(t *testing.T) {
-	ctx := newRunnerTemplateTestContext(t)
-
-	require.NoError(t, os.MkdirAll(filepath.Join(ctx.ccodeContext.config.CCodePath, "templates"), 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(ctx.ccodeContext.config.CCodePath, "templates", "greeting.tpl"), []byte("Hello {{ data.name }}!"), 0644))
-
-	value, err := ctx.runtime.RunString(`({ name: "Carlos" })`)
-	require.NoError(t, err)
-
-	err = ctx.TemplateToFile("templates/greeting.tpl", "nested/greeting.txt", value)
-	require.NoError(t, err)
-
-	outputFilePath := filepath.Join(ctx.ccodeContext.config.OutputPath, "nested", "greeting.txt")
-	require.FileExists(t, outputFilePath)
-
-	content, err := os.ReadFile(outputFilePath)
-	require.NoError(t, err)
-	assert.Equal(t, "Hello Carlos!", string(content))
 }
 
 func newRunnerTemplateTestContext(t *testing.T) *RunnerContext {
