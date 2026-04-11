@@ -1,14 +1,31 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	ccode "github.com/cohesivestack/ccode/lib"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
+
+type acceleratorInstructionsAgentResult struct {
+	ScopeID              string  `json:"scope_id"`
+	ArtifactID           string  `json:"artifact_id"`
+	InstructionsPath     *string `json:"instructions_path"`
+	InstructionsMarkdown string  `json:"instructions_markdown"`
+	AcceleratedContent   string  `json:"accelerated_content"`
+	ComposedMarkdown     string  `json:"composed_markdown"`
+}
+
+type instructionContentAgentResult struct {
+	Path     string `json:"path"`
+	Markdown string `json:"markdown"`
+}
 
 func main() {
 	if err := newRootCmd(ccode.Run, ccode.Init).Execute(); err != nil {
@@ -165,8 +182,270 @@ Syntax:
 		},
 	}
 
+	listCmd := &cobra.Command{
+		Use:   "list",
+		Short: "List accelerator metadata",
+	}
+
+	listAcceleratedCmd := &cobra.Command{
+		Use:   "accelerated [scopeId]",
+		Short: "List not-adjusted accelerated artifacts",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := loadConfig(cmd)
+			if err != nil {
+				return err
+			}
+
+			context := ccode.NewContext(cfg)
+			var scopeID *string
+			if len(args) == 1 {
+				scopeID = &args[0]
+			}
+
+			items, err := context.ListNotAdjustedAccelerators(scopeID)
+			if err != nil {
+				return err
+			}
+
+			return writeJSON(cmd, items)
+		},
+	}
+	listAcceleratedCmd.Flags().Bool("for-agent", false, "Output machine-readable JSON")
+
+	listInstructionsCmd := &cobra.Command{
+		Use:   "instructions",
+		Short: "List accelerator instruction references",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := loadConfig(cmd)
+			if err != nil {
+				return err
+			}
+
+			context := ccode.NewContext(cfg)
+			items, err := context.ListAcceleratorInstructions()
+			if err != nil {
+				return err
+			}
+
+			return writeJSON(cmd, items)
+		},
+	}
+	listInstructionsCmd.Flags().Bool("for-agent", false, "Output machine-readable JSON")
+
+	getCmd := &cobra.Command{
+		Use:   "get",
+		Short: "Get accelerator details and instructions",
+	}
+
+	getAcceleratedCmd := &cobra.Command{
+		Use:   "accelerated <scopeId>:<artifactId>",
+		Short: "Get accelerated artifact metadata",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := loadConfig(cmd)
+			if err != nil {
+				return err
+			}
+
+			scopeID, artifactID, err := parseAcceleratorSelector(args[0])
+			if err != nil {
+				return err
+			}
+
+			context := ccode.NewContext(cfg)
+			state, err := context.GetAcceleratorState(scopeID, artifactID)
+			if err != nil {
+				return err
+			}
+
+			emitInstructions, err := cmd.Flags().GetBool("instructions")
+			if err != nil {
+				return err
+			}
+			forAgent, err := cmd.Flags().GetBool("for-agent")
+			if err != nil {
+				return err
+			}
+
+			if !emitInstructions {
+				return writeJSON(cmd, ccode.AcceleratorArtifactMetadata{
+					ScopeID:          state.ScopeID,
+					ArtifactID:       state.ArtifactID,
+					InstructionsPath: state.InstructionsPath,
+					AdjustedAt:       state.AdjustedAt,
+				})
+			}
+
+			acceleratedContent, err := ccode.DecodeAcceleratorContentSnapshot(state.Content)
+			if err != nil {
+				return err
+			}
+
+			instructionsMarkdown := ""
+			if state.InstructionsPath != nil && !isStringBlank(*state.InstructionsPath) {
+				instructionsMarkdown, err = context.GetAcceleratorInstruction(*state.InstructionsPath)
+				if err != nil {
+					return err
+				}
+			}
+
+			composedMarkdown := composeAcceleratedInstructionsMarkdown(instructionsMarkdown, acceleratedContent, state.ArtifactID)
+			if forAgent {
+				return writeJSON(cmd, acceleratorInstructionsAgentResult{
+					ScopeID:              state.ScopeID,
+					ArtifactID:           state.ArtifactID,
+					InstructionsPath:     state.InstructionsPath,
+					InstructionsMarkdown: instructionsMarkdown,
+					AcceleratedContent:   acceleratedContent,
+					ComposedMarkdown:     composedMarkdown,
+				})
+			}
+
+			_, err = cmd.OutOrStdout().Write([]byte(composedMarkdown))
+			return err
+		},
+	}
+	getAcceleratedCmd.Flags().Bool("instructions", false, "Include instruction markdown with decoded accelerated content")
+	getAcceleratedCmd.Flags().Bool("for-agent", false, "Output machine-readable JSON")
+
+	getInstructionCmd := &cobra.Command{
+		Use:   "instruction <path>",
+		Short: "Get raw accelerator instruction markdown",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := loadConfig(cmd)
+			if err != nil {
+				return err
+			}
+
+			context := ccode.NewContext(cfg)
+			markdown, err := context.GetAcceleratorInstruction(args[0])
+			if err != nil {
+				return err
+			}
+
+			forAgent, err := cmd.Flags().GetBool("for-agent")
+			if err != nil {
+				return err
+			}
+			if forAgent {
+				return writeJSON(cmd, instructionContentAgentResult{
+					Path:     args[0],
+					Markdown: markdown,
+				})
+			}
+
+			_, err = cmd.OutOrStdout().Write([]byte(markdown))
+			return err
+		},
+	}
+	getInstructionCmd.Flags().Bool("for-agent", false, "Output machine-readable JSON")
+
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(initCmd)
+	rootCmd.AddCommand(listCmd)
+	rootCmd.AddCommand(getCmd)
+	listCmd.AddCommand(listAcceleratedCmd)
+	listCmd.AddCommand(listInstructionsCmd)
+	getCmd.AddCommand(getAcceleratedCmd)
+	getCmd.AddCommand(getInstructionCmd)
 
 	return rootCmd
+}
+
+func writeJSON(cmd *cobra.Command, payload any) error {
+	encoder := json.NewEncoder(cmd.OutOrStdout())
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(payload)
+}
+
+func parseAcceleratorSelector(value string) (string, string, error) {
+	trimmedValue := strings.TrimSpace(value)
+	if trimmedValue == "" {
+		return "", "", fmt.Errorf("accelerator selector is required")
+	}
+	if strings.Count(trimmedValue, ":") != 1 {
+		return "", "", fmt.Errorf("invalid accelerator selector %q: expected <scopeId>:<artifactId>", value)
+	}
+
+	parts := strings.SplitN(trimmedValue, ":", 2)
+	if len(parts) != 2 || isStringBlank(parts[0]) || isStringBlank(parts[1]) {
+		return "", "", fmt.Errorf("invalid accelerator selector %q: expected <scopeId>:<artifactId>", value)
+	}
+
+	return parts[0], parts[1], nil
+}
+
+func composeAcceleratedInstructionsMarkdown(instructionsMarkdown string, acceleratedContent string, artifactID string) string {
+	builder := &strings.Builder{}
+
+	if !isStringBlank(instructionsMarkdown) {
+		builder.WriteString(strings.TrimRight(instructionsMarkdown, "\n"))
+		builder.WriteString("\n")
+	}
+
+	builder.WriteString("---\n")
+	builder.WriteString("New accelerated content:\n")
+
+	language := inferCodeFenceLanguageFromArtifactID(artifactID)
+	if language == "" {
+		builder.WriteString("```\n")
+	} else {
+		builder.WriteString("```")
+		builder.WriteString(language)
+		builder.WriteString("\n")
+	}
+
+	builder.WriteString(acceleratedContent)
+	if !strings.HasSuffix(acceleratedContent, "\n") {
+		builder.WriteString("\n")
+	}
+	builder.WriteString("```\n")
+
+	return builder.String()
+}
+
+func inferCodeFenceLanguageFromArtifactID(artifactID string) string {
+	switch strings.ToLower(filepath.Ext(artifactID)) {
+	case ".go":
+		return "go"
+	case ".ts":
+		return "typescript"
+	case ".tsx":
+		return "tsx"
+	case ".js":
+		return "javascript"
+	case ".jsx":
+		return "jsx"
+	case ".json":
+		return "json"
+	case ".yaml", ".yml":
+		return "yaml"
+	case ".md":
+		return "markdown"
+	case ".sql":
+		return "sql"
+	case ".py":
+		return "python"
+	case ".java":
+		return "java"
+	case ".rb":
+		return "ruby"
+	case ".sh":
+		return "bash"
+	case ".html":
+		return "html"
+	case ".css":
+		return "css"
+	case ".xml":
+		return "xml"
+	default:
+		return ""
+	}
+}
+
+func isStringBlank(value string) bool {
+	return strings.TrimSpace(value) == ""
 }
