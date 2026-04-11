@@ -46,7 +46,7 @@ func TestRunner_RunRendersTemplates(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
 	require.NoError(t, os.MkdirAll(filepath.Dir(templateFile), 0755))
 	require.NoError(t, os.WriteFile(templateFile, []byte("Hello {{ data.name }}!"), 0644))
-	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/context\";\n\nexport default function main(ctx: Context) {\n\tconst rendered = ctx.templateToString(\"templates/greeting.tpl\", { name: \"Carlos\" });\n\tctx.templateToFile(\"templates/greeting.tpl\", \"generated/greeting.txt\", { name: \"Carlos\" });\n\tctx.println(rendered);\n}\n"), 0644))
+	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/context\";\n\nexport default function main(ctx: Context) {\n\tconst rendered = ctx.renderTemplate(\"templates/greeting.tpl\", { name: \"Carlos\" });\n\tctx.generate(\"templates/greeting.tpl\", \"generated/greeting.txt\", { name: \"Carlos\" });\n\tctx.println(rendered);\n}\n"), 0644))
 
 	var output bytes.Buffer
 	ctx.stdout = &output
@@ -68,7 +68,7 @@ func TestRunner_RunRendersTemplatesWithDeterministicObjectOrder(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
 	require.NoError(t, os.MkdirAll(filepath.Dir(templateFile), 0755))
 	require.NoError(t, os.WriteFile(templateFile, []byte("{% for key, value in data %}{{ key }} {% endfor %}|{% for key, value in data.nested %}{{ key }} {% endfor %}"), 0644))
-	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/context\";\n\nexport default function main(ctx: Context) {\n\tconst model = { z: 1, nested: { beta: 1, alpha: 2 }, a: 3 };\n\tconst rendered = ctx.templateToString(\"templates/ordered.tpl\", model);\n\tctx.templateToFile(\"templates/ordered.tpl\", \"generated/ordered.txt\", model);\n\tctx.println(rendered);\n}\n"), 0644))
+	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/context\";\n\nexport default function main(ctx: Context) {\n\tconst model = { z: 1, nested: { beta: 1, alpha: 2 }, a: 3 };\n\tconst rendered = ctx.renderTemplate(\"templates/ordered.tpl\", model);\n\tctx.generate(\"templates/ordered.tpl\", \"generated/ordered.txt\", model);\n\tctx.println(rendered);\n}\n"), 0644))
 
 	var output bytes.Buffer
 	ctx.stdout = &output
@@ -87,7 +87,7 @@ func TestRunner_RunTemplateErrorsCanBeCaughtInTypescript(t *testing.T) {
 	processFile := filepath.Join(projectDir, "x", "generate.ts")
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
-	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/context\";\n\nexport default function main(ctx: Context) {\n\ttry {\n\t\tctx.templateToString(\"templates/missing.tpl\", { name: \"Carlos\" });\n\t} catch (e: any) {\n\t\tif (!(e instanceof GoError)) {\n\t\t\tthrow e;\n\t\t}\n\t\tctx.println(e.value.Error());\n\t}\n}\n"), 0644))
+	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/context\";\n\nexport default function main(ctx: Context) {\n\ttry {\n\t\tctx.renderTemplate(\"templates/missing.tpl\", { name: \"Carlos\" });\n\t} catch (e: any) {\n\t\tif (!(e instanceof GoError)) {\n\t\t\tthrow e;\n\t\t}\n\t\tctx.println(e.value.Error());\n\t}\n}\n"), 0644))
 
 	var output bytes.Buffer
 	ctx.stdout = &output

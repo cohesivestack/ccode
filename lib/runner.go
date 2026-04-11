@@ -152,10 +152,10 @@ func (ctx *RunnerContext) toValue(runtime *goja.Runtime) (goja.Value, error) {
 	if err := object.Set("println", ctx.Println); err != nil {
 		return nil, fmt.Errorf("set runner context functions: %w", err)
 	}
-	if err := object.Set("templateToString", ctx.RenderTemplate); err != nil {
+	if err := object.Set("renderTemplate", ctx.RenderTemplate); err != nil {
 		return nil, fmt.Errorf("set runner context functions: %w", err)
 	}
-	if err := object.Set("templateToFile", ctx.Generate); err != nil {
+	if err := object.Set("generate", ctx.Generate); err != nil {
 		return nil, fmt.Errorf("set runner context functions: %w", err)
 	}
 	if err := object.Set("parseJSONFromBytes", ctx.ParseJSONFromBytes); err != nil {
