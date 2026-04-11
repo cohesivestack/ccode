@@ -12,6 +12,7 @@ Default result:
   tsconfig.json
   .ccode/
     build/
+    state/
     lib/
       context.ts
       openapi.ts
@@ -35,6 +36,7 @@ Notes:
 - `ccode_path` is resolved relative to the config file directory.
 - `output_path` is used as written. Relative values resolve from the directory where the CLI runs.
 - `hidden_path` defaults to `.ccode`. When relative, the runtime resolves it under `ccode_path`.
+- accelerator state is written to `<hidden_path>/state/accelerators.json`.
 
 Config precedence:
 
@@ -83,6 +85,7 @@ Recommended conventions:
 - Keep OpenAPI files under `specs/`.
 - Keep test or seed JSON under `data/`.
 - Leave `.ccode/build/` to the compiler cache.
+- Treat `.ccode/state/accelerators.json` as runtime state; do not hand-edit it unless explicitly asked.
 
 ## Process path rules
 
@@ -104,3 +107,4 @@ Example:
 - Read `ccode.yaml` before creating files.
 - Keep templates and spec files inside `ccode_path` unless the user explicitly wants external inputs.
 - Do not edit `.ccode/lib/context.ts` in application repos; regenerate it through `ccode init` or change the CLI templates in the source repo instead.
+- For accelerated artifacts, inspect pending items via CLI (`ccode list accelerated`) before editing generated outputs manually.

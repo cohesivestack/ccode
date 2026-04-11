@@ -44,7 +44,7 @@ export default function main(ctx: Context) {
     }
   }
 
-  ctx.templateToFile("templates/docs/operations.tpl", "generated/operations.md", {
+  ctx.generate("templates/docs/operations.tpl", "generated/operations.md", {
     title: spec.info?.title ?? "API",
     operations,
   });

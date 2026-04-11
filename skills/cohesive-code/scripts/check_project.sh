@@ -86,6 +86,12 @@ else
   echo "build_cache: missing"
 fi
 
+if [ -f "$HIDDEN_ABS/state/accelerators.json" ]; then
+  echo "accelerator_state: present"
+else
+  echo "accelerator_state: missing"
+fi
+
 if [ -d "$CCODE_ABS" ]; then
   TS_COUNT="$(find "$CCODE_ABS" -type f -name '*.ts' ! -path "$HIDDEN_ABS/*" | wc -l | tr -d ' ')"
   echo "typescript_files: $TS_COUNT"

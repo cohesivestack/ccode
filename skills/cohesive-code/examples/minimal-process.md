@@ -21,9 +21,9 @@ export default function main(ctx: Context) {
     name: "Cohesive Code",
   };
 
-  const preview = ctx.templateToString("templates/greeting.tpl", model);
+  const preview = ctx.renderTemplate("templates/greeting.tpl", model);
   ctx.println(preview);
-  ctx.templateToFile("templates/greeting.tpl", "generated/greeting.txt", model);
+  ctx.generate("templates/greeting.tpl", "generated/greeting.txt", model);
 }
 ```
 

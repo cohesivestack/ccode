@@ -22,7 +22,7 @@ ccode/
 1. Parse the spec once with `ctx.parseOpenAPIFromFile("specs/api.yaml")`.
 2. Build a template-friendly model in TypeScript.
 3. Keep guards for optional fields and union-like shapes.
-4. Render one or more outputs with `templateToFile`.
+4. Render one or more outputs with `generate` (or `accelerate` when review/adjustment is required).
 5. Validate the generated artifacts, not just the process source.
 
 ## Process pattern
@@ -59,7 +59,7 @@ export default function main(ctx: Context) {
     }
   }
 
-  ctx.templateToFile("templates/docs/operations.tpl", "generated/operations.md", {
+  ctx.generate("templates/docs/operations.tpl", "generated/operations.md", {
     title: spec.info?.title ?? "API",
     operations,
   });
@@ -96,3 +96,4 @@ Keep templates shallow. Example:
 - Local `$ref` and file references resolve correctly from the spec directory.
 - The generated output lands under `output_path`.
 - The process is re-runnable without manual cleanup.
+- If using `accelerate`, pending items are visible in `ccode list accelerated`.
