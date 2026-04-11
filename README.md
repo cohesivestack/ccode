@@ -1,37 +1,69 @@
 # Cohesive Code
 
-Cohesive Code is an AI‑enabled code generator.
+Cohesive Code is an AI-enabled code generation CLI built around TypeScript processes, template rendering, and accelerators.
 
-This intent will evolve in different stages:
+> **Status:** Alpha/Experimental stage. Not ready for production use yet.
 
-## Stage 1 - Add a template generator with support from OpenAPI models:
-  * A CLI command which is able to run process
-  * Process are typescript functions executed from the CLI or from another process
-  * Templates which are Jinja template and are called from a Process
-  * A process has a typescript API:
-    * The object ccode is the package that has the API to communicate with the model and API offer by the Cohesive Code library
-    * The type `ccode.OpenAPI` is an openAPI model
-    * The function `ccode.GetOpenAPI(filePath: string): ccode.OpenAPI` parse a yaml or json file to an OpenAPI model
-    * The function `ccode.TemplateToString(templatePath: string, model: any): string` return a string from a parsed template
-    * The function `ccode.TemplateToFile(templatePath: string, model: any, filePath: string, override: bool = true)` save a file from parsed template 
-    * The function `ccode.StringToFile(input: string, filePath: string, override: bool = true)` save a file from a string
+## What It Does
 
-## Stage 2 - Add MCP server to the tool
+* Executes TypeScript processes from a project workspace.
+* Renders Jinja templates into output files.
+* Parses JSON and OpenAPI documents from process code.
+* Supports accelerators for predictable generation of artifacts that are expected to be adjusted by humans or agents.
 
-## Stage 3 - Add SQL database model and accelerators
-Details to be determined.
+## Core Concepts
 
-## Stage 4 (Not confirmed) - Add AI Agents with support to MCP and A2A
-Details to be determined.
+* **Process**: A TypeScript file with a default export:
+  * `export default function main(ctx: Context) { ... }`
+* **Scope**: Logical output namespace used by accelerators.
+  * Default scope is the process filename (without `.ts`).
+  * You can change it at runtime with `ctx.setScope(...)`.
+* **Accelerator**: A generated artifact tracked in state to avoid unsafe overwrites.
+  * Output target: `<output_path>/<scope>/<artifact_id>`
+  * State file: `<hidden_path>/state/accelerators.json`
+  * Optional instructions markdown can be attached per artifact.
 
-## Components and Architecture for stage 1
+## Runtime API (TypeScript)
 
-* A CLI which read a yaml config file using cobra+viper+pflag+gopkg.in/yaml.v3
-* Use Valgo branch next-0.8 (https://github.com/cohesivestack/valgo/tree/next-0.8) for validate CLI entries
-* Use https://github.com/dop251/goja package and esbuild to support executing the typescript functions
-* Use https://github.com/NikolaLohinski/gonja as template parser
-* Use https://github.com/pb33f/libopenapi as the OpenApi model parser
-* Tests with testify package
+Import `Context` from `@ccode/context`:
+
+```ts
+import type { Context } from "@ccode/context";
+```
+
+Available methods:
+
+* `println(message: string)`
+* `setScope(scopeName: string)`
+* `scope(): string`
+* `renderTemplate(templatePath: string, data: any): string`
+* `generate(templatePath: string, filePath: string, data: any): void`
+* `accelerate(id: string, templatePath: string, data: any, instructionsPath?: string): void`
+* `parseJSONFromBytes(jsonBytes: number[]): Record<string, any>`
+* `parseJSONFromString(jsonString: string): Record<string, any>`
+* `parseJSONFromFile(filePath: string): Record<string, any>`
+* `parseOpenAPIFromBytes(specBytes: number[]): OpenAPIDocument`
+* `parseOpenAPIFromString(spec: string): OpenAPIDocument`
+* `parseOpenAPIFromFile(filePath: string): OpenAPIDocument`
+
+## Minimal Process Example
+
+```ts
+import type { Context } from "@ccode/context";
+
+export default function main(ctx: Context) {
+  const model = ctx.parseOpenAPIFromFile("specs/api.yaml");
+
+  ctx.generate("templates/summary.tpl", "generated/summary.md", { model });
+
+  ctx.accelerate(
+    "handlers.ts",
+    "templates/handlers.tpl",
+    { model },
+    "instructions/handlers.md",
+  );
+}
+```
 
 ## Installation
 
@@ -56,12 +88,25 @@ bash installer/install.sh
 ```yaml
 ccode_path: ccode # The path where the structure of the project resides. This accepts relative paths. Relative paths are resolved from the config file directory. By default is `ccode`.
 output_path: . # The root path where will be saved the produced artifacts. This is relative to the path where ccode command runs. By default is `.`
+hidden_path: .ccode # Internal state/build folder. By default is `.ccode`
 ```
 
 ## CLI
 
+### Main commands
+
 ```bash
+ccode --config [config-path] init [path]
 ccode --config [config-path] --ccode-path [path] --output-path [output-path] run [process]
+```
+
+### Accelerator inspection commands
+
+```bash
+ccode list accelerated [scopeId]
+ccode list instructions
+ccode get accelerated <scopeId>:<artifactId> [--instructions]
+ccode get instruction <path>
 ```
 
 ## Releases
