@@ -4,8 +4,16 @@ export type OpenAPIDocument = OpenAPIV3.Document | OpenAPIV3_1.Document;
 
 export interface Context {
   println: (message: string) => void;
+  setScope: (scopeName: string) => void;
+  scope: () => string;
   renderTemplate: (templatePath: string, data: any) => string;
   generate: (templatePath: string, filePath: string, data: any) => void;
+  accelerate: (
+    id: string,
+    templatePath: string,
+    data: any,
+    instructionsPath?: string,
+  ) => void;
   parseJSONFromBytes: (jsonBytes: number[]) => Record<string, any>;
   parseJSONFromString: (jsonString: string) => Record<string, any>;
   parseJSONFromFile: (filePath: string) => Record<string, any>;
