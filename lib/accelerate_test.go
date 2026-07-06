@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAccelerator_AccelerateWritesScopedArtifactAndState(t *testing.T) {
+func TestAccelerator_AccelerateWritesArtifactAndScopedState(t *testing.T) {
 	ctx := newRunnerTemplateTestContext(t)
 
 	require.NoError(t, ctx.SetScope("generate-api"))
@@ -23,7 +23,7 @@ func TestAccelerator_AccelerateWritesScopedArtifactAndState(t *testing.T) {
 
 	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value))
 
-	outputFilePath := filepath.Join(ctx.ccodeContext.config.OutputPath, "generate-api", "handlers")
+	outputFilePath := filepath.Join(ctx.ccodeContext.config.OutputPath, "handlers")
 	require.FileExists(t, outputFilePath)
 
 	content, err := os.ReadFile(outputFilePath)
@@ -86,7 +86,7 @@ func TestAccelerator_AccelerateSkipsOverwriteForModifiedFile(t *testing.T) {
 
 	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value))
 
-	outputFilePath := filepath.Join(ctx.ccodeContext.config.OutputPath, "generate-api", "handlers")
+	outputFilePath := filepath.Join(ctx.ccodeContext.config.OutputPath, "handlers")
 	require.NoError(t, os.WriteFile(outputFilePath, []byte("manually changed"), 0644))
 	require.NoError(t, os.WriteFile(templatePath, []byte("Second"), 0644))
 
@@ -119,7 +119,7 @@ func TestAccelerator_AccelerateAllowsOverwriteWhenContentMatchesLastGeneratedVer
 	require.NoError(t, os.WriteFile(templatePath, []byte("Second"), 0644))
 	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value))
 
-	outputFilePath := filepath.Join(ctx.ccodeContext.config.OutputPath, "generate-api", "handlers")
+	outputFilePath := filepath.Join(ctx.ccodeContext.config.OutputPath, "handlers")
 	content, err := os.ReadFile(outputFilePath)
 	require.NoError(t, err)
 	assert.Equal(t, "Second", string(content))
@@ -164,7 +164,7 @@ func TestAccelerator_AccelerateSkipsWhenExistingFileIsNotTracked(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Join(ctx.ccodeContext.config.CCodePath, "templates"), 0755))
 	require.NoError(t, os.WriteFile(filepath.Join(ctx.ccodeContext.config.CCodePath, "templates", "handlers.tpl"), []byte("Generated"), 0644))
 
-	outputFilePath := filepath.Join(ctx.ccodeContext.config.OutputPath, "generate-api", "handlers")
+	outputFilePath := filepath.Join(ctx.ccodeContext.config.OutputPath, "handlers")
 	require.NoError(t, os.MkdirAll(filepath.Dir(outputFilePath), 0755))
 	require.NoError(t, os.WriteFile(outputFilePath, []byte("manual existing content"), 0644))
 
@@ -200,8 +200,8 @@ func TestAccelerator_RunUsesDefaultScopeFromProcessFileAndAllowsSetScope(t *test
 	assert.Equal(t, "generate-api", lines[0])
 	assert.Equal(t, "custom-scope", lines[1])
 
-	defaultScopeFile := filepath.Join(filepath.Dir(projectDir), "output", "generate-api", "handlers")
-	customScopeFile := filepath.Join(filepath.Dir(projectDir), "output", "custom-scope", "service")
+	defaultScopeFile := filepath.Join(filepath.Dir(projectDir), "output", "handlers")
+	customScopeFile := filepath.Join(filepath.Dir(projectDir), "output", "service")
 	require.FileExists(t, defaultScopeFile)
 	require.FileExists(t, customScopeFile)
 

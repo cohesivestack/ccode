@@ -82,7 +82,7 @@ func (ctx *RunnerContext) Accelerate(id string, templatePath string, data goja.V
 	}
 
 	scope, artifact := state.findArtifact(scopeName, artifactID)
-	outputFilePath := filepath.Clean(filepath.Join(ctx.ccodeContext.config.OutputPath, filepath.FromSlash(scopeName), filepath.FromSlash(artifactID)))
+	outputFilePath := filepath.Clean(filepath.Join(ctx.ccodeContext.config.OutputPath, filepath.FromSlash(artifactID)))
 	shouldWrite, err := ctx.shouldWriteAcceleratedArtifact(outputFilePath, scopeName, artifactID, rendered, artifact)
 	if err != nil {
 		return err

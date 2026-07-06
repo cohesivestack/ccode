@@ -15,11 +15,11 @@ Cohesive Code is an AI-enabled code generation CLI built around TypeScript proce
 
 * **Process**: A TypeScript file with a default export:
   * `export default function main(ctx: Context) { ... }`
-* **Scope**: Logical output namespace used by accelerators.
+* **Scope**: Logical accelerator state namespace.
   * Default scope is the process filename (without `.ts`).
   * You can change it at runtime with `ctx.setScope(...)`.
 * **Accelerator**: A generated artifact tracked in state to avoid unsafe overwrites.
-  * Output target: `<output_path>/<scope>/<artifact_id>`
+  * Output target: `<output_path>/<artifact_id>`
   * State file: `<hidden_path>/state/accelerators.json`
   * Optional instructions markdown can be attached per artifact.
 

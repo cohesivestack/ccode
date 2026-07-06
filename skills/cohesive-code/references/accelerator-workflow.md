@@ -7,7 +7,7 @@ Use `accelerate` when generation output is a proposal that should be reviewed or
 ## Runtime write and tracking behavior
 
 - `ctx.accelerate(id, templatePath, data, instructionsPath?)` renders the template and targets:
-  - `output_path/<scope>/<id>`
+  - `output_path/<id>`
 - The active scope is:
   - process file name by default
   - overridden with `ctx.setScope(...)`
@@ -43,7 +43,7 @@ For machine-readable output:
 1. Run generator process (`ccode run ...`).
 2. Query pending items (`ccode list accelerated --for-agent`).
 3. For each item, fetch instruction bundle (`ccode get accelerated ... --instructions --for-agent`).
-4. Apply edits to the target file in `output_path/<scope>/<id>`.
+4. Apply edits to the target file in `output_path/<id>`.
 5. Marking adjusted is available through the Go API (`MarkAcceleratorAsAdjusted`), and can be integrated by host tooling.
 
 ## Guardrails
