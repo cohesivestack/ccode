@@ -22,7 +22,7 @@ func TestInitializer_InitCreatesProjectStructure(t *testing.T) {
 		_ = os.Chdir(originalWD)
 	})
 
-	require.NoError(t, Init("cohesive", "configs/ccode.yaml"))
+	require.NoError(t, Init("cohesive", "configs/ccode.yaml", "v1.2.3"))
 
 	projectPath := filepath.Join(tmp, "cohesive")
 	configPath := filepath.Join(tmp, "configs", "ccode.yaml")
@@ -43,7 +43,7 @@ func TestInitializer_InitCreatesProjectStructure(t *testing.T) {
 
 	configContent, err := os.ReadFile(configPath)
 	require.NoError(t, err)
-	assert.Equal(t, "ccode_path: cohesive\n", string(configContent))
+	assert.Equal(t, "ccode_path: cohesive\nversion: v1.2.3\n", string(configContent))
 
 	contextContent, err := os.ReadFile(contextPath)
 	require.NoError(t, err)
@@ -88,7 +88,7 @@ func TestInitializer_InitUsesDefaultsAndDoesNotOverwriteExistingFiles(t *testing
 		slog.SetDefault(originalLogger)
 	})
 
-	require.NoError(t, Init("", ""))
+	require.NoError(t, Init("", "", "v1.2.3"))
 
 	configContent, err := os.ReadFile(configPath)
 	require.NoError(t, err)

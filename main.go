@@ -127,7 +127,7 @@ func lookupEnv(names ...string) (string, bool) {
 }
 
 // newRootCmd creates the Cobra CLI and wires viper + config loading.
-func newRootCmd(run func(*ccode.Config, string) error, initProject func(string, string) error) *cobra.Command {
+func newRootCmd(run func(*ccode.Config, string) error, initProject func(string, string, string) error) *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:   "ccode",
 		Short: "Cohesive Code CLI",
@@ -135,7 +135,7 @@ func newRootCmd(run func(*ccode.Config, string) error, initProject func(string, 
 
 Syntax:
   ccode --config [config-path] --ccode-path [path] --output-path [output-path] run [process]
-  ccode --config [config-path] init [path]`,
+  ccode --config [config-path] init [path] --version [version]`,
 	}
 
 	rootCmd.PersistentFlags().String("config", "", "Path to YAML config file")
@@ -174,13 +174,18 @@ Syntax:
 			if err != nil {
 				return err
 			}
+			version, err := cmd.Flags().GetString("version")
+			if err != nil {
+				return err
+			}
 			if initProject == nil {
 				return nil
 			}
 
-			return initProject(projectPath, configPath)
+			return initProject(projectPath, configPath, version)
 		},
 	}
+	initCmd.Flags().String("version", "", "ccode version to write to ccode.yaml")
 
 	listCmd := &cobra.Command{
 		Use:   "list",

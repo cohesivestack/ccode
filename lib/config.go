@@ -14,6 +14,7 @@ type Config struct {
 	CCodePath  string `yaml:"ccode_path"`
 	OutputPath string `yaml:"output_path"`
 	HiddenPath string `yaml:"hidden_path"`
+	Version    string `yaml:"version"`
 }
 
 func (c *Config) validate() error {
@@ -39,6 +40,9 @@ func LoadConfig(filename string) (*Config, error) {
 	config := &Config{}
 	if err := yaml.Unmarshal(data, config); err != nil {
 		return nil, fmt.Errorf("failed to parse YAML: %w", err)
+	}
+	if isStringBlank(config.Version) {
+		return nil, fmt.Errorf("config validation failed: version is required")
 	}
 
 	config, err = NewConfig(config)
@@ -98,6 +102,7 @@ func (config *Config) UnmarshalYAML(node *yaml.Node) error {
 		LegacyPath string `yaml:"path"`
 		OutputPath string `yaml:"output_path"`
 		HiddenPath string `yaml:"hidden_path"`
+		Version    string `yaml:"version"`
 	}
 
 	var raw configAlias
@@ -111,6 +116,7 @@ func (config *Config) UnmarshalYAML(node *yaml.Node) error {
 	}
 	config.OutputPath = raw.OutputPath
 	config.HiddenPath = raw.HiddenPath
+	config.Version = raw.Version
 
 	return nil
 }

@@ -19,6 +19,7 @@ func TestNewRootCmd_LoadsConfigFile(t *testing.T) {
 	cfgFile := filepath.Join(tmp, "ccode.yaml")
 	configYAML := `ccode_path: "from-config"
 output_path: "build/from-config"
+version: "v1.2.3"
 `
 	require.NoError(t, os.WriteFile(cfgFile, []byte(configYAML), 0644))
 
@@ -44,6 +45,7 @@ func TestNewRootCmd_FlagsOverrideConfig(t *testing.T) {
 	cfgFile := filepath.Join(tmp, "ccode.yaml")
 	configYAML := `ccode_path: "from-config"
 output_path: "build/from-config"
+version: "v1.2.3"
 `
 	require.NoError(t, os.WriteFile(cfgFile, []byte(configYAML), 0644))
 
@@ -96,17 +98,20 @@ func TestNewRootCmd_DefaultConfigWhenNoFile(t *testing.T) {
 func TestNewRootCmd_InitUsesArgsAndConfigFlag(t *testing.T) {
 	var capturedProjectPath string
 	var capturedConfigPath string
+	var capturedVersion string
 
-	cmd := newRootCmd(nil, func(projectPath string, configPath string) error {
+	cmd := newRootCmd(nil, func(projectPath string, configPath string, version string) error {
 		capturedProjectPath = projectPath
 		capturedConfigPath = configPath
+		capturedVersion = version
 		return nil
 	})
-	cmd.SetArgs([]string{"--config", "custom/ccode.yaml", "init", "cohesive"})
+	cmd.SetArgs([]string{"--config", "custom/ccode.yaml", "init", "cohesive", "--version", "v1.2.3"})
 
 	require.NoError(t, cmd.Execute())
 	assert.Equal(t, "cohesive", capturedProjectPath)
 	assert.Equal(t, "custom/ccode.yaml", capturedConfigPath)
+	assert.Equal(t, "v1.2.3", capturedVersion)
 }
 
 func TestNewRootCmd_ListAcceleratedExcludesContent(t *testing.T) {
@@ -227,7 +232,7 @@ func setupAcceleratorCLIProject(t *testing.T) (string, string) {
 	require.NoError(t, os.WriteFile(filepath.Join(ccodePath, "instructions", "handlers.md"), []byte("# Update handlers"), 0644))
 
 	configPath := filepath.Join(rootDir, "ccode.yaml")
-	configYAML := "ccode_path: " + ccodePath + "\noutput_path: " + filepath.Join(rootDir, "out") + "\n"
+	configYAML := "ccode_path: " + ccodePath + "\noutput_path: " + filepath.Join(rootDir, "out") + "\nversion: v1.2.3\n"
 	require.NoError(t, os.WriteFile(configPath, []byte(configYAML), 0644))
 
 	type stateArtifact struct {

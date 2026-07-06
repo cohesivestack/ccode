@@ -15,6 +15,7 @@ import (
 type initOptions struct {
 	ProjectPath string
 	ConfigPath  string
+	Version     string
 }
 
 func (o *initOptions) setDefaults() {
@@ -35,6 +36,7 @@ func (o *initOptions) validate() error {
 	val := v.Is(
 		v.String(o.ProjectPath, "project_path").Not().Blank(),
 		v.String(o.ConfigPath, "config_path").Not().Blank(),
+		v.String(o.Version, "version").Not().Blank(),
 	)
 	if val.Valid() {
 		return nil
@@ -42,10 +44,11 @@ func (o *initOptions) validate() error {
 	return val.ToValgoError()
 }
 
-func newInitOptions(projectPath string, configPath string) (*initOptions, error) {
+func newInitOptions(projectPath string, configPath string, version string) (*initOptions, error) {
 	options := &initOptions{
 		ProjectPath: projectPath,
 		ConfigPath:  configPath,
+		Version:     version,
 	}
 	options.setDefaults()
 
@@ -62,8 +65,8 @@ func newInitOptions(projectPath string, configPath string) (*initOptions, error)
 	return options, nil
 }
 
-func Init(projectPath string, configPath string) error {
-	options, err := newInitOptions(projectPath, configPath)
+func Init(projectPath string, configPath string, version string) error {
+	options, err := newInitOptions(projectPath, configPath, version)
 	if err != nil {
 		return err
 	}
@@ -78,7 +81,7 @@ func Init(projectPath string, configPath string) error {
 		}
 	}
 
-	if err := writeConfigIfMissing(options.ConfigPath, options.ProjectPath); err != nil {
+	if err := writeConfigIfMissing(options.ConfigPath, options.ProjectPath, options.Version); err != nil {
 		return err
 	}
 	if err := writeFileIfMissing(filepath.Join(hiddenLibPath, "context.ts"), templateassets.ContextTemplate, "context template"); err != nil {
@@ -94,8 +97,8 @@ func Init(projectPath string, configPath string) error {
 	return nil
 }
 
-func writeConfigIfMissing(configPath string, projectPath string) error {
-	rendered, err := renderConfigTemplate(projectPath)
+func writeConfigIfMissing(configPath string, projectPath string, version string) error {
+	rendered, err := renderConfigTemplate(projectPath, version)
 	if err != nil {
 		return err
 	}
@@ -103,7 +106,7 @@ func writeConfigIfMissing(configPath string, projectPath string) error {
 	return writeFileIfMissing(configPath, rendered, "config file")
 }
 
-func renderConfigTemplate(projectPath string) (string, error) {
+func renderConfigTemplate(projectPath string, version string) (string, error) {
 	tmpl, err := texttemplate.New(DefaultConfigFileName).Parse(templateassets.ConfigTemplate)
 	if err != nil {
 		return "", fmt.Errorf("parse config template: %w", err)
@@ -112,8 +115,10 @@ func renderConfigTemplate(projectPath string) (string, error) {
 	var buffer bytes.Buffer
 	if err := tmpl.Execute(&buffer, struct {
 		ProjectPath string
+		Version     string
 	}{
 		ProjectPath: projectPath,
+		Version:     version,
 	}); err != nil {
 		return "", fmt.Errorf("render config template: %w", err)
 	}

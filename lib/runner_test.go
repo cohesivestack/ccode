@@ -194,7 +194,7 @@ func setupRunnerTestProject(t *testing.T, folderName string) (*Context, string) 
 	projectDir := filepath.Join(tempDir, folderName)
 	configFile := filepath.Join(tempDir, DefaultConfigFileName)
 
-	require.NoError(t, Init(projectDir, configFile))
+	require.NoError(t, Init(projectDir, configFile, "v1.2.3"))
 
 	config, err := LoadConfig(configFile)
 	require.NoError(t, err)
