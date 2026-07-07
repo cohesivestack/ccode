@@ -28,6 +28,10 @@ func Run(config *Config, process string) error {
 }
 
 func (ctx *Context) Run(process string) error {
+	if err := ctx.validateWorkspaceSupportFiles(); err != nil {
+		return err
+	}
+
 	entryPointPath, sourcePath, err := ctx.resolveProcessEntryPoint(process)
 	if err != nil {
 		return err
@@ -44,6 +48,31 @@ func (ctx *Context) Run(process string) error {
 
 	defaultScope := runnerScopeFromEntryPoint(entryPointPath)
 	return ctx.executeRunnerBundle(result.OutputFiles, defaultScope)
+}
+
+func (ctx *Context) validateWorkspaceSupportFiles() error {
+	if ctx == nil || ctx.config == nil {
+		return fmt.Errorf("context config is required")
+	}
+
+	requiredPaths := []string{
+		ctx.config.CCodePath,
+		filepath.Join(ctx.config.CCodePath, "tsconfig.json"),
+		filepath.Join(ctx.config.HiddenPath, "lib", "context.ts"),
+		filepath.Join(ctx.config.HiddenPath, "lib", "openapi.ts"),
+	}
+
+	missingPaths := []string{}
+	for _, path := range requiredPaths {
+		if !fileExists(path) {
+			missingPaths = append(missingPaths, path)
+		}
+	}
+	if len(missingPaths) == 0 {
+		return nil
+	}
+
+	return fmt.Errorf("ccode workspace is not initialized or support files are missing. Run: ccode init. Missing: %s", strings.Join(missingPaths, ", "))
 }
 
 func (ctx *Context) resolveProcessEntryPoint(process string) (string, string, error) {

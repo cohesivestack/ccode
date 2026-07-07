@@ -22,6 +22,35 @@ func TestRunner_RunValidatesDefaultExportContextSignature(t *testing.T) {
 	assert.Contains(t, err.Error(), "must export a default function with a single Context-typed parameter")
 }
 
+func TestRunner_RunFailsWhenWorkspaceSupportFilesAreMissing(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunFailsWhenWorkspaceSupportFilesAreMissing")
+	contextPath := filepath.Join(ctx.config.HiddenPath, "lib", "context.ts")
+	require.NoError(t, os.Remove(contextPath))
+
+	err := ctx.Run("x/generate")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "ccode workspace is not initialized or support files are missing")
+	assert.Contains(t, err.Error(), "Run: ccode init")
+	assert.Contains(t, err.Error(), filepath.Join(projectDir, DefaultHiddenFolderName, "lib", "context.ts"))
+}
+
+func TestRunner_RunRecreatesMissingBuildCache(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunRecreatesMissingBuildCache")
+	processFile := filepath.Join(projectDir, "x", "generate.ts")
+	buildPath := filepath.Join(ctx.config.HiddenPath, "build")
+
+	require.NoError(t, os.RemoveAll(buildPath))
+	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
+	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/context\";\n\nexport default function main(ctx: Context) {\n\tctx.println(\"ok\");\n}\n"), 0644))
+
+	var output bytes.Buffer
+	ctx.stdout = &output
+
+	require.NoError(t, ctx.Run("x/generate"))
+	assert.Equal(t, "ok\n", output.String())
+	require.DirExists(t, buildPath)
+}
+
 func TestRunner_RunExecutesDefaultExport(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunExecutesDefaultExport")
 	processFile := filepath.Join(projectDir, "x", "generate.ts")
