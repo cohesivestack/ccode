@@ -13,3 +13,6 @@ var ContextTemplate string
 
 //go:embed openapi.ts
 var OpenAPITemplate string
+
+//go:embed ccode.gitignore
+var HiddenGitIgnoreTemplate string

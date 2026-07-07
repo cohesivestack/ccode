@@ -98,6 +98,9 @@ func Init(projectPath string, configPath string, version string) error {
 	if err := updateConfigVersion(options.ConfigPath, options.Version); err != nil {
 		return err
 	}
+	if err := writeFileIfMissing(filepath.Join(hiddenPath, ".gitignore"), templateassets.HiddenGitIgnoreTemplate, ".ccode gitignore"); err != nil {
+		return err
+	}
 	if err := writeFile(filepath.Join(hiddenLibPath, "context.ts"), templateassets.ContextTemplate, "context template"); err != nil {
 		return err
 	}

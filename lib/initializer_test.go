@@ -27,6 +27,7 @@ func TestInitializer_InitCreatesProjectStructure(t *testing.T) {
 	projectPath := filepath.Join(tmp, "cohesive")
 	configPath := filepath.Join(tmp, "configs", "ccode.yaml")
 	hiddenPath := filepath.Join(projectPath, DefaultHiddenFolderName)
+	hiddenGitIgnorePath := filepath.Join(hiddenPath, ".gitignore")
 	buildPath := filepath.Join(hiddenPath, "build")
 	contextPath := filepath.Join(hiddenPath, "lib", "context.ts")
 	openapiPath := filepath.Join(hiddenPath, "lib", "openapi.ts")
@@ -37,6 +38,7 @@ func TestInitializer_InitCreatesProjectStructure(t *testing.T) {
 	require.DirExists(t, filepath.Join(hiddenPath, "lib"))
 	require.DirExists(t, buildPath)
 	require.FileExists(t, configPath)
+	require.FileExists(t, hiddenGitIgnorePath)
 	require.FileExists(t, contextPath)
 	require.FileExists(t, openapiPath)
 	require.FileExists(t, tsconfigPath)
@@ -44,6 +46,10 @@ func TestInitializer_InitCreatesProjectStructure(t *testing.T) {
 	configContent, err := os.ReadFile(configPath)
 	require.NoError(t, err)
 	assert.Equal(t, "ccode_path: cohesive\nversion: v1.2.3\n", string(configContent))
+
+	hiddenGitIgnoreContent, err := os.ReadFile(hiddenGitIgnorePath)
+	require.NoError(t, err)
+	assert.Equal(t, templateassets.HiddenGitIgnoreTemplate, string(hiddenGitIgnoreContent))
 
 	contextContent, err := os.ReadFile(contextPath)
 	require.NoError(t, err)
@@ -69,8 +75,10 @@ func TestInitializer_InitRefreshesGeneratedSupportFilesAndPreservesUserFiles(t *
 	})
 
 	projectPath := filepath.Join(tmp, "ccode")
+	hiddenPath := filepath.Join(projectPath, DefaultHiddenFolderName)
 	hiddenLibPath := filepath.Join(projectPath, DefaultHiddenFolderName, "lib")
 	configPath := filepath.Join(tmp, DefaultConfigFileName)
+	hiddenGitIgnorePath := filepath.Join(hiddenPath, ".gitignore")
 	contextPath := filepath.Join(hiddenLibPath, "context.ts")
 	openapiPath := filepath.Join(hiddenLibPath, "openapi.ts")
 	buildPath := filepath.Join(projectPath, DefaultHiddenFolderName, "build")
@@ -82,6 +90,7 @@ func TestInitializer_InitRefreshesGeneratedSupportFilesAndPreservesUserFiles(t *
 	require.NoError(t, os.MkdirAll(buildPath, 0755))
 	require.NoError(t, os.MkdirAll(filepath.Dir(statePath), 0755))
 	require.NoError(t, os.WriteFile(configPath, []byte("ccode_path: ccode\nversion: v0.1.0\n"), 0644))
+	require.NoError(t, os.WriteFile(hiddenGitIgnorePath, []byte("custom ignore"), 0644))
 	require.NoError(t, os.WriteFile(contextPath, []byte("existing context"), 0644))
 	require.NoError(t, os.WriteFile(openapiPath, []byte("existing openapi"), 0644))
 	require.NoError(t, os.WriteFile(buildCachePath, []byte("cached bundle"), 0644))
@@ -108,6 +117,10 @@ func TestInitializer_InitRefreshesGeneratedSupportFilesAndPreservesUserFiles(t *
 	openapiContent, err := os.ReadFile(openapiPath)
 	require.NoError(t, err)
 	assert.Equal(t, templateassets.OpenAPITemplate, string(openapiContent))
+
+	hiddenGitIgnoreContent, err := os.ReadFile(hiddenGitIgnorePath)
+	require.NoError(t, err)
+	assert.Equal(t, "custom ignore", string(hiddenGitIgnoreContent))
 
 	tsconfigContent, err := os.ReadFile(tsconfigPath)
 	require.NoError(t, err)
