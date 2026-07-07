@@ -143,6 +143,7 @@ The wrapper at `installer/bin/ccode`:
 * Caches binaries under `~/.cache/ccode/releases`
 * For normal execution, does not modify `ccode.yaml` or `~/.config/ccode/version`
 * For `ccode init`, forwards the resolved version to the binary so `ccode.yaml` includes `version` and generated support files are refreshed
+* `ccode init` creates `.ccode/.gitignore` so only that file is tracked from the hidden internal folder by default
 * `ccode run` expects an initialized workspace and fails clearly if init-managed support files are missing
 * Supports pinning:
   * `ccode pin`

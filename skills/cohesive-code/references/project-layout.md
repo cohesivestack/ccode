@@ -11,13 +11,16 @@ Default result:
 ./ccode/
   tsconfig.json
   .ccode/
+    .gitignore
     build/
     lib/
       context.ts
       openapi.ts
 ```
 
-If `ccode.yaml` already exists, `init` keeps the file and only adds or updates its top-level `version` entry. `init` refreshes generated support files in `.ccode/lib/`, preserves existing `tsconfig.json`, clears and recreates `.ccode/build/`, and leaves accelerator state untouched.
+If `ccode.yaml` already exists, `init` keeps the file and only adds or updates its top-level `version` entry. `init` refreshes generated support files in `.ccode/lib/`, preserves existing `tsconfig.json`, creates `.ccode/.gitignore` if missing, clears and recreates `.ccode/build/`, and leaves accelerator state untouched.
+
+The default `.ccode/.gitignore` ignores everything inside `.ccode/` except the `.gitignore` file itself, so the repository can keep the hidden folder anchor without committing generated support files, build cache, or runtime state.
 
 ## Config and path resolution
 
