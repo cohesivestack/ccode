@@ -12,13 +12,12 @@ Default result:
   tsconfig.json
   .ccode/
     build/
-    state/
     lib/
       context.ts
       openapi.ts
 ```
 
-If a target file already exists, `init` leaves it in place. It does not overwrite the config file, the generated context typings, the generated OpenAPI typings, or `tsconfig.json`.
+If `ccode.yaml` already exists, `init` keeps the file and only adds or updates its top-level `version` entry. `init` refreshes generated support files in `.ccode/lib/`, preserves existing `tsconfig.json`, clears and recreates `.ccode/build/`, and leaves accelerator state untouched.
 
 ## Config and path resolution
 
@@ -116,4 +115,5 @@ Example:
 - Read `ccode.yaml` before creating files.
 - Keep templates and spec files inside `ccode_path` unless the user explicitly wants external inputs.
 - Do not edit `.ccode/lib/context.ts` in application repos; regenerate it through `ccode init` or change the CLI templates in the source repo instead.
+- Run `ccode init` after changing `ccode.yaml` `version` to refresh generated support files for that version.
 - For accelerated artifacts, inspect pending items via CLI (`ccode list accelerated`) before editing generated outputs manually.
