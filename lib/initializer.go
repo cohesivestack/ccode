@@ -6,10 +6,12 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	texttemplate "text/template"
 
 	templateassets "github.com/cohesivestack/ccode/template"
 	v "github.com/cohesivestack/valgo"
+	"gopkg.in/yaml.v3"
 )
 
 type initOptions struct {
@@ -71,39 +73,129 @@ func Init(projectPath string, configPath string, version string) error {
 		return err
 	}
 
-	hiddenPath := filepath.Join(options.ProjectPath, DefaultHiddenFolderName)
+	workspacePath, hiddenPath, err := resolveInitWorkspacePaths(options)
+	if err != nil {
+		return err
+	}
 	hiddenLibPath := filepath.Join(hiddenPath, "lib")
 	buildPath := filepath.Join(hiddenPath, "build")
 
-	for _, path := range []string{options.ProjectPath, hiddenLibPath, buildPath} {
+	for _, path := range []string{workspacePath, hiddenLibPath} {
 		if err := os.MkdirAll(path, 0755); err != nil {
 			return fmt.Errorf("create %s: %w", path, err)
 		}
+	}
+	if err := os.RemoveAll(buildPath); err != nil {
+		return fmt.Errorf("clear build cache %s: %w", buildPath, err)
+	}
+	if err := os.MkdirAll(buildPath, 0755); err != nil {
+		return fmt.Errorf("create %s: %w", buildPath, err)
 	}
 
 	if err := writeConfigIfMissing(options.ConfigPath, options.ProjectPath, options.Version); err != nil {
 		return err
 	}
-	if err := writeFileIfMissing(filepath.Join(hiddenLibPath, "context.ts"), templateassets.ContextTemplate, "context template"); err != nil {
+	if err := updateConfigVersion(options.ConfigPath, options.Version); err != nil {
 		return err
 	}
-	if err := writeFileIfMissing(filepath.Join(hiddenLibPath, "openapi.ts"), templateassets.OpenAPITemplate, "openapi template"); err != nil {
+	if err := writeFile(filepath.Join(hiddenLibPath, "context.ts"), templateassets.ContextTemplate, "context template"); err != nil {
 		return err
 	}
-	if err := writeFileIfMissing(filepath.Join(options.ProjectPath, "tsconfig.json"), templateassets.TSConfigTemplate, "tsconfig"); err != nil {
+	if err := writeFile(filepath.Join(hiddenLibPath, "openapi.ts"), templateassets.OpenAPITemplate, "openapi template"); err != nil {
+		return err
+	}
+	if err := writeFileIfMissing(filepath.Join(workspacePath, "tsconfig.json"), templateassets.TSConfigTemplate, "tsconfig"); err != nil {
 		return err
 	}
 
 	return nil
 }
 
+func resolveInitWorkspacePaths(options *initOptions) (string, string, error) {
+	workspacePath := options.ProjectPath
+	hiddenPath := filepath.Join(workspacePath, DefaultHiddenFolderName)
+
+	if !fileExists(options.ConfigPath) {
+		return workspacePath, hiddenPath, nil
+	}
+
+	payload, err := os.ReadFile(options.ConfigPath)
+	if err != nil {
+		return "", "", fmt.Errorf("read config file %s: %w", options.ConfigPath, err)
+	}
+
+	config := &Config{}
+	if err := yaml.Unmarshal(payload, config); err != nil {
+		return "", "", fmt.Errorf("parse config file %s: %w", options.ConfigPath, err)
+	}
+	if !isStringBlank(config.CCodePath) {
+		workspacePath = config.CCodePath
+	}
+	if !filepath.IsAbs(workspacePath) {
+		workspacePath = filepath.Clean(filepath.Join(filepath.Dir(options.ConfigPath), workspacePath))
+	}
+
+	hiddenPath = config.HiddenPath
+	if isStringBlank(hiddenPath) {
+		hiddenPath = DefaultHiddenFolderName
+	}
+	if !filepath.IsAbs(hiddenPath) {
+		hiddenPath = filepath.Join(workspacePath, hiddenPath)
+	}
+
+	return workspacePath, hiddenPath, nil
+}
+
 func writeConfigIfMissing(configPath string, projectPath string, version string) error {
+	if fileExists(configPath) {
+		return nil
+	}
+
 	rendered, err := renderConfigTemplate(projectPath, version)
 	if err != nil {
 		return err
 	}
 
 	return writeFileIfMissing(configPath, rendered, "config file")
+}
+
+func updateConfigVersion(configPath string, version string) error {
+	payload, err := os.ReadFile(configPath)
+	if err != nil {
+		return fmt.Errorf("read config file %s: %w", configPath, err)
+	}
+
+	content := string(payload)
+	lines := strings.SplitAfter(content, "\n")
+	for index, line := range lines {
+		trimmed := strings.TrimSpace(strings.TrimRight(line, "\n"))
+		if !strings.HasPrefix(trimmed, "version:") {
+			continue
+		}
+
+		prefixLength := strings.Index(line, "version:")
+		prefix := line[:prefixLength]
+		lineEnding := ""
+		if strings.HasSuffix(line, "\n") {
+			lineEnding = "\n"
+		}
+		comment := ""
+		if commentIndex := strings.Index(line[prefixLength:], "#"); commentIndex >= 0 {
+			comment = strings.TrimRight(line[prefixLength+commentIndex:], "\n")
+			if !strings.HasPrefix(comment, " ") {
+				comment = " " + comment
+			}
+		}
+		lines[index] = fmt.Sprintf("%sversion: %s%s%s", prefix, version, comment, lineEnding)
+		return os.WriteFile(configPath, []byte(strings.Join(lines, "")), 0644)
+	}
+
+	if content != "" && !strings.HasSuffix(content, "\n") {
+		content += "\n"
+	}
+	content += fmt.Sprintf("version: %s\n", version)
+
+	return os.WriteFile(configPath, []byte(content), 0644)
 }
 
 func renderConfigTemplate(projectPath string, version string) (string, error) {
@@ -132,6 +224,10 @@ func writeFileIfMissing(path string, content string, assetName string) error {
 		return nil
 	}
 
+	return writeFile(path, content, assetName)
+}
+
+func writeFile(path string, content string, assetName string) error {
 	parentDir := filepath.Dir(path)
 	if parentDir != "." {
 		if err := os.MkdirAll(parentDir, 0755); err != nil {
