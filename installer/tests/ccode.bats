@@ -213,36 +213,35 @@ teardown() {
   rm -rf "$TEST_ROOT"
 }
 
-@test "pin v1.2.3 writes local .ccode/version" {
+@test "pin v1.2.3 writes global version file" {
   run run_wrapper "$WORKSPACE" pin v1.2.3
   [ "$status" -eq 0 ]
   [ "$output" = "v1.2.3" ]
-  [ "$(cat "$WORKSPACE/.ccode/version")" = "v1.2.3" ]
+  [ "$(cat "$XDG_CONFIG_HOME/ccode/version")" = "v1.2.3" ]
+  [ ! -e "$WORKSPACE/.ccode/version" ]
 }
 
 @test "pin 1.2.3 normalizes to v1.2.3" {
   run run_wrapper "$WORKSPACE" pin 1.2.3
   [ "$status" -eq 0 ]
   [ "$output" = "v1.2.3" ]
-  [ "$(cat "$WORKSPACE/.ccode/version")" = "v1.2.3" ]
-}
-
-@test "pin v1.2.3 --global writes global version file" {
-  run run_wrapper "$WORKSPACE" pin v1.2.3 --global
-  [ "$status" -eq 0 ]
-  [ "$output" = "v1.2.3" ]
   [ "$(cat "$XDG_CONFIG_HOME/ccode/version")" = "v1.2.3" ]
 }
 
-@test "pin with no version uses highest cached semantic version" {
-  make_cached_binary v1.2.3
-  make_cached_binary v1.10.0
-  make_cached_binary v1.9.9
+@test "pin rejects --global because pin is always global" {
+  run run_wrapper "$WORKSPACE" pin v1.2.3 --global
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"unknown argument for pin: --global"* ]]
+}
+
+@test "pin with no version resolves latest stable and writes global version file" {
+  export MOCK_LATEST_TAG="v1.10.0"
 
   run run_wrapper "$WORKSPACE" pin
   [ "$status" -eq 0 ]
   [ "$output" = "v1.10.0" ]
-  [ "$(cat "$WORKSPACE/.ccode/version")" = "v1.10.0" ]
+  [ "$(cat "$XDG_CONFIG_HOME/ccode/version")" = "v1.10.0" ]
+  grep -q "/releases/latest" "$MOCK_CURL_LOG"
 }
 
 @test "pin latest resolves latest stable from mocked GitHub and writes concrete tag" {
@@ -251,7 +250,7 @@ teardown() {
   run run_wrapper "$WORKSPACE" pin latest
   [ "$status" -eq 0 ]
   [ "$output" = "v2.4.6" ]
-  [ "$(cat "$WORKSPACE/.ccode/version")" = "v2.4.6" ]
+  [ "$(cat "$XDG_CONFIG_HOME/ccode/version")" = "v2.4.6" ]
   grep -q "/releases/latest" "$MOCK_CURL_LOG"
 }
 
@@ -273,22 +272,22 @@ teardown() {
   [[ "$output" == *"invalid version for pin"* ]]
 }
 
-@test "normal execution uses CCODE_VERSION over project and global version files" {
+@test "normal execution uses --version over ccode.yaml and global pin" {
   make_cached_binary v3.0.0
   make_cached_binary v1.1.1
-  mkdir -p "$WORKSPACE/.ccode"
-  printf 'v1.1.1\n' >"$WORKSPACE/.ccode/version"
+  printf 'ccode_path: ccode\nversion: v1.1.1\n' >"$WORKSPACE/ccode.yaml"
   mkdir -p "$XDG_CONFIG_HOME/ccode"
   printf 'v1.1.1\n' >"$XDG_CONFIG_HOME/ccode/version"
 
-  export CCODE_VERSION="v3.0.0"
-  run run_wrapper "$WORKSPACE" run processA
-  unset CCODE_VERSION
+  run run_wrapper "$WORKSPACE" --version v3.0.0 run processA
   [ "$status" -eq 0 ]
   [[ "$output" == *"BIN=v3.0.0"* ]]
+  [[ "$output" == *"ARG=run"* ]]
+  [[ "$output" == *"ARG=processA"* ]]
+  [[ "$output" != *"ARG=--version"* ]]
 }
 
-@test "normal execution uses nearest project version over global version" {
+@test "normal execution uses nearest ccode.yaml version over global pin" {
   make_cached_binary v1.2.0
   make_cached_binary v4.0.0
   mkdir -p "$XDG_CONFIG_HOME/ccode"
@@ -296,15 +295,15 @@ teardown() {
 
   local root="${WORKSPACE}/root"
   local nested="${root}/a/b"
-  mkdir -p "${root}/.ccode" "$nested"
-  printf 'v1.2.0\n' >"${root}/.ccode/version"
+  mkdir -p "$nested"
+  printf 'ccode_path: ccode\nversion: v1.2.0\n' >"${root}/ccode.yaml"
 
   run run_wrapper "$nested" run task
   [ "$status" -eq 0 ]
   [[ "$output" == *"BIN=v1.2.0"* ]]
 }
 
-@test "normal execution uses global config when env and project versions are absent" {
+@test "normal execution uses global pin when ccode.yaml is absent" {
   make_cached_binary v5.0.0
   mkdir -p "$XDG_CONFIG_HOME/ccode"
   printf 'v5.0.0\n' >"$XDG_CONFIG_HOME/ccode/version"
@@ -314,17 +313,7 @@ teardown() {
   [[ "$output" == *"BIN=v5.0.0"* ]]
 }
 
-@test "normal execution uses highest cached version when no env/project/global version is set" {
-  make_cached_binary v1.1.0
-  make_cached_binary v1.10.0
-  make_cached_binary v1.2.9
-
-  run run_wrapper "$WORKSPACE" run task
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"BIN=v1.10.0"* ]]
-}
-
-@test "normal execution resolves latest stable from mocked GitHub when cache is empty" {
+@test "normal execution resolves latest stable when no version source exists" {
   export MOCK_LATEST_TAG="v7.7.7"
 
   run run_wrapper "$WORKSPACE" run task --flag=value
@@ -338,7 +327,7 @@ teardown() {
 }
 
 @test "normal execution does not create local or global version files" {
-  make_cached_binary v1.0.0
+  export MOCK_LATEST_TAG="v1.0.0"
   run run_wrapper "$WORKSPACE" run task
   [ "$status" -eq 0 ]
   [ ! -f "$WORKSPACE/.ccode/version" ]
@@ -347,6 +336,7 @@ teardown() {
 
 @test "arguments are forwarded unchanged to the resolved binary" {
   make_cached_binary v2.0.0
+  printf 'ccode_path: ccode\nversion: v2.0.0\n' >"$WORKSPACE/ccode.yaml"
 
   run run_wrapper "$WORKSPACE" --alpha "two words" --beta=3 "x=y"
   [ "$status" -eq 0 ]
@@ -357,52 +347,38 @@ teardown() {
   [[ "$output" == *"ARG=x=y"* ]]
 }
 
-@test "local pin updates nearest existing parent .ccode/version" {
-  local parent="${WORKSPACE}/parent"
-  local child="${parent}/sub/deeper"
-  mkdir -p "${parent}/.ccode" "$child"
-  printf 'v0.1.0\n' >"${parent}/.ccode/version"
+@test "init without --version forwards latest stable as init version" {
+  export MOCK_LATEST_TAG="v8.0.0"
+  make_cached_binary v1.1.1
+  printf 'ccode_path: ccode\nversion: v1.1.1\n' >"$WORKSPACE/ccode.yaml"
+  mkdir -p "$XDG_CONFIG_HOME/ccode"
+  printf 'v1.1.1\n' >"$XDG_CONFIG_HOME/ccode/version"
 
-  run run_wrapper "$child" pin v1.4.0
+  run run_wrapper "$WORKSPACE" init project
   [ "$status" -eq 0 ]
-  [ "$(cat "${parent}/.ccode/version")" = "v1.4.0" ]
-  [ ! -e "${child}/.ccode/version" ]
+  [[ "$output" == *"BIN=v8.0.0"* ]]
+  [[ "$output" == *"ARG=init"* ]]
+  [[ "$output" == *"ARG=project"* ]]
+  [[ "$output" == *"ARG=--version"* ]]
+  [[ "$output" == *"ARG=v8.0.0"* ]]
 }
 
-@test "local pin writes to mocked git root when no parent .ccode/version exists" {
-  local repo_root="${WORKSPACE}/repo"
-  local nested="${repo_root}/sub/path"
-  mkdir -p "$nested"
-  export FAKE_GIT_ROOT="$repo_root"
+@test "init --version selects and forwards explicit version" {
+  make_cached_binary v6.1.0
 
-  run run_wrapper "$nested" pin v3.2.1
+  run run_wrapper "$WORKSPACE" init project --version v6.1.0
   [ "$status" -eq 0 ]
-  [ "$(cat "${repo_root}/.ccode/version")" = "v3.2.1" ]
+  [[ "$output" == *"BIN=v6.1.0"* ]]
+  [[ "$output" == *"ARG=init"* ]]
+  [[ "$output" == *"ARG=project"* ]]
+  [[ "$output" == *"ARG=--version"* ]]
+  [[ "$output" == *"ARG=v6.1.0"* ]]
 }
 
-@test "local pin writes to current directory when no parent .ccode/version and not in git repo" {
-  local nested="${WORKSPACE}/nogit/sub/path"
-  mkdir -p "$nested"
+@test "ccode.yaml without version fails clearly" {
+  printf 'ccode_path: ccode\n' >"$WORKSPACE/ccode.yaml"
 
-  run run_wrapper "$nested" pin v4.5.6
-  [ "$status" -eq 0 ]
-  [ "$(cat "${nested}/.ccode/version")" = "v4.5.6" ]
-}
-
-@test "cached selection ignores malformed entries and uses semantic version ordering rather than mtime" {
-  make_cached_binary v1.9.0
-  make_cached_binary v2.0.0-beta1
-  make_cached_binary v1.10.0
-
-  mkdir -p "${XDG_CACHE_HOME}/ccode/releases/not-a-version/${TEST_PLATFORM}"
-  mkdir -p "${XDG_CACHE_HOME}/ccode/releases/v1.2/${TEST_PLATFORM}"
-  mkdir -p "${XDG_CACHE_HOME}/ccode/releases/v1.8.0/${TEST_PLATFORM}"
-  printf 'junk\n' >"${XDG_CACHE_HOME}/ccode/releases/v1.8.0/${TEST_PLATFORM}/README.txt"
-
-  touch -t 203001010101 "${XDG_CACHE_HOME}/ccode/releases/v1.9.0/${TEST_PLATFORM}/${TEST_BINARY_NAME}"
-  touch -t 200001010101 "${XDG_CACHE_HOME}/ccode/releases/v2.0.0-beta1/${TEST_PLATFORM}/${TEST_BINARY_NAME}"
-
-  run run_wrapper "$WORKSPACE" pin
-  [ "$status" -eq 0 ]
-  [ "$output" = "v2.0.0-beta1" ]
+  run run_wrapper "$WORKSPACE" run task
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"version is required"* ]]
 }

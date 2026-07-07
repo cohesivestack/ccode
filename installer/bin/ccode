@@ -2,12 +2,10 @@
 set -euo pipefail
 
 # ccode wrapper behavior:
-# - Version precedence: CCODE_VERSION -> nearest .ccode/version (walk up) -> ~/.config/ccode/version
-# - If no version is configured: use highest cached semantic version under ~/.cache/ccode/releases
-# - If cache has no installed versions: resolve latest stable (non-draft, non-prerelease) from GitHub Releases
-# - Normal command execution is read-only for version config files (.ccode/version and ~/.config/ccode/version)
+# - Version precedence: --version -> nearest ccode.yaml version -> ~/.config/ccode/version -> latest stable release
+# - Normal command execution is read-only for version config files.
 # - Cache/install writes are only under ~/.cache/ccode/releases
-# - Built-in `pin` writes version atomically to .ccode/version (local) or ~/.config/ccode/version (--global)
+# - Built-in `pin` writes version atomically to ~/.config/ccode/version
 
 GITHUB_REPO="cohesivestack/ccode"
 GITHUB_API_BASE="https://api.github.com/repos/${GITHUB_REPO}"
@@ -72,10 +70,15 @@ read_version_file() {
   printf '%s' "$value"
 }
 
-find_project_version_file() {
+find_config_file() {
+  if [[ -n "${CONFIG_FILE_ARG:-}" ]]; then
+    printf '%s' "$CONFIG_FILE_ARG"
+    return 0
+  fi
+
   local dir="$PWD"
   while true; do
-    local candidate="${dir}/.ccode/version"
+    local candidate="${dir}/ccode.yaml"
     if [[ -f "$candidate" ]]; then
       printf '%s' "$candidate"
       return 0
@@ -85,6 +88,34 @@ find_project_version_file() {
     fi
     dir="$(dirname "$dir")"
   done
+}
+
+read_config_version() {
+  local file="$1"
+  [[ -f "$file" ]] || return 1
+
+  local line value first last
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="$(trim_line "$line")"
+    case "$line" in
+      version:*)
+        value="${line#version:}"
+        value="${value%%#*}"
+        value="$(trim_line "$value")"
+        first="${value:0:1}"
+        last="${value: -1}"
+        if { [[ "$first" == '"' && "$last" == '"' ]] || [[ "$first" == "'" && "$last" == "'" ]]; } && [[ "${#value}" -ge 2 ]]; then
+          value="${value:1:${#value}-2}"
+        fi
+        value="$(trim_line "$value")"
+        [[ -n "$value" ]] || return 1
+        printf '%s' "$value"
+        return 0
+        ;;
+    esac
+  done <"$file"
+
+  return 1
 }
 
 is_semver_tag() {
@@ -133,34 +164,6 @@ cache_install_dir() {
 installed_binary_path() {
   local version="$1"
   printf '%s/%s' "$(cache_install_dir "$version")" "$BINARY_NAME"
-}
-
-version_has_any_cached_binary() {
-  local version="$1"
-  local version_dir="${CACHE_BASE}/${version}"
-  [[ -d "$version_dir" ]] || return 1
-  local found
-  found="$(find "$version_dir" -type f \( -name 'ccode' -o -name 'ccode.exe' \) -print -quit 2>/dev/null || true)"
-  [[ -n "$found" ]]
-}
-
-find_highest_cached_version() {
-  [[ -d "$CACHE_BASE" ]] || return 1
-
-  local versions=()
-  local path version
-  shopt -s nullglob
-  for path in "$CACHE_BASE"/v*; do
-    [[ -d "$path" ]] || continue
-    version="$(basename "$path")"
-    is_semver_tag "$version" || continue
-    version_has_any_cached_binary "$version" || continue
-    versions+=("$version")
-  done
-  shopt -u nullglob
-
-  [[ "${#versions[@]}" -gt 0 ]] || return 1
-  printf '%s\n' "${versions[@]}" | sort -V | tail -n1
 }
 
 github_api_get() {
@@ -290,39 +293,14 @@ Usage:
   ccode pin
   ccode pin <version>
   ccode pin latest
-  ccode pin --global
-  ccode pin latest --global
-  ccode pin <version> --global
 EOF
-}
-
-find_git_repo_root() {
-  command -v git >/dev/null 2>&1 || return 1
-  git -C "$PWD" rev-parse --show-toplevel 2>/dev/null
-}
-
-resolve_local_pin_target_file() {
-  local existing_file git_root
-  if existing_file="$(find_project_version_file 2>/dev/null)"; then
-    printf '%s' "$existing_file"
-    return 0
-  fi
-
-  if git_root="$(find_git_repo_root 2>/dev/null)"; then
-    printf '%s/.ccode/version' "$git_root"
-    return 0
-  fi
-
-  printf '%s/.ccode/version' "$PWD"
 }
 
 pin_command() {
   shift
   local input_version=""
-  local global_scope=0
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --global) global_scope=1 ;;
       -*)
         pin_usage
         die "unknown argument for pin: $1"
@@ -340,11 +318,7 @@ pin_command() {
 
   local resolved_version target_dir target_file temp_file
   if [[ -z "$input_version" ]]; then
-    if resolved_version="$(find_highest_cached_version 2>/dev/null)"; then
-      :
-    else
-      resolved_version="$(latest_stable_release_tag)"
-    fi
+    resolved_version="$(latest_stable_release_tag)"
   elif [[ "$input_version" == "latest" ]]; then
     resolved_version="$(latest_stable_release_tag)"
   else
@@ -355,13 +329,8 @@ pin_command() {
     fi
   fi
 
-  if [[ "$global_scope" -eq 1 ]]; then
-    target_dir="$(dirname "$GLOBAL_VERSION_FILE")"
-    target_file="$GLOBAL_VERSION_FILE"
-  else
-    target_file="$(resolve_local_pin_target_file)"
-    target_dir="$(dirname "$target_file")"
-  fi
+  target_dir="$(dirname "$GLOBAL_VERSION_FILE")"
+  target_file="$GLOBAL_VERSION_FILE"
 
   mkdir -p "$target_dir"
   temp_file="$(mktemp "${target_dir}/version.tmp.XXXXXX")"
@@ -371,28 +340,113 @@ pin_command() {
   printf '%s\n' "$resolved_version"
 }
 
-resolve_requested_version() {
-  local value project_version_file cached
+REQUESTED_VERSION_ARG=""
+CONFIG_FILE_ARG=""
+COMMAND_NAME=""
+FORWARDED_ARGS=()
 
-  if [[ -n "${CCODE_VERSION:-}" ]]; then
-    normalize_version "$CCODE_VERSION"
+parse_wrapper_args() {
+  REQUESTED_VERSION_ARG=""
+  CONFIG_FILE_ARG=""
+  COMMAND_NAME=""
+  FORWARDED_ARGS=()
+
+  local expect_config=0
+  local expect_version=0
+  local expect_passthrough_value=0
+  local arg
+
+  for arg in "$@"; do
+    if [[ "$expect_config" -eq 1 ]]; then
+      CONFIG_FILE_ARG="$arg"
+      FORWARDED_ARGS+=("$arg")
+      expect_config=0
+      continue
+    fi
+    if [[ "$expect_version" -eq 1 ]]; then
+      REQUESTED_VERSION_ARG="$arg"
+      expect_version=0
+      continue
+    fi
+    if [[ "$expect_passthrough_value" -eq 1 ]]; then
+      FORWARDED_ARGS+=("$arg")
+      expect_passthrough_value=0
+      continue
+    fi
+
+    case "$arg" in
+      --config=*)
+        CONFIG_FILE_ARG="${arg#--config=}"
+        FORWARDED_ARGS+=("$arg")
+        ;;
+      --config)
+        FORWARDED_ARGS+=("$arg")
+        expect_config=1
+        ;;
+      --version=*)
+        REQUESTED_VERSION_ARG="${arg#--version=}"
+        ;;
+      --version)
+        expect_version=1
+        ;;
+      --ccode-path|--path|--output-path)
+        FORWARDED_ARGS+=("$arg")
+        expect_passthrough_value=1
+        ;;
+      --ccode-path=*|--path=*|--output-path=*)
+        FORWARDED_ARGS+=("$arg")
+        ;;
+      *)
+        FORWARDED_ARGS+=("$arg")
+        if [[ -z "$COMMAND_NAME" && "$arg" != -* ]]; then
+          COMMAND_NAME="$arg"
+        fi
+        ;;
+    esac
+  done
+
+  [[ "$expect_config" -eq 0 ]] || die "--config requires a value"
+  [[ "$expect_version" -eq 0 ]] || die "--version requires a value"
+  [[ "$expect_passthrough_value" -eq 0 ]] || die "missing value for option"
+}
+
+validate_requested_version() {
+  local value="$1"
+  if [[ "$value" == "latest" ]] || is_semver_tag "$value"; then
+    return 0
+  fi
+  return 1
+}
+
+resolve_requested_version() {
+  local value config_file
+
+  if [[ -n "$REQUESTED_VERSION_ARG" ]]; then
+    value="$(normalize_version "$REQUESTED_VERSION_ARG")"
+    validate_requested_version "$value" || die "invalid version for --version: ${REQUESTED_VERSION_ARG}"
+    printf '%s' "$value"
     return 0
   fi
 
-  if project_version_file="$(find_project_version_file 2>/dev/null)"; then
-    if value="$(read_version_file "$project_version_file" 2>/dev/null)"; then
-      normalize_version "$value"
+  if [[ "$COMMAND_NAME" == "init" ]]; then
+    latest_stable_release_tag
+    return 0
+  fi
+
+  if config_file="$(find_config_file 2>/dev/null)" && [[ -f "$config_file" ]]; then
+    if value="$(read_config_version "$config_file" 2>/dev/null)"; then
+      value="$(normalize_version "$value")"
+      validate_requested_version "$value" || die "invalid version in ${config_file}: ${value}"
+      printf '%s' "$value"
       return 0
     fi
+    die "version is required in ${config_file}"
   fi
 
   if value="$(read_version_file "$GLOBAL_VERSION_FILE" 2>/dev/null)"; then
-    normalize_version "$value"
-    return 0
-  fi
-
-  if cached="$(find_highest_cached_version 2>/dev/null)"; then
-    printf '%s' "$cached"
+    value="$(normalize_version "$value")"
+    validate_requested_version "$value" || die "invalid global pinned version: ${value}"
+    printf '%s' "$value"
     return 0
   fi
 
@@ -408,6 +462,8 @@ main() {
     return 0
   fi
 
+  parse_wrapper_args "$@"
+
   local requested_version resolved_version real_binary
   requested_version="$(resolve_requested_version)"
   if [[ "$requested_version" == "latest" ]]; then
@@ -417,7 +473,11 @@ main() {
   fi
 
   real_binary="$(install_version_if_needed "$resolved_version")"
-  exec "$real_binary" "$@"
+  if [[ "$COMMAND_NAME" == "init" ]]; then
+    FORWARDED_ARGS+=("--version" "$resolved_version")
+  fi
+
+  exec "$real_binary" "${FORWARDED_ARGS[@]}"
 }
 
 main "$@"

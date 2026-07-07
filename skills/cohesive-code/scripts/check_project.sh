@@ -33,6 +33,7 @@ if [ -z "$CCODE_PATH" ]; then
 fi
 OUTPUT_PATH="$(read_yaml_value "output_path" "$CONFIG")"
 HIDDEN_PATH="$(read_yaml_value "hidden_path" "$CONFIG")"
+VERSION="$(read_yaml_value "version" "$CONFIG")"
 
 [ -n "$CCODE_PATH" ] || CCODE_PATH="ccode"
 [ -n "$OUTPUT_PATH" ] || OUTPUT_PATH="."
@@ -51,6 +52,7 @@ esac
 echo "config: $CONFIG"
 echo "config_dir: $CONFIG_DIR"
 echo "ccode_path: $CCODE_PATH"
+echo "version: $VERSION"
 echo "output_path: $OUTPUT_PATH"
 echo "hidden_path: $HIDDEN_PATH"
 echo "resolved_ccode_path: $CCODE_ABS"
