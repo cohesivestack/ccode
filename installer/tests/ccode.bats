@@ -347,10 +347,25 @@ teardown() {
   [[ "$output" == *"ARG=x=y"* ]]
 }
 
-@test "init without --version forwards latest stable as init version" {
+@test "init without --version forwards existing ccode.yaml version" {
   export MOCK_LATEST_TAG="v8.0.0"
   make_cached_binary v1.1.1
   printf 'ccode_path: ccode\nversion: v1.1.1\n' >"$WORKSPACE/ccode.yaml"
+  mkdir -p "$XDG_CONFIG_HOME/ccode"
+  printf 'v8.0.0\n' >"$XDG_CONFIG_HOME/ccode/version"
+
+  run run_wrapper "$WORKSPACE" init project
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"BIN=v1.1.1"* ]]
+  [[ "$output" == *"ARG=init"* ]]
+  [[ "$output" == *"ARG=project"* ]]
+  [[ "$output" == *"ARG=--version"* ]]
+  [[ "$output" == *"ARG=v1.1.1"* ]]
+}
+
+@test "init without ccode.yaml version forwards latest stable" {
+  export MOCK_LATEST_TAG="v8.0.0"
+  printf 'ccode_path: ccode\n' >"$WORKSPACE/ccode.yaml"
   mkdir -p "$XDG_CONFIG_HOME/ccode"
   printf 'v1.1.1\n' >"$XDG_CONFIG_HOME/ccode/version"
 

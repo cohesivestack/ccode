@@ -428,11 +428,6 @@ resolve_requested_version() {
     return 0
   fi
 
-  if [[ "$COMMAND_NAME" == "init" ]]; then
-    latest_stable_release_tag
-    return 0
-  fi
-
   if config_file="$(find_config_file 2>/dev/null)" && [[ -f "$config_file" ]]; then
     if value="$(read_config_version "$config_file" 2>/dev/null)"; then
       value="$(normalize_version "$value")"
@@ -440,7 +435,16 @@ resolve_requested_version() {
       printf '%s' "$value"
       return 0
     fi
+    if [[ "$COMMAND_NAME" == "init" ]]; then
+      latest_stable_release_tag
+      return 0
+    fi
     die "version is required in ${config_file}"
+  fi
+
+  if [[ "$COMMAND_NAME" == "init" ]]; then
+    latest_stable_release_tag
+    return 0
   fi
 
   if value="$(read_version_file "$GLOBAL_VERSION_FILE" 2>/dev/null)"; then
