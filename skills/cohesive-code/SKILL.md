@@ -12,7 +12,7 @@ Use this skill when the task involves `ccode`, `ccode.yaml`, `ccode init`, `ccod
 
 ## Core rules
 
-- Treat `ccode.yaml` as the source of truth for `ccode_path`, `output_path`, and `hidden_path`. The `path` key is legacy and maps to `ccode_path`.
+- Treat `ccode.yaml` as the source of truth for `ccode_path`, `output_path`, `hidden_path`, and required `version`. The `path` key is legacy and maps to `ccode_path`.
 - Keep authored sources under `ccode_path`. Do not hand-edit `.ccode/build/*`; it is generated cache.
 - Avoid editing `.ccode/lib/*` in an application project unless the task is to change the Cohesive Code CLI templates themselves.
 - A runnable process must be a `.ts` file under `ccode_path` that exports `default function <name>(ctx: Context)`.
@@ -25,7 +25,7 @@ Use this skill when the task involves `ccode`, `ccode.yaml`, `ccode init`, `ccod
 
 ## Workflow
 
-1. Detect the workspace. Look for `ccode.yaml`. If the user is starting new, initialize with `ccode init [path]`.
+1. Detect the workspace. Look for `ccode.yaml`. If the user is starting new, initialize with `ccode init [path]` and optionally `--version <version>`.
 2. Read `ccode.yaml` before editing files so path resolution is explicit.
 3. Author or update the target process in TypeScript and import `type { Context } from "@ccode/context"`.
 4. Keep templates, specs, and seed data inside `ccode_path` so the runner can resolve them consistently.

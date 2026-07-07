@@ -26,6 +26,7 @@ Current config keys:
 
 ```yaml
 ccode_path: ccode
+version: v1.2.3
 output_path: .
 hidden_path: .ccode
 ```
@@ -33,6 +34,7 @@ hidden_path: .ccode
 Notes:
 
 - `path` is still accepted as a legacy alias for `ccode_path`.
+- `version` is required in `ccode.yaml` and is used by the wrapper to select the ccode release for the workspace.
 - `ccode_path` is resolved relative to the config file directory.
 - `output_path` is used as written. Relative values resolve from the directory where the CLI runs.
 - `hidden_path` defaults to `.ccode`. When relative, the runtime resolves it under `ccode_path`.
@@ -58,6 +60,13 @@ Supported CLI overrides:
 - `--ccode-path`
 - `--output-path`
 - `--path` as a deprecated alias for `--ccode-path`
+
+Wrapper version precedence:
+
+1. `--version`
+2. nearest `ccode.yaml` `version` entry, or the file passed with `--config`
+3. global pin at `~/.config/ccode/version`
+4. latest stable GitHub release
 
 ## Recommended source layout inside `ccode_path`
 

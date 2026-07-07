@@ -87,6 +87,7 @@ bash installer/install.sh
 
 ```yaml
 ccode_path: ccode # The path where the structure of the project resides. This accepts relative paths. Relative paths are resolved from the config file directory. By default is `ccode`.
+version: v1.2.3 # Required. The ccode release version used by the wrapper for this workspace.
 output_path: . # The root path where will be saved the produced artifacts. This is relative to the path where ccode command runs. By default is `.`
 hidden_path: .ccode # Internal state/build folder. By default is `.ccode`
 ```
@@ -96,7 +97,7 @@ hidden_path: .ccode # Internal state/build folder. By default is `.ccode`
 ### Main commands
 
 ```bash
-ccode --config [config-path] init [path]
+ccode --config [config-path] init [path] [--version version]
 ccode --config [config-path] --ccode-path [path] --output-path [output-path] run [process]
 ```
 
@@ -135,19 +136,18 @@ git push origin v1.2.3
 The wrapper at `installer/bin/ccode`:
 
 * Resolves version precedence in this order:
-  * `CCODE_VERSION`
-  * nearest `.ccode/version` (searching upward from the current directory)
+  * `--version` flag
+  * nearest `ccode.yaml` `version` entry (searching upward from the current directory, unless `--config` is passed)
   * `~/.config/ccode/version`
-  * highest cached version in `~/.cache/ccode/releases`
   * latest stable GitHub release (non-draft, non-prerelease)
 * Caches binaries under `~/.cache/ccode/releases`
-* For normal execution, does not modify `.ccode/version` or `~/.config/ccode/version`
+* For normal execution, does not modify `ccode.yaml` or `~/.config/ccode/version`
+* For `ccode init`, forwards the resolved version to the binary so new `ccode.yaml` files include `version`
 * Supports pinning:
   * `ccode pin`
   * `ccode pin <version>`
   * `ccode pin latest`
-  * `ccode pin --global`
-  * `ccode pin <version> --global`
+* `ccode pin` always writes `~/.config/ccode/version`
 
 ## Install from release assets
 
