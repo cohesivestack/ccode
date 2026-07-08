@@ -194,7 +194,7 @@ Syntax:
 
 	listAcceleratedCmd := &cobra.Command{
 		Use:   "accelerated [scopeId]",
-		Short: "List not-adjusted accelerated artifacts",
+		Short: "List pending accelerated artifacts",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := loadConfig(cmd)
@@ -279,7 +279,7 @@ Syntax:
 					ScopeID:          state.ScopeID,
 					ArtifactID:       state.ArtifactID,
 					InstructionsPath: state.InstructionsPath,
-					AdjustedAt:       state.AdjustedAt,
+					Pending:          state.Pending,
 				})
 			}
 

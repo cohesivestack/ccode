@@ -2,6 +2,7 @@ package ccode
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -30,8 +31,20 @@ func TestAccelerator_AccelerateWritesArtifactAndScopedState(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "Hello Carlos!", string(content))
 
-	statePath := filepath.Join(ctx.ccodeContext.config.CCodePath, DefaultHiddenFolderName, "state", "accelerators.json")
-	require.FileExists(t, statePath)
+	statePath := ctx.acceleratorStateFilePath()
+	require.DirExists(t, statePath)
+	stateFilePath := filepath.Join(statePath, "generate-api", "handlers.accelerated.json")
+	require.FileExists(t, stateFilePath)
+	stateFileContent, err := os.ReadFile(stateFilePath)
+	require.NoError(t, err)
+	assert.Equal(t, 1, strings.Count(string(stateFileContent), "\n"))
+	var stateFile map[string]any
+	require.NoError(t, json.Unmarshal(stateFileContent, &stateFile))
+	assert.Equal(t, true, stateFile["pending"])
+	assert.Contains(t, stateFile, "instructions")
+	assert.Contains(t, stateFile, "accelerated_checksum")
+	assert.Contains(t, stateFile, "instructions_checksum")
+	assert.Contains(t, stateFile, "code")
 
 	state, err := loadAcceleratorState(statePath)
 	require.NoError(t, err)
@@ -40,9 +53,10 @@ func TestAccelerator_AccelerateWritesArtifactAndScopedState(t *testing.T) {
 	require.Equal(t, "generate-api", state.Scopes[0].ID)
 	require.Len(t, state.Scopes[0].Artifacts, 1)
 	require.Equal(t, "handlers", state.Scopes[0].Artifacts[0].ID)
-	assert.Nil(t, state.Scopes[0].Artifacts[0].AdjustedAt)
+	assert.True(t, state.Scopes[0].Artifacts[0].Pending)
 	assert.Nil(t, state.Scopes[0].Artifacts[0].InstructionsPath)
-	assert.Contains(t, state.Scopes[0].Artifacts[0].Content, "Z:")
+	assert.NotContains(t, state.Scopes[0].Artifacts[0].Content, "Z:")
+	assert.NotEmpty(t, state.Scopes[0].Artifacts[0].AcceleratedChecksum)
 
 	decoded, err := decodeAcceleratorContentSnapshot(state.Scopes[0].Artifacts[0].Content)
 	require.NoError(t, err)
@@ -63,7 +77,7 @@ func TestAccelerator_AccelerateStoresRelativeInstructionsPath(t *testing.T) {
 	absoluteInstructionsPath := filepath.Join(ctx.ccodeContext.config.CCodePath, "instructions", "handlers.md")
 	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value, absoluteInstructionsPath))
 
-	statePath := filepath.Join(ctx.ccodeContext.config.CCodePath, DefaultHiddenFolderName, "state", "accelerators.json")
+	statePath := ctx.acceleratorStateFilePath()
 	state, err := loadAcceleratorState(statePath)
 	require.NoError(t, err)
 
@@ -96,7 +110,7 @@ func TestAccelerator_AccelerateSkipsOverwriteForModifiedFile(t *testing.T) {
 	require.NoError(t, readErr)
 	assert.Equal(t, "manually changed", string(content))
 
-	statePath := filepath.Join(ctx.ccodeContext.config.CCodePath, DefaultHiddenFolderName, "state", "accelerators.json")
+	statePath := ctx.acceleratorStateFilePath()
 	state, err := loadAcceleratorState(statePath)
 	require.NoError(t, err)
 	decoded, err := decodeAcceleratorContentSnapshot(state.Scopes[0].Artifacts[0].Content)
@@ -124,7 +138,7 @@ func TestAccelerator_AccelerateAllowsOverwriteWhenContentMatchesLastGeneratedVer
 	require.NoError(t, err)
 	assert.Equal(t, "Second", string(content))
 
-	statePath := filepath.Join(ctx.ccodeContext.config.CCodePath, DefaultHiddenFolderName, "state", "accelerators.json")
+	statePath := ctx.acceleratorStateFilePath()
 	state, err := loadAcceleratorState(statePath)
 	require.NoError(t, err)
 
@@ -145,7 +159,7 @@ func TestAccelerator_AccelerateSkipsOverwriteWhenRenderedContentMatchesPreviousS
 	require.NoError(t, err)
 	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value))
 
-	statePath := filepath.Join(ctx.ccodeContext.config.CCodePath, DefaultHiddenFolderName, "state", "accelerators.json")
+	statePath := ctx.acceleratorStateFilePath()
 	stateBefore, err := loadAcceleratorState(statePath)
 	require.NoError(t, err)
 	contentBefore := stateBefore.Scopes[0].Artifacts[0].Content
@@ -176,8 +190,8 @@ func TestAccelerator_AccelerateSkipsWhenExistingFileIsNotTracked(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "manual existing content", string(content))
 
-	statePath := filepath.Join(ctx.ccodeContext.config.CCodePath, DefaultHiddenFolderName, "state", "accelerators.json")
-	assert.NoFileExists(t, statePath)
+	statePath := ctx.acceleratorStateFilePath()
+	assert.NoDirExists(t, statePath)
 }
 
 func TestAccelerator_RunUsesDefaultScopeFromProcessFileAndAllowsSetScope(t *testing.T) {
@@ -205,12 +219,16 @@ func TestAccelerator_RunUsesDefaultScopeFromProcessFileAndAllowsSetScope(t *test
 	require.FileExists(t, defaultScopeFile)
 	require.FileExists(t, customScopeFile)
 
-	statePath := filepath.Join(projectDir, DefaultHiddenFolderName, "state", "accelerators.json")
+	statePath := ctx.acceleratorStateFilePath()
 	state, err := loadAcceleratorState(statePath)
 	require.NoError(t, err)
 	require.Len(t, state.Scopes, 2)
-	assert.Equal(t, "generate-api", state.Scopes[0].ID)
-	assert.Equal(t, "handlers", state.Scopes[0].Artifacts[0].ID)
-	assert.Equal(t, "custom-scope", state.Scopes[1].ID)
-	assert.Equal(t, "service", state.Scopes[1].Artifacts[0].ID)
+	defaultScope := state.findScopeByID("generate-api")
+	require.NotNil(t, defaultScope)
+	require.Len(t, defaultScope.Artifacts, 1)
+	assert.Equal(t, "handlers", defaultScope.Artifacts[0].ID)
+	customScope := state.findScopeByID("custom-scope")
+	require.NotNil(t, customScope)
+	require.Len(t, customScope.Artifacts, 1)
+	assert.Equal(t, "service", customScope.Artifacts[0].ID)
 }

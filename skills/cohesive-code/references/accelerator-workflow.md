@@ -12,18 +12,19 @@ Use `accelerate` when generation output is a proposal that should be reviewed or
   - process file name by default
   - overridden with `ctx.setScope(...)`
 - State is persisted at:
-  - `.ccode/state/accelerators.json`
+  - `.ccode/accelerators/<scope>/<id>.accelerated.json`
 
 State record fields are stable:
 
-- `id`
-- `content` (timestamp + encoded single-line payload)
-- `adjusted_at`
-- `instructions_path`
+- `pending`
+- `instructions`
+- `accelerated_checksum`
+- `instructions_checksum`
+- `code` (base64-encoded generated content)
 
 ## CLI inspection commands
 
-- List pending (not adjusted) artifacts:
+- List pending artifacts:
   - `ccode list accelerated [scopeId]`
 - List instruction references:
   - `ccode list instructions`
@@ -44,11 +45,11 @@ For machine-readable output:
 2. Query pending items (`ccode list accelerated --for-agent`).
 3. For each item, fetch instruction bundle (`ccode get accelerated ... --instructions --for-agent`).
 4. Apply edits to the target file in `output_path/<id>`.
-5. Marking adjusted is available through the Go API (`MarkAcceleratorAsAdjusted`), and can be integrated by host tooling.
+5. Clearing pending status is available through the Go API (`MarkAcceleratorAsAdjusted`), and can be integrated by host tooling.
 
 ## Guardrails
 
-- Do not decode `content` manually unless building instruction output.
+- Do not decode `code` manually unless building instruction output.
 - Do not expose accelerated content in list responses.
 - Do not expose instruction markdown from list commands.
-- Keep `instructions_path` relative to `ccode_path`.
+- Keep `instructions` relative to `ccode_path`.

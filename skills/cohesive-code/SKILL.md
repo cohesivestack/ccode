@@ -19,7 +19,7 @@ Use this skill when the task involves `ccode`, `ccode.yaml`, `ccode init`, `ccod
 - Invoke processes as `ccode run <relative/process/path-without-.ts>`.
 - `renderTemplate`, `generate`, `parseJSONFromFile`, and `parseOpenAPIFromFile` resolve template/input paths relative to `ccode_path`.
 - `generate` writes relative outputs under `output_path`.
-- `accelerate` writes artifacts under `output_path/<artifact-id>` and tracks them by scope in `.ccode/state/accelerators.json`.
+- `accelerate` writes artifacts under `output_path/<artifact-id>` and tracks them by scope in `.ccode/accelerators/<scope>/<artifact-id>.accelerated.json`.
 - By default, accelerator scope is the process file name (without `.ts`); `ctx.setScope(...)` overrides it and `ctx.scope()` reads it.
 - Prefer the generated `.ccode/lib/context.ts` contract over stale docs if README text and runtime behavior disagree.
 

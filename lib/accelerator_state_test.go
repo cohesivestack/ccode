@@ -18,8 +18,8 @@ func TestAcceleratorState_MarkSingleArtifactAsAdjusted(t *testing.T) {
 			{
 				ID: "generate-api",
 				Artifacts: []acceleratorStateArtifact{
-					{ID: "handlers", Content: encodeAcceleratorContentSnapshot("handlers", time.Now().UTC())},
-					{ID: "service", Content: encodeAcceleratorContentSnapshot("service", time.Now().UTC())},
+					{ID: "handlers", Content: encodeAcceleratorContentSnapshot("handlers", time.Now().UTC()), Pending: true},
+					{ID: "service", Content: encodeAcceleratorContentSnapshot("service", time.Now().UTC()), Pending: true},
 				},
 			},
 		},
@@ -32,9 +32,8 @@ func TestAcceleratorState_MarkSingleArtifactAsAdjusted(t *testing.T) {
 	state := readAcceleratorStateForTest(t, ctx)
 	require.Len(t, state.Scopes, 1)
 	require.Len(t, state.Scopes[0].Artifacts, 2)
-	require.NotNil(t, state.Scopes[0].Artifacts[0].AdjustedAt)
-	assertRFC3339(t, *state.Scopes[0].Artifacts[0].AdjustedAt)
-	assert.Nil(t, state.Scopes[0].Artifacts[1].AdjustedAt)
+	assert.False(t, state.Scopes[0].Artifacts[0].Pending)
+	assert.True(t, state.Scopes[0].Artifacts[1].Pending)
 }
 
 func TestAcceleratorState_MarkAllArtifactsInScopeAsAdjusted(t *testing.T) {
@@ -45,14 +44,14 @@ func TestAcceleratorState_MarkAllArtifactsInScopeAsAdjusted(t *testing.T) {
 			{
 				ID: "generate-api",
 				Artifacts: []acceleratorStateArtifact{
-					{ID: "handlers", Content: encodeAcceleratorContentSnapshot("handlers", time.Now().UTC())},
-					{ID: "service", Content: encodeAcceleratorContentSnapshot("service", time.Now().UTC())},
+					{ID: "handlers", Content: encodeAcceleratorContentSnapshot("handlers", time.Now().UTC()), Pending: true},
+					{ID: "service", Content: encodeAcceleratorContentSnapshot("service", time.Now().UTC()), Pending: true},
 				},
 			},
 			{
 				ID: "other",
 				Artifacts: []acceleratorStateArtifact{
-					{ID: "ignored", Content: encodeAcceleratorContentSnapshot("ignored", time.Now().UTC())},
+					{ID: "ignored", Content: encodeAcceleratorContentSnapshot("ignored", time.Now().UTC()), Pending: true},
 				},
 			},
 		},
@@ -62,9 +61,9 @@ func TestAcceleratorState_MarkAllArtifactsInScopeAsAdjusted(t *testing.T) {
 	require.NoError(t, ctx.MarkAcceleratorAsAdjusted(&scopeID, nil))
 
 	state := readAcceleratorStateForTest(t, ctx)
-	require.NotNil(t, state.Scopes[0].Artifacts[0].AdjustedAt)
-	require.NotNil(t, state.Scopes[0].Artifacts[1].AdjustedAt)
-	assert.Nil(t, state.Scopes[1].Artifacts[0].AdjustedAt)
+	assert.False(t, state.Scopes[0].Artifacts[0].Pending)
+	assert.False(t, state.Scopes[0].Artifacts[1].Pending)
+	assert.True(t, state.Scopes[1].Artifacts[0].Pending)
 }
 
 func TestAcceleratorState_MarkAllArtifactsGloballyAsAdjusted(t *testing.T) {
@@ -75,13 +74,13 @@ func TestAcceleratorState_MarkAllArtifactsGloballyAsAdjusted(t *testing.T) {
 			{
 				ID: "generate-api",
 				Artifacts: []acceleratorStateArtifact{
-					{ID: "handlers", Content: encodeAcceleratorContentSnapshot("handlers", time.Now().UTC())},
+					{ID: "handlers", Content: encodeAcceleratorContentSnapshot("handlers", time.Now().UTC()), Pending: true},
 				},
 			},
 			{
 				ID: "generate-web",
 				Artifacts: []acceleratorStateArtifact{
-					{ID: "page.ts", Content: encodeAcceleratorContentSnapshot("page", time.Now().UTC())},
+					{ID: "page.ts", Content: encodeAcceleratorContentSnapshot("page", time.Now().UTC()), Pending: true},
 				},
 			},
 		},
@@ -90,21 +89,20 @@ func TestAcceleratorState_MarkAllArtifactsGloballyAsAdjusted(t *testing.T) {
 	require.NoError(t, ctx.MarkAcceleratorAsAdjusted(nil, nil))
 
 	state := readAcceleratorStateForTest(t, ctx)
-	require.NotNil(t, state.Scopes[0].Artifacts[0].AdjustedAt)
-	require.NotNil(t, state.Scopes[1].Artifacts[0].AdjustedAt)
+	assert.False(t, state.Scopes[0].Artifacts[0].Pending)
+	assert.False(t, state.Scopes[1].Artifacts[0].Pending)
 }
 
 func TestAcceleratorState_ListNotAdjustedAccelerators(t *testing.T) {
 	ctx := newAcceleratorStateContext(t)
-	now := time.Now().UTC().Format(time.RFC3339)
 	writeAcceleratorStateForTest(t, ctx, &acceleratorState{
 		Version: 1,
 		Scopes: []acceleratorStateScope{
 			{
 				ID: "generate-api",
 				Artifacts: []acceleratorStateArtifact{
-					{ID: "handlers", Content: encodeAcceleratorContentSnapshot("handlers", time.Now().UTC()), AdjustedAt: nil},
-					{ID: "service", Content: encodeAcceleratorContentSnapshot("service", time.Now().UTC()), AdjustedAt: &now},
+					{ID: "handlers", Content: encodeAcceleratorContentSnapshot("handlers", time.Now().UTC()), Pending: true},
+					{ID: "service", Content: encodeAcceleratorContentSnapshot("service", time.Now().UTC()), Pending: false},
 				},
 			},
 		},
@@ -115,7 +113,7 @@ func TestAcceleratorState_ListNotAdjustedAccelerators(t *testing.T) {
 	require.Len(t, items, 1)
 	assert.Equal(t, "generate-api", items[0].ScopeID)
 	assert.Equal(t, "handlers", items[0].ArtifactID)
-	assert.Nil(t, items[0].AdjustedAt)
+	assert.True(t, items[0].Pending)
 }
 
 func TestAcceleratorState_ListNotAdjustedAcceleratorsByScope(t *testing.T) {
@@ -126,13 +124,13 @@ func TestAcceleratorState_ListNotAdjustedAcceleratorsByScope(t *testing.T) {
 			{
 				ID: "generate-api",
 				Artifacts: []acceleratorStateArtifact{
-					{ID: "handlers", Content: encodeAcceleratorContentSnapshot("handlers", time.Now().UTC())},
+					{ID: "handlers", Content: encodeAcceleratorContentSnapshot("handlers", time.Now().UTC()), Pending: true},
 				},
 			},
 			{
 				ID: "generate-web",
 				Artifacts: []acceleratorStateArtifact{
-					{ID: "page.ts", Content: encodeAcceleratorContentSnapshot("page", time.Now().UTC())},
+					{ID: "page.ts", Content: encodeAcceleratorContentSnapshot("page", time.Now().UTC()), Pending: true},
 				},
 			},
 		},
@@ -158,6 +156,7 @@ func TestAcceleratorState_GetAcceleratorState(t *testing.T) {
 						ID:               "handlers.go",
 						Content:          encodeAcceleratorContentSnapshot("package handlers", time.Now().UTC()),
 						InstructionsPath: strPtr("instructions/handlers.md"),
+						Pending:          true,
 					},
 				},
 			},
@@ -171,6 +170,7 @@ func TestAcceleratorState_GetAcceleratorState(t *testing.T) {
 	assert.NotEmpty(t, item.Content)
 	require.NotNil(t, item.InstructionsPath)
 	assert.Equal(t, "instructions/handlers.md", *item.InstructionsPath)
+	assert.True(t, item.Pending)
 }
 
 func TestAcceleratorState_ListAcceleratorInstructions(t *testing.T) {
@@ -230,7 +230,7 @@ func TestAcceleratorState_MarkAdjustedReturnsErrorWhenScopeOrArtifactNotFound(t 
 			{
 				ID: "generate-api",
 				Artifacts: []acceleratorStateArtifact{
-					{ID: "handlers", Content: encodeAcceleratorContentSnapshot("handlers", time.Now().UTC())},
+					{ID: "handlers", Content: encodeAcceleratorContentSnapshot("handlers", time.Now().UTC()), Pending: true},
 				},
 			},
 		},
@@ -275,10 +275,4 @@ func readAcceleratorStateForTest(t *testing.T, ctx *Context) *acceleratorState {
 
 func strPtr(value string) *string {
 	return &value
-}
-
-func assertRFC3339(t *testing.T, value string) {
-	t.Helper()
-	_, err := time.Parse(time.RFC3339, value)
-	require.NoError(t, err)
 }

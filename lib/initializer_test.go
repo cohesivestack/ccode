@@ -83,7 +83,7 @@ func TestInitializer_InitRefreshesGeneratedSupportFilesAndPreservesUserFiles(t *
 	openapiPath := filepath.Join(hiddenLibPath, "openapi.ts")
 	buildPath := filepath.Join(projectPath, DefaultHiddenFolderName, "build")
 	buildCachePath := filepath.Join(buildPath, "process.old.js")
-	statePath := filepath.Join(projectPath, DefaultHiddenFolderName, "state", "accelerators.json")
+	statePath := filepath.Join(projectPath, DefaultHiddenFolderName, "accelerators", "generate-api", "handlers.go.accelerated.json")
 	tsconfigPath := filepath.Join(projectPath, "tsconfig.json")
 
 	require.NoError(t, os.MkdirAll(hiddenLibPath, 0755))
@@ -94,7 +94,7 @@ func TestInitializer_InitRefreshesGeneratedSupportFilesAndPreservesUserFiles(t *
 	require.NoError(t, os.WriteFile(contextPath, []byte("existing context"), 0644))
 	require.NoError(t, os.WriteFile(openapiPath, []byte("existing openapi"), 0644))
 	require.NoError(t, os.WriteFile(buildCachePath, []byte("cached bundle"), 0644))
-	require.NoError(t, os.WriteFile(statePath, []byte(`{"version":1}`), 0644))
+	require.NoError(t, os.WriteFile(statePath, []byte(`{"pending":true,"instructions":"","accelerated_checksum":"sha256:test","instructions_checksum":"","code":"dGVzdA=="}`+"\n"), 0644))
 	require.NoError(t, os.WriteFile(tsconfigPath, []byte(`{"existing":true}`), 0644))
 
 	var logs bytes.Buffer

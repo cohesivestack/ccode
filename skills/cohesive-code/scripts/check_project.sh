@@ -88,7 +88,7 @@ else
   echo "build_cache: missing"
 fi
 
-if [ -f "$HIDDEN_ABS/state/accelerators.json" ]; then
+if [ -d "$HIDDEN_ABS/accelerators" ]; then
   echo "accelerator_state: present"
 else
   echo "accelerator_state: missing"

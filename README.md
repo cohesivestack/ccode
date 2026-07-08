@@ -20,7 +20,7 @@ Cohesive Code is an AI-enabled code generation CLI built around TypeScript proce
   * You can change it at runtime with `ctx.setScope(...)`.
 * **Accelerator**: A generated artifact tracked in state to avoid unsafe overwrites.
   * Output target: `<output_path>/<artifact_id>`
-  * State file: `<hidden_path>/state/accelerators.json`
+  * State file: `<hidden_path>/accelerators/<scope>/<artifact_id>.accelerated.json`
   * Optional instructions markdown can be attached per artifact.
 
 ## Runtime API (TypeScript)

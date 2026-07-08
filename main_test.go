@@ -2,12 +2,13 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	ccode "github.com/cohesivestack/ccode/lib"
 	"github.com/stretchr/testify/assert"
@@ -126,6 +127,8 @@ func TestNewRootCmd_ListAcceleratedExcludesContent(t *testing.T) {
 	output := stdout.String()
 	assert.Contains(t, output, `"scope_id": "generate-api"`)
 	assert.Contains(t, output, `"artifact_id": "handlers.go"`)
+	assert.Contains(t, output, `"pending": true`)
+	assert.NotContains(t, output, `"adjusted_at"`)
 	assert.NotContains(t, output, `"content"`)
 	assert.NotContains(t, output, "package handlers")
 }
@@ -142,6 +145,8 @@ func TestNewRootCmd_GetAcceleratedExcludesContent(t *testing.T) {
 	output := stdout.String()
 	assert.Contains(t, output, `"scope_id": "generate-api"`)
 	assert.Contains(t, output, `"artifact_id": "handlers.go"`)
+	assert.Contains(t, output, `"pending": true`)
+	assert.NotContains(t, output, `"adjusted_at"`)
 	assert.NotContains(t, output, `"content"`)
 	assert.NotContains(t, output, "package handlers")
 }
@@ -175,6 +180,7 @@ func TestNewRootCmd_ListAndGetForAgentOutputValidJSON(t *testing.T) {
 	require.Len(t, listPayload, 1)
 	assert.Equal(t, "generate-api", listPayload[0]["scope_id"])
 	assert.Equal(t, "handlers.go", listPayload[0]["artifact_id"])
+	assert.Equal(t, true, listPayload[0]["pending"])
 
 	getCmd := newRootCmd(nil, nil)
 	var getOut bytes.Buffer
@@ -235,55 +241,46 @@ func setupAcceleratorCLIProject(t *testing.T) (string, string) {
 	configYAML := "ccode_path: " + ccodePath + "\noutput_path: " + filepath.Join(rootDir, "out") + "\nversion: v1.2.3\n"
 	require.NoError(t, os.WriteFile(configPath, []byte(configYAML), 0644))
 
-	type stateArtifact struct {
-		ID               string  `json:"id"`
-		Content          string  `json:"content"`
-		AdjustedAt       *string `json:"adjusted_at"`
-		InstructionsPath *string `json:"instructions_path"`
-	}
-	type stateScope struct {
-		ID        string          `json:"id"`
-		Artifacts []stateArtifact `json:"artifacts"`
-	}
-	type stateRoot struct {
-		Version int          `json:"version"`
-		Scopes  []stateScope `json:"scopes"`
-	}
-
-	adjustedAt := "2026-04-11T00:00:00Z"
-	instructionsPath := "instructions/handlers.md"
-	state := stateRoot{
-		Version: 1,
-		Scopes: []stateScope{
-			{
-				ID: "generate-api",
-				Artifacts: []stateArtifact{
-					{
-						ID:               "handlers.go",
-						Content:          encodeSnapshotForCLITest("package handlers"),
-						AdjustedAt:       nil,
-						InstructionsPath: &instructionsPath,
-					},
-					{
-						ID:         "service.go",
-						Content:    encodeSnapshotForCLITest("package service"),
-						AdjustedAt: &adjustedAt,
-					},
-				},
-			},
-		},
-	}
-
-	stateBytes, err := json.MarshalIndent(state, "", "  ")
-	require.NoError(t, err)
-	stateBytes = append(stateBytes, '\n')
-	statePath := filepath.Join(ccodePath, ".ccode", "state", "accelerators.json")
-	require.NoError(t, os.MkdirAll(filepath.Dir(statePath), 0755))
-	require.NoError(t, os.WriteFile(statePath, stateBytes, 0644))
+	stateDir := filepath.Join(ccodePath, ".ccode", "accelerators", "generate-api")
+	require.NoError(t, os.MkdirAll(stateDir, 0755))
+	writeAcceleratorStateFileForCLITest(t, filepath.Join(stateDir, "handlers.go.accelerated.json"), true, "instructions/handlers.md", "package handlers", "# Update handlers")
+	writeAcceleratorStateFileForCLITest(t, filepath.Join(stateDir, "service.go.accelerated.json"), false, "", "package service", "")
 
 	return configPath, ccodePath
 }
 
 func encodeSnapshotForCLITest(content string) string {
-	return time.Now().UTC().Format(time.RFC3339) + ":" + base64.StdEncoding.EncodeToString([]byte(content))
+	return base64.StdEncoding.EncodeToString([]byte(content))
+}
+
+func writeAcceleratorStateFileForCLITest(t *testing.T, path string, pending bool, instructionsPath string, code string, instructions string) {
+	t.Helper()
+
+	type stateFile struct {
+		Pending              bool   `json:"pending"`
+		Instructions         string `json:"instructions"`
+		AcceleratedChecksum  string `json:"accelerated_checksum"`
+		InstructionsChecksum string `json:"instructions_checksum"`
+		Code                 string `json:"code"`
+	}
+
+	state := stateFile{
+		Pending:             pending,
+		Instructions:        instructionsPath,
+		AcceleratedChecksum: checksumForCLITest(code),
+		Code:                encodeSnapshotForCLITest(code),
+	}
+	if instructions != "" {
+		state.InstructionsChecksum = checksumForCLITest(instructions)
+	}
+
+	payload, err := json.Marshal(state)
+	require.NoError(t, err)
+	payload = append(payload, '\n')
+	require.NoError(t, os.WriteFile(path, payload, 0644))
+}
+
+func checksumForCLITest(content string) string {
+	checksum := sha256.Sum256([]byte(content))
+	return fmt.Sprintf("sha256:%x", checksum)
 }

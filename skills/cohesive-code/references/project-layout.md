@@ -40,7 +40,7 @@ Notes:
 - `ccode_path` is resolved relative to the config file directory.
 - `output_path` is used as written. Relative values resolve from the directory where the CLI runs.
 - `hidden_path` defaults to `.ccode`. When relative, the runtime resolves it under `ccode_path`.
-- accelerator state is written to `<hidden_path>/state/accelerators.json`.
+- accelerator state is written to `<hidden_path>/accelerators/<scope>/<artifact-id>.accelerated.json`.
 
 Config precedence:
 
@@ -96,7 +96,7 @@ Recommended conventions:
 - Keep OpenAPI files under `specs/`.
 - Keep test or seed JSON under `data/`.
 - Leave `.ccode/build/` to the compiler cache.
-- Treat `.ccode/state/accelerators.json` as runtime state; do not hand-edit it unless explicitly asked.
+- Treat `.ccode/accelerators/` as runtime state; do not hand-edit it unless explicitly asked.
 
 ## Process path rules
 
