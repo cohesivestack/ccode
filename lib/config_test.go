@@ -39,19 +39,18 @@ version: "v1.2.3"
 	assert.Equal(t, "v1.2.3", cfg.Version)
 }
 
-func TestConfig_LoadConfigLegacyPathKey(t *testing.T) {
+func TestConfig_LoadConfigRejectsUnknownKeys(t *testing.T) {
 	tmp := t.TempDir()
 	cfgFile := filepath.Join(tmp, "ccode.yaml")
-	content := `path: "legacy-ccode"
+	content := `path: "old-ccode"
 version: "v1.2.3"
 `
 	require.NoError(t, os.WriteFile(cfgFile, []byte(content), 0644))
 
 	cfg, err := LoadConfig(cfgFile)
-	require.NoError(t, err)
-	require.NotNil(t, cfg)
-
-	assert.Equal(t, filepath.Join(tmp, "legacy-ccode"), cfg.CCodePath)
+	require.Error(t, err)
+	assert.Nil(t, cfg)
+	assert.Contains(t, err.Error(), "field path not found")
 }
 
 func TestConfig_LoadConfigRequiresVersion(t *testing.T) {

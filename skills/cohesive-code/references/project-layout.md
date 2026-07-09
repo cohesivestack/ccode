@@ -36,7 +36,6 @@ hidden_path: .ccode
 
 Notes:
 
-- `path` is still accepted as a legacy alias for `ccode_path`.
 - `version` is required in `ccode.yaml` and is used by the wrapper to select the ccode release for the workspace.
 - `ccode_path` is resolved relative to the config file directory.
 - `output_path` is used as written. Relative values resolve from the directory where the CLI runs.
@@ -53,7 +52,6 @@ Config precedence:
 Supported environment overrides:
 
 - `CCODE_CCODE_PATH`
-- `CCODE_PATH` as a legacy alias
 - `CCODE_OUTPUT_PATH`
 - `CCODE_HIDDEN_PATH`
 
@@ -62,7 +60,6 @@ Supported CLI overrides:
 - `--config`
 - `--ccode-path`
 - `--output-path`
-- `--path` as a deprecated alias for `--ccode-path`
 
 Wrapper version precedence:
 

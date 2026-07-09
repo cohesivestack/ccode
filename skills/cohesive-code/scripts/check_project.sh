@@ -27,21 +27,18 @@ read_yaml_value() {
 }
 
 CONFIG_DIR="$(cd "$(dirname "$CONFIG")" && pwd -P)"
-CCODE_PATH="$(read_yaml_value "ccode_path" "$CONFIG")"
-if [ -z "$CCODE_PATH" ]; then
-  CCODE_PATH="$(read_yaml_value "path" "$CONFIG")"
-fi
+CONFIG_CCODE_PATH="$(read_yaml_value "ccode_path" "$CONFIG")"
 OUTPUT_PATH="$(read_yaml_value "output_path" "$CONFIG")"
 HIDDEN_PATH="$(read_yaml_value "hidden_path" "$CONFIG")"
 VERSION="$(read_yaml_value "version" "$CONFIG")"
 
-[ -n "$CCODE_PATH" ] || CCODE_PATH="ccode"
+[ -n "$CONFIG_CCODE_PATH" ] || CONFIG_CCODE_PATH="ccode"
 [ -n "$OUTPUT_PATH" ] || OUTPUT_PATH="."
 [ -n "$HIDDEN_PATH" ] || HIDDEN_PATH=".ccode"
 
-case "$CCODE_PATH" in
-  /*) CCODE_ABS="$CCODE_PATH" ;;
-  *) CCODE_ABS="$CONFIG_DIR/$CCODE_PATH" ;;
+case "$CONFIG_CCODE_PATH" in
+  /*) CCODE_ABS="$CONFIG_CCODE_PATH" ;;
+  *) CCODE_ABS="$CONFIG_DIR/$CONFIG_CCODE_PATH" ;;
 esac
 
 case "$HIDDEN_PATH" in
@@ -51,7 +48,7 @@ esac
 
 echo "config: $CONFIG"
 echo "config_dir: $CONFIG_DIR"
-echo "ccode_path: $CCODE_PATH"
+echo "ccode_path: $CONFIG_CCODE_PATH"
 echo "version: $VERSION"
 echo "output_path: $OUTPUT_PATH"
 echo "hidden_path: $HIDDEN_PATH"

@@ -1,6 +1,7 @@
 package ccode
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -38,7 +39,9 @@ func LoadConfig(filename string) (*Config, error) {
 	}
 
 	config := &Config{}
-	if err := yaml.Unmarshal(data, config); err != nil {
+	decoder := yaml.NewDecoder(bytes.NewReader(data))
+	decoder.KnownFields(true)
+	if err := decoder.Decode(config); err != nil {
 		return nil, fmt.Errorf("failed to parse YAML: %w", err)
 	}
 	if isStringBlank(config.Version) {
@@ -94,29 +97,4 @@ func (config *Config) resolveConfigRelativePaths(baseDir string) {
 	if !filepath.IsAbs(config.CCodePath) && !isStringBlank(config.CCodePath) {
 		config.CCodePath = filepath.Clean(filepath.Join(baseDir, config.CCodePath))
 	}
-}
-
-func (config *Config) UnmarshalYAML(node *yaml.Node) error {
-	type configAlias struct {
-		CCodePath  string `yaml:"ccode_path"`
-		LegacyPath string `yaml:"path"`
-		OutputPath string `yaml:"output_path"`
-		HiddenPath string `yaml:"hidden_path"`
-		Version    string `yaml:"version"`
-	}
-
-	var raw configAlias
-	if err := node.Decode(&raw); err != nil {
-		return err
-	}
-
-	config.CCodePath = raw.CCodePath
-	if isStringBlank(config.CCodePath) {
-		config.CCodePath = raw.LegacyPath
-	}
-	config.OutputPath = raw.OutputPath
-	config.HiddenPath = raw.HiddenPath
-	config.Version = raw.Version
-
-	return nil
 }

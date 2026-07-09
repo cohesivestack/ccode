@@ -389,11 +389,11 @@ parse_wrapper_args() {
       --version)
         expect_version=1
         ;;
-      --ccode-path|--path|--output-path)
+      --ccode-path|--output-path)
         FORWARDED_ARGS+=("$arg")
         expect_passthrough_value=1
         ;;
-      --ccode-path=*|--path=*|--output-path=*)
+      --ccode-path=*|--output-path=*)
         FORWARDED_ARGS+=("$arg")
         ;;
       *)
