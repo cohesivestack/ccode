@@ -50,6 +50,7 @@ func TestInitializer_InitCreatesProjectStructure(t *testing.T) {
 	hiddenGitIgnoreContent, err := os.ReadFile(hiddenGitIgnorePath)
 	require.NoError(t, err)
 	assert.Equal(t, templateassets.HiddenGitIgnoreTemplate, string(hiddenGitIgnoreContent))
+	assert.Contains(t, string(hiddenGitIgnoreContent), "!accelerators/**")
 
 	contextContent, err := os.ReadFile(contextPath)
 	require.NoError(t, err)
