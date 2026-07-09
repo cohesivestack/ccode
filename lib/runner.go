@@ -15,12 +15,14 @@ import (
 var runnerEntryPointPattern = regexp.MustCompile(`(?s)export\s+default\s+function(?:\s+\w+)?\s*\(\s*\w+\s*:\s*Context\s*\)`)
 
 type RunnerContext struct {
-	ccodeContext *Context
-	runtime      *goja.Runtime
-	jsonObject   *goja.Object
-	jsonParse    goja.Callable
-	stdout       io.Writer
-	scopeName    string
+	ccodeContext             *Context
+	runtime                  *goja.Runtime
+	jsonObject               *goja.Object
+	jsonParse                goja.Callable
+	stdout                   io.Writer
+	scopeName                string
+	trackedAcceleratorStates map[string]struct{}
+	trackedAcceleratorScopes map[string]struct{}
 }
 
 func Run(config *Config, process string) error {
@@ -143,10 +145,12 @@ func (ctx *Context) executeRunnerBundle(outputFiles []api.OutputFile, defaultSco
 	}
 
 	runnerContext := &RunnerContext{
-		ccodeContext: ctx,
-		runtime:      runtime,
-		stdout:       ctx.stdout,
-		scopeName:    defaultScope,
+		ccodeContext:             ctx,
+		runtime:                  runtime,
+		stdout:                   ctx.stdout,
+		scopeName:                defaultScope,
+		trackedAcceleratorStates: map[string]struct{}{},
+		trackedAcceleratorScopes: map[string]struct{}{},
 	}
 	if err := runnerContext.initializeJSONParser(); err != nil {
 		return err
@@ -160,7 +164,7 @@ func (ctx *Context) executeRunnerBundle(outputFiles []api.OutputFile, defaultSco
 		return fmt.Errorf("run default export: %w", err)
 	}
 
-	return nil
+	return runnerContext.cleanupUntrackedAcceleratorStates()
 }
 
 func (ctx *RunnerContext) initializeJSONParser() error {

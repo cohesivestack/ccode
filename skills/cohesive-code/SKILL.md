@@ -43,6 +43,7 @@ Use this skill when the task involves `ccode`, `ccode.yaml`, `ccode init`, `ccod
 - Pass plain objects and arrays into templates. Do not rely on class instances.
 - Use `ctx.generate(...)` for standard artifact writes.
 - Use `ctx.accelerate(...)` for artifacts that need human/agent adjustment and should avoid unsafe overwrite.
+- A successful `ccode run` removes accelerator state files in scopes used by that run when they were not produced during the run.
 
 ## Accelerator workflow guidance
 

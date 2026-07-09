@@ -22,6 +22,7 @@ Cohesive Code is an AI-enabled code generation CLI built around TypeScript proce
   * Output target: `<output_path>/<artifact_id>`
   * State file: `<hidden_path>/accelerators/<scope>/<artifact_id>.accelerated.json`
   * Optional instructions markdown can be attached per artifact.
+  * After a successful `ccode run`, accelerator state files in scopes used by that run are removed when not produced during the run.
 
 ## Runtime API (TypeScript)
 

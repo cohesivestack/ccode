@@ -86,6 +86,7 @@ Use generated `context.ts` in the workspace as local truth.
 - Renders template relative to `ccode_path`.
 - Targets file `output_path/<id>`.
 - Stores accelerator state at `.ccode/accelerators/<scope>/<artifact-id>.accelerated.json`.
+- A successful `ccode run` prunes accelerator state files in scopes used by that run when they were not produced during the run.
 - `instructionsPath` (optional) is stored as relative path under `ccode_path`.
 - Performs safe-write behavior to avoid unsafe overwrite.
 - Marks the artifact metadata as pending when a new accelerated version is written.

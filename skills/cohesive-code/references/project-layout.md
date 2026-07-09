@@ -41,6 +41,7 @@ Notes:
 - `output_path` is used as written. Relative values resolve from the directory where the CLI runs.
 - `hidden_path` defaults to `.ccode`. When relative, the runtime resolves it under `ccode_path`.
 - accelerator state is written to `<hidden_path>/accelerators/<scope>/<artifact-id>.accelerated.json`.
+- after a successful `ccode run`, accelerator state files in scopes used by that run are removed when they were not produced during the run.
 
 Config precedence:
 

@@ -130,6 +130,7 @@ func (ctx *RunnerContext) Accelerate(id string, templatePath string, data goja.V
 			return err
 		}
 	}
+	ctx.trackAcceleratorState(scopeName, artifactID)
 
 	var previousArtifact *acceleratorStateArtifact
 	if stateExists {
@@ -186,6 +187,86 @@ func (ctx *RunnerContext) shouldWriteAcceleratedArtifact(outputFilePath string, 
 
 func (ctx *RunnerContext) acceleratorStateFilePath() string {
 	return ctx.ccodeContext.acceleratorStateFilePath()
+}
+
+func (ctx *RunnerContext) trackAcceleratorState(scopeID string, artifactID string) {
+	if ctx == nil {
+		return
+	}
+	if ctx.trackedAcceleratorStates == nil {
+		ctx.trackedAcceleratorStates = map[string]struct{}{}
+	}
+	if ctx.trackedAcceleratorScopes == nil {
+		ctx.trackedAcceleratorScopes = map[string]struct{}{}
+	}
+	ctx.trackedAcceleratorStates[acceleratorStateTrackingKey(scopeID, artifactID)] = struct{}{}
+	ctx.trackedAcceleratorScopes[scopeID] = struct{}{}
+}
+
+func (ctx *RunnerContext) cleanupUntrackedAcceleratorStates() error {
+	if ctx == nil || ctx.ccodeContext == nil {
+		return fmt.Errorf("runner context is not initialized")
+	}
+
+	stateRootPath := ctx.acceleratorStateFilePath()
+	if !fileExists(stateRootPath) {
+		return nil
+	}
+
+	info, err := os.Stat(stateRootPath)
+	if err != nil {
+		return fmt.Errorf("stat accelerator state %q: %w", stateRootPath, err)
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("accelerator state %q is not a directory", stateRootPath)
+	}
+
+	trackedStates := ctx.trackedAcceleratorStates
+	if trackedStates == nil {
+		trackedStates = map[string]struct{}{}
+	}
+	trackedScopes := ctx.trackedAcceleratorScopes
+	if trackedScopes == nil || len(trackedScopes) == 0 {
+		return nil
+	}
+
+	return filepath.WalkDir(stateRootPath, func(itemPath string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		if !strings.HasSuffix(entry.Name(), ".accelerated.json") {
+			return nil
+		}
+
+		relativePath, err := filepath.Rel(stateRootPath, itemPath)
+		if err != nil {
+			return fmt.Errorf("resolve accelerator state file %q: %w", itemPath, err)
+		}
+
+		scopeID, artifactID, err := acceleratorStateIDsFromRelativePath(relativePath)
+		if err != nil {
+			return err
+		}
+
+		if _, ok := trackedScopes[scopeID]; !ok {
+			return nil
+		}
+		if _, ok := trackedStates[acceleratorStateTrackingKey(scopeID, artifactID)]; ok {
+			return nil
+		}
+
+		if err := removeAcceleratorArtifactStateFile(itemPath); err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
+func acceleratorStateTrackingKey(scopeID string, artifactID string) string {
+	return scopeID + "\x00" + artifactID
 }
 
 func (ctx *RunnerContext) normalizeInstructionsPath(instructionsPath string) (string, error) {

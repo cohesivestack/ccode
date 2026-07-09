@@ -51,6 +51,8 @@ For machine-readable output:
 4. Apply edits to the target file in `output_path/<id>`.
 5. Clearing pending status is available through the Go API (`MarkAcceleratorAsAdjusted`), and can be integrated by host tooling.
 
+Successful generator runs remove accelerator state files in scopes used by that run when they were not produced during the run.
+
 ## Guardrails
 
 - Do not decode `code` manually unless building instruction output.

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -343,6 +344,19 @@ func TestAccelerator_RunUsesDefaultScopeFromProcessFileAndAllowsSetScope(t *test
 	require.NoError(t, os.WriteFile(filepath.Join(projectDir, "templates", "service.tpl"), []byte("service"), 0644))
 	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/context\";\n\nexport default function main(ctx: Context) {\n\tctx.println(ctx.scope());\n\tctx.accelerate(\"handlers\", \"templates/handlers.tpl\", {});\n\tctx.setScope(\"custom-scope\");\n\tctx.println(ctx.scope());\n\tctx.accelerate(\"service\", \"templates/service.tpl\", {});\n}\n"), 0644))
 
+	staleDefaultScopeStateFile := acceleratorArtifactStateFilePath(ctx.acceleratorStateFilePath(), "generate-api", "stale")
+	staleOtherScopeStateFile := acceleratorArtifactStateFilePath(ctx.acceleratorStateFilePath(), "other-scope", "old")
+	require.NoError(t, saveAcceleratorArtifactStateFile(staleDefaultScopeStateFile, acceleratorStateArtifact{
+		ID:      "stale",
+		Content: encodeAcceleratorContentSnapshot("stale", time.Now().UTC()),
+		Pending: true,
+	}))
+	require.NoError(t, saveAcceleratorArtifactStateFile(staleOtherScopeStateFile, acceleratorStateArtifact{
+		ID:      "old",
+		Content: encodeAcceleratorContentSnapshot("old", time.Now().UTC()),
+		Pending: true,
+	}))
+
 	var output bytes.Buffer
 	ctx.stdout = &output
 
@@ -361,7 +375,7 @@ func TestAccelerator_RunUsesDefaultScopeFromProcessFileAndAllowsSetScope(t *test
 	statePath := ctx.acceleratorStateFilePath()
 	state, err := loadAcceleratorState(statePath)
 	require.NoError(t, err)
-	require.Len(t, state.Scopes, 2)
+	require.Len(t, state.Scopes, 3)
 	defaultScope := state.findScopeByID("generate-api")
 	require.NotNil(t, defaultScope)
 	require.Len(t, defaultScope.Artifacts, 1)
@@ -370,4 +384,10 @@ func TestAccelerator_RunUsesDefaultScopeFromProcessFileAndAllowsSetScope(t *test
 	require.NotNil(t, customScope)
 	require.Len(t, customScope.Artifacts, 1)
 	assert.Equal(t, "service", customScope.Artifacts[0].ID)
+	untouchedScope := state.findScopeByID("other-scope")
+	require.NotNil(t, untouchedScope)
+	require.Len(t, untouchedScope.Artifacts, 1)
+	assert.Equal(t, "old", untouchedScope.Artifacts[0].ID)
+	require.NoFileExists(t, staleDefaultScopeStateFile)
+	require.FileExists(t, staleOtherScopeStateFile)
 }
