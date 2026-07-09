@@ -1,0 +1,104 @@
+---
+title: Cohesive Code
+description: AI-enabled code generation built around TypeScript processes,
+  templates, and accelerators.
+template: splash
+slug: "0.1"
+---
+
+import { Code, LinkButton } from '@astrojs/starlight/components';
+import SidebarMenu from '../../../components/IndexContentSection.astro';
+import { docsSidebar } from '../../../data/sidebar.mjs';
+
+<style is:global>
+  {`
+    main > .content-panel:first-child {
+      display: none;
+    }
+    `}
+</style>
+
+<section
+  aria-labelledby="ccode-home-title"
+  class="home-landing flex flex-col max-w-[40rem] w-full items-center gap-[0rem] pt-[1rem]"
+  style={{
+  margin: '0 auto',
+  minHeight: 'min(34rem, calc(100vh - var(--sl-nav-height) - 8rem))',
+}}
+>
+  <div class="dark:sl-hidden w-[22rem] max-w-[86vw]">
+    <img
+      src="/cohesive-code-logo.svg"
+      alt="Cohesive Code"
+    />
+  </div>
+  <div class="light:sl-hidden w-[22rem] max-w-[86vw] !mt-0">
+    <img
+      src="/cohesive-code-logo-dark.svg"
+      alt="Cohesive Code"
+    />
+  </div>
+
+  <div class="text-center text-textGrayDark text-[1.1rem]">
+    TypeScript processes for deterministic generation,<br />with accelerators for human and agent adjustment.
+  </div>
+
+  <div>
+    <LinkButton href="/getting-started/" variant="primary">
+      Getting Started
+    </LinkButton>
+  </div>
+
+  <Code
+    lang="typescript"
+    class="code-block-secondary !mt-0"
+    code={`
+import type { Context } from "@ccode/context";
+
+export default function main(ctx: Context) {
+  const spec = ctx.parseOpenAPIFromFile("specs/api.yaml");
+
+  ctx.generate("templates/summary.tpl", "generated/summary.md", { spec });
+  ctx.accelerate(
+    "handlers.ts",
+    "templates/handlers.tpl",
+    { spec },
+    "instructions/handlers.md",
+  );
+}
+`}
+  />
+
+  <Code
+    lang="bash"
+    class="!mt-0"
+    code={`
+ccode init ccode --version v0.1.0
+ccode run api/generate
+ccode list accelerated --for-agent
+`}
+  />
+
+  <div class="w-full !mt-[4rem]">
+    <div class="title w-full">Installing</div>
+    <pre class="code-block-secondary !mt-0">curl -fsSL https://raw.githubusercontent.com/cohesivestack/ccode/master/installer/install.sh | bash</pre>
+  </div>
+
+  <div class="w-full !mt-[4rem]">
+    <div class="title w-full">Agent skill</div>
+    <pre class="code-block-secondary !mt-0">npx skills add cohesivestack/ccode --skill cohesive-code</pre>
+  </div>
+
+  <div class="w-full">
+    <SidebarMenu items={docsSidebar} />
+  </div>
+
+  <footer class="w-full text-textGrayDark text-[0.875rem] leading-[1.6] !mt-[4rem] pb-[2rem]">
+    <p>Copyright © 2026 Carlos Forero</p>
+
+    <p>
+      Cohesive Code is developed and maintained by <a href="https://cohesivestack.com" target="_blank" rel="noopener noreferrer">Cohesive Stack LLC</a> and released under the{' '}
+      <a href="/0.1/about/license">MIT License</a>.
+    </p>
+  </footer>
+</section>
