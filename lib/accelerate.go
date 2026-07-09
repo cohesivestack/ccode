@@ -108,15 +108,42 @@ func (ctx *RunnerContext) Accelerate(id string, templatePath string, data goja.V
 		return err
 	}
 
-	stateFilePath := ctx.acceleratorStateFilePath()
-	state, err := loadAcceleratorState(stateFilePath)
+	memoryArtifact := acceleratorStateArtifact{
+		ID:                  artifactID,
+		Content:             encodeAcceleratorContentSnapshot(rendered, time.Now().UTC()),
+		Pending:             true,
+		AcceleratedChecksum: checksumAcceleratorBytes([]byte(rendered)),
+	}
+	if len(instructionsPath) > 0 {
+		normalizedInstructionsPath, err := ctx.normalizeInstructionsPath(instructionsPath[0])
+		if err != nil {
+			return err
+		}
+		memoryArtifact.InstructionsPath = &normalizedInstructionsPath
+		memoryArtifact.InstructionsChecksum = ctx.acceleratorInstructionChecksum(normalizedInstructionsPath)
+	}
+
+	stateRootPath := ctx.acceleratorStateFilePath()
+	stateFilePath := acceleratorArtifactStateFilePath(stateRootPath, scopeName, artifactID)
+	storedArtifact, stateExists, err := sanitizeAcceleratorArtifactStateFile(stateFilePath)
 	if err != nil {
 		return err
 	}
+	if stateExists {
+		storedArtifact.ID = artifactID
+	}
+	if !stateExists || !acceleratorArtifactGeneratedStateMatches(storedArtifact, memoryArtifact) {
+		if err := saveAcceleratorArtifactStateFile(stateFilePath, memoryArtifact); err != nil {
+			return err
+		}
+	}
 
-	scope, artifact := state.findArtifact(scopeName, artifactID)
+	var previousArtifact *acceleratorStateArtifact
+	if stateExists {
+		previousArtifact = &storedArtifact
+	}
 	outputFilePath := filepath.Clean(filepath.Join(ctx.ccodeContext.config.OutputPath, filepath.FromSlash(artifactID)))
-	shouldWrite, err := ctx.shouldWriteAcceleratedArtifact(outputFilePath, scopeName, artifactID, rendered, artifact)
+	shouldWrite, err := ctx.shouldWriteAcceleratedArtifact(outputFilePath, scopeName, artifactID, rendered, previousArtifact)
 	if err != nil {
 		return err
 	}
@@ -129,29 +156,6 @@ func (ctx *RunnerContext) Accelerate(id string, templatePath string, data goja.V
 	}
 	if err := os.WriteFile(outputFilePath, []byte(rendered), 0644); err != nil {
 		return fmt.Errorf("write accelerated artifact to %q: %w", outputFilePath, err)
-	}
-
-	artifact.Content = encodeAcceleratorContentSnapshot(rendered, time.Now().UTC())
-	artifact.AcceleratedChecksum = checksumAcceleratorBytes([]byte(rendered))
-	if len(instructionsPath) > 0 {
-		normalizedInstructionsPath, err := ctx.normalizeInstructionsPath(instructionsPath[0])
-		if err != nil {
-			return err
-		}
-		artifact.InstructionsPath = &normalizedInstructionsPath
-		artifact.InstructionsChecksum = ctx.acceleratorInstructionChecksum(normalizedInstructionsPath)
-	} else {
-		artifact.InstructionsPath = nil
-		artifact.InstructionsChecksum = ""
-	}
-	artifact.Pending = true
-
-	if scope.Artifacts == nil {
-		scope.Artifacts = []acceleratorStateArtifact{}
-	}
-
-	if err := saveAcceleratorState(stateFilePath, state); err != nil {
-		return err
 	}
 
 	return nil
@@ -365,9 +369,76 @@ func loadAcceleratorArtifactStateFile(path string) (acceleratorStateArtifact, er
 		return acceleratorStateArtifact{}, fmt.Errorf("read accelerator artifact state %q: %w", path, err)
 	}
 
+	artifact, err := parseAcceleratorArtifactStatePayload(payload)
+	if err != nil {
+		return acceleratorStateArtifact{}, fmt.Errorf("parse accelerator artifact state %q: %w", path, err)
+	}
+
+	return artifact, nil
+}
+
+func sanitizeAcceleratorArtifactStateFile(path string) (acceleratorStateArtifact, bool, error) {
+	if !fileExists(path) {
+		return acceleratorStateArtifact{}, false, nil
+	}
+
+	payload, err := os.ReadFile(path)
+	if err != nil {
+		return acceleratorStateArtifact{}, false, fmt.Errorf("read accelerator artifact state %q: %w", path, err)
+	}
+
+	lines := acceleratorStatePayloadLines(payload)
+	if len(lines) == 0 {
+		if err := removeAcceleratorArtifactStateFile(path); err != nil {
+			return acceleratorStateArtifact{}, false, err
+		}
+		return acceleratorStateArtifact{}, false, nil
+	}
+
+	firstLine := lines[0]
+	for _, line := range lines[1:] {
+		if line != firstLine {
+			if err := removeAcceleratorArtifactStateFile(path); err != nil {
+				return acceleratorStateArtifact{}, false, err
+			}
+			return acceleratorStateArtifact{}, false, nil
+		}
+	}
+
+	artifact, err := parseAcceleratorArtifactStatePayload([]byte(firstLine))
+	if err != nil {
+		if removeErr := removeAcceleratorArtifactStateFile(path); removeErr != nil {
+			return acceleratorStateArtifact{}, false, removeErr
+		}
+		return acceleratorStateArtifact{}, false, nil
+	}
+
+	if len(lines) > 1 || string(payload) != firstLine+"\n" {
+		if err := os.WriteFile(path, []byte(firstLine+"\n"), 0644); err != nil {
+			return acceleratorStateArtifact{}, false, fmt.Errorf("clean accelerator artifact state %q: %w", path, err)
+		}
+	}
+
+	return artifact, true, nil
+}
+
+func acceleratorStatePayloadLines(payload []byte) []string {
+	rawLines := strings.Split(string(payload), "\n")
+	lines := []string{}
+	for _, line := range rawLines {
+		trimmedLine := strings.TrimSpace(line)
+		if trimmedLine == "" {
+			continue
+		}
+		lines = append(lines, trimmedLine)
+	}
+	return lines
+}
+
+func parseAcceleratorArtifactStatePayload(payload []byte) (acceleratorStateArtifact, error) {
 	fileState := acceleratorArtifactStateFile{}
 	if err := json.Unmarshal(payload, &fileState); err != nil {
-		return acceleratorStateArtifact{}, fmt.Errorf("parse accelerator artifact state %q: %w", path, err)
+		return acceleratorStateArtifact{}, err
 	}
 
 	var instructionsPath *string
@@ -382,6 +453,26 @@ func loadAcceleratorArtifactStateFile(path string) (acceleratorStateArtifact, er
 		AcceleratedChecksum:  fileState.AcceleratedChecksum,
 		InstructionsChecksum: fileState.InstructionsChecksum,
 	}, nil
+}
+
+func removeAcceleratorArtifactStateFile(path string) error {
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("remove accelerator artifact state %q: %w", path, err)
+	}
+	return nil
+}
+
+func acceleratorArtifactGeneratedStateMatches(storedArtifact acceleratorStateArtifact, memoryArtifact acceleratorStateArtifact) bool {
+	return storedArtifact.AcceleratedChecksum == memoryArtifact.AcceleratedChecksum &&
+		acceleratorArtifactInstructionsPath(storedArtifact) == acceleratorArtifactInstructionsPath(memoryArtifact) &&
+		storedArtifact.InstructionsChecksum == memoryArtifact.InstructionsChecksum
+}
+
+func acceleratorArtifactInstructionsPath(artifact acceleratorStateArtifact) string {
+	if artifact.InstructionsPath == nil {
+		return ""
+	}
+	return *artifact.InstructionsPath
 }
 
 func saveAcceleratorArtifactStateFile(path string, artifact acceleratorStateArtifact) error {
