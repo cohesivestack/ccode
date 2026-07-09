@@ -30,7 +30,7 @@ Use this skill when the task involves `ccode`, `ccode.yaml`, `ccode init`, `ccod
 3. Author or update the target process in TypeScript and import `type { Context } from "@ccode/context"`.
 4. Keep templates, specs, and seed data inside `ccode_path` so the runner can resolve them consistently.
 5. Validate with `ccode run <process>` and inspect output under `output_path`.
-6. For accelerator workflows, use CLI metadata/instruction commands to review pending adjustments before editing target files.
+6. For accelerator workflows, use CLI metadata/instruction commands to review unresolved adjustments before editing target files.
 7. Fix runtime errors from real command output rather than guessing.
 
 ## Authoring guidance
@@ -46,10 +46,12 @@ Use this skill when the task involves `ccode`, `ccode.yaml`, `ccode init`, `ccod
 
 ## Accelerator workflow guidance
 
-- List pending adjustments: `ccode list accelerated [scopeId]`
+- List unresolved adjustments: `ccode list accelerated [scopeId]`
+- Include resolved adjustments: `ccode list accelerated [scopeId] --include-resolved`
 - Inspect accelerator metadata: `ccode get accelerated <scopeId>:<artifactId>`
 - Fetch adjustment bundle (instructions + decoded accelerated content): `ccode get accelerated <scopeId>:<artifactId> --instructions`
-- List instruction references: `ccode list instructions`
+- List unresolved instruction references: `ccode list instructions`
+- Include resolved instruction references: `ccode list instructions --include-resolved`
 - Read raw instruction file: `ccode get instruction <path>`
 - For machine workflows, add `--for-agent` to list/get commands.
 

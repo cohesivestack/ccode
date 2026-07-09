@@ -24,10 +24,14 @@ State record fields are stable:
 
 ## CLI inspection commands
 
-- List pending artifacts:
+- List unresolved artifacts:
   - `ccode list accelerated [scopeId]`
-- List instruction references:
+- Include resolved artifacts:
+  - `ccode list accelerated [scopeId] --include-resolved`
+- List unresolved instruction references:
   - `ccode list instructions`
+- Include resolved instruction references:
+  - `ccode list instructions --include-resolved`
 - Get one artifact metadata:
   - `ccode get accelerated <scopeId>:<artifactId>`
 - Get composed adjustment markdown:
@@ -42,7 +46,7 @@ For machine-readable output:
 ## Suggested agent flow
 
 1. Run generator process (`ccode run ...`).
-2. Query pending items (`ccode list accelerated --for-agent`).
+2. Query unresolved items (`ccode list accelerated --for-agent`).
 3. For each item, fetch instruction bundle (`ccode get accelerated ... --instructions --for-agent`).
 4. Apply edits to the target file in `output_path/<id>`.
 5. Clearing pending status is available through the Go API (`MarkAcceleratorAsAdjusted`), and can be integrated by host tooling.

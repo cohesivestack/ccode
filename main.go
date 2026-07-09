@@ -192,7 +192,12 @@ Syntax:
 				scopeID = &args[0]
 			}
 
-			items, err := context.ListNotAdjustedAccelerators(scopeID)
+			includeResolved, err := cmd.Flags().GetBool("include-resolved")
+			if err != nil {
+				return err
+			}
+
+			items, err := context.ListAccelerators(scopeID, includeResolved)
 			if err != nil {
 				return err
 			}
@@ -200,6 +205,7 @@ Syntax:
 			return writeJSON(cmd, items)
 		},
 	}
+	listAcceleratedCmd.Flags().Bool("include-resolved", false, "Include resolved accelerator artifacts")
 	listAcceleratedCmd.Flags().Bool("for-agent", false, "Output machine-readable JSON")
 
 	listInstructionsCmd := &cobra.Command{
@@ -213,7 +219,11 @@ Syntax:
 			}
 
 			context := ccode.NewContext(cfg)
-			items, err := context.ListAcceleratorInstructions()
+			includeResolved, err := cmd.Flags().GetBool("include-resolved")
+			if err != nil {
+				return err
+			}
+			items, err := context.ListAcceleratorInstructionsWithResolved(includeResolved)
 			if err != nil {
 				return err
 			}
@@ -221,6 +231,7 @@ Syntax:
 			return writeJSON(cmd, items)
 		},
 	}
+	listInstructionsCmd.Flags().Bool("include-resolved", false, "Include resolved accelerator instruction references")
 	listInstructionsCmd.Flags().Bool("for-agent", false, "Output machine-readable JSON")
 
 	getCmd := &cobra.Command{

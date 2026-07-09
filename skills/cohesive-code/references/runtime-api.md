@@ -110,7 +110,9 @@ Use generated `context.ts` in the workspace as local truth.
 These commands expose accelerator metadata and instructions:
 
 - `ccode list accelerated [scopeId]`
+- `ccode list accelerated [scopeId] --include-resolved`
 - `ccode list instructions`
+- `ccode list instructions --include-resolved`
 - `ccode get accelerated <scopeId>:<artifactId>`
 - `ccode get accelerated <scopeId>:<artifactId> --instructions`
 - `ccode get instruction <path>`

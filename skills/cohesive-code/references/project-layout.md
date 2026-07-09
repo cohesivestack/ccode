@@ -117,4 +117,4 @@ Example:
 - Keep templates and spec files inside `ccode_path` unless the user explicitly wants external inputs.
 - Do not edit `.ccode/lib/context.ts` in application repos; regenerate it through `ccode init` or change the CLI templates in the source repo instead.
 - Run `ccode init` after changing `ccode.yaml` `version` to refresh generated support files for that version.
-- For accelerated artifacts, inspect pending items via CLI (`ccode list accelerated`) before editing generated outputs manually.
+- For accelerated artifacts, inspect unresolved items via CLI (`ccode list accelerated`) before editing generated outputs manually.

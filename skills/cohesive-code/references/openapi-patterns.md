@@ -96,4 +96,4 @@ Keep templates shallow. Example:
 - Local `$ref` and file references resolve correctly from the spec directory.
 - The generated output lands under `output_path`.
 - The process is re-runnable without manual cleanup.
-- If using `accelerate`, pending items are visible in `ccode list accelerated`.
+- If using `accelerate`, unresolved items are visible in `ccode list accelerated`.

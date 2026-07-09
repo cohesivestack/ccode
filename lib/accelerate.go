@@ -37,6 +37,7 @@ const (
 	acceleratorReportStateAdjusted            = "adjusted"
 	acceleratorReportStateCorrupt             = "corrupt"
 	acceleratorReportStateAmbiguous           = "ambiguous"
+	acceleratorReportStateMissingArtifact     = "missing_artifact"
 	acceleratorReportStateMissingInstructions = "missing_instructions"
 )
 
@@ -374,6 +375,10 @@ func (ctx *Context) inspectParsedAcceleratorArtifact(path string, scopeID string
 	}
 
 	if artifact.InstructionsPath == nil || isStringBlank(*artifact.InstructionsPath) {
+		if !ctx.acceleratorOutputArtifactExists(artifactID) {
+			item.State = acceleratorReportStateMissingArtifact
+			item.Message = acceleratorStateMessage(acceleratorReportStateMissingArtifact)
+		}
 		return item, nil
 	}
 
@@ -384,6 +389,13 @@ func (ctx *Context) inspectParsedAcceleratorArtifact(path string, scopeID string
 		return item, nil
 	}
 	artifact.InstructionsPath = &normalizedInstructionsPath
+
+	if !ctx.acceleratorOutputArtifactExists(artifactID) {
+		item.Artifact = &artifact
+		item.State = acceleratorReportStateMissingArtifact
+		item.Message = acceleratorStateMessage(acceleratorReportStateMissingArtifact)
+		return item, nil
+	}
 
 	instructionsFullPath := filepath.Join(ctx.config.CCodePath, filepath.FromSlash(normalizedInstructionsPath))
 	instructionsContent, err := os.ReadFile(instructionsFullPath)
@@ -413,6 +425,14 @@ func (ctx *Context) inspectParsedAcceleratorArtifact(path string, scopeID string
 	return item, nil
 }
 
+func (ctx *Context) acceleratorOutputArtifactExists(artifactID string) bool {
+	if ctx == nil || ctx.config == nil || isStringBlank(artifactID) {
+		return false
+	}
+	outputFilePath := filepath.Clean(filepath.Join(ctx.config.OutputPath, filepath.FromSlash(artifactID)))
+	return fileExists(outputFilePath)
+}
+
 func acceleratorArtifactReportState(artifact acceleratorStateArtifact) string {
 	if artifact.Pending {
 		return acceleratorReportStatePending
@@ -426,6 +446,8 @@ func acceleratorStateMessage(state string) string {
 		return "State file is corrupt. Re-run the accelerator to rebuild it."
 	case acceleratorReportStateAmbiguous:
 		return "State file is ambiguous. Re-run the accelerator to rebuild it."
+	case acceleratorReportStateMissingArtifact:
+		return "Artifact file is missing. Restore it or re-run the accelerator."
 	case acceleratorReportStateMissingInstructions:
 		return "Instruction file is missing. Restore it or re-run the accelerator."
 	default:
@@ -437,9 +459,14 @@ func acceleratorReportStateIsActionable(state string) bool {
 	return state == acceleratorReportStatePending || acceleratorReportStateIsProblem(state)
 }
 
+func acceleratorReportStateMatchesListFilter(state string, includeResolved bool) bool {
+	return includeResolved || acceleratorReportStateIsActionable(state)
+}
+
 func acceleratorReportStateIsProblem(state string) bool {
 	return state == acceleratorReportStateCorrupt ||
 		state == acceleratorReportStateAmbiguous ||
+		state == acceleratorReportStateMissingArtifact ||
 		state == acceleratorReportStateMissingInstructions
 }
 
@@ -885,6 +912,10 @@ func (ctx *Context) MarkAcceleratorAsAdjusted(scopeID *string, artifactID *strin
 }
 
 func (ctx *Context) ListNotAdjustedAccelerators(scopeID *string) ([]AcceleratorArtifactMetadata, error) {
+	return ctx.ListAccelerators(scopeID, false)
+}
+
+func (ctx *Context) ListAccelerators(scopeID *string, includeResolved bool) ([]AcceleratorArtifactMetadata, error) {
 	if ctx == nil || ctx.config == nil {
 		return nil, fmt.Errorf("context config is required")
 	}
@@ -908,7 +939,7 @@ func (ctx *Context) ListNotAdjustedAccelerators(scopeID *string) ([]AcceleratorA
 		if filterScopeID != nil && item.ScopeID != *filterScopeID {
 			continue
 		}
-		if !acceleratorReportStateIsActionable(item.State) {
+		if !acceleratorReportStateMatchesListFilter(item.State, includeResolved) {
 			continue
 		}
 		metadataItems = append(metadataItems, acceleratorMetadataFromInspected(item))
@@ -947,6 +978,10 @@ func (ctx *Context) GetAcceleratorState(scopeID string, artifactID string) (*Acc
 }
 
 func (ctx *Context) ListAcceleratorInstructions() ([]AcceleratorInstructionReference, error) {
+	return ctx.ListAcceleratorInstructionsWithResolved(false)
+}
+
+func (ctx *Context) ListAcceleratorInstructionsWithResolved(includeResolved bool) ([]AcceleratorInstructionReference, error) {
 	if ctx == nil || ctx.config == nil {
 		return nil, fmt.Errorf("context config is required")
 	}
@@ -958,6 +993,9 @@ func (ctx *Context) ListAcceleratorInstructions() ([]AcceleratorInstructionRefer
 
 	references := []AcceleratorInstructionReference{}
 	for _, item := range items {
+		if !acceleratorReportStateMatchesListFilter(item.State, includeResolved) {
+			continue
+		}
 		if item.Artifact == nil || item.Artifact.InstructionsPath == nil || isStringBlank(*item.Artifact.InstructionsPath) {
 			if !acceleratorReportStateIsProblem(item.State) {
 				continue
@@ -1001,11 +1039,15 @@ func (ctx *RunnerContext) MarkAcceleratorAsAdjusted(scopeID *string, artifactID 
 }
 
 func (ctx *RunnerContext) ListNotAdjustedAccelerators(scopeID *string) ([]AcceleratorArtifactMetadata, error) {
+	return ctx.ListAccelerators(scopeID, false)
+}
+
+func (ctx *RunnerContext) ListAccelerators(scopeID *string, includeResolved bool) ([]AcceleratorArtifactMetadata, error) {
 	if ctx == nil || ctx.ccodeContext == nil {
 		return nil, fmt.Errorf("runner context is not initialized")
 	}
 
-	return ctx.ccodeContext.ListNotAdjustedAccelerators(scopeID)
+	return ctx.ccodeContext.ListAccelerators(scopeID, includeResolved)
 }
 
 func (ctx *RunnerContext) GetAcceleratorState(scopeID string, artifactID string) (*AcceleratorArtifactState, error) {
@@ -1017,11 +1059,15 @@ func (ctx *RunnerContext) GetAcceleratorState(scopeID string, artifactID string)
 }
 
 func (ctx *RunnerContext) ListAcceleratorInstructions() ([]AcceleratorInstructionReference, error) {
+	return ctx.ListAcceleratorInstructionsWithResolved(false)
+}
+
+func (ctx *RunnerContext) ListAcceleratorInstructionsWithResolved(includeResolved bool) ([]AcceleratorInstructionReference, error) {
 	if ctx == nil || ctx.ccodeContext == nil {
 		return nil, fmt.Errorf("runner context is not initialized")
 	}
 
-	return ctx.ccodeContext.ListAcceleratorInstructions()
+	return ctx.ccodeContext.ListAcceleratorInstructionsWithResolved(includeResolved)
 }
 
 func (ctx *RunnerContext) GetAcceleratorInstruction(markdownPath string) (string, error) {

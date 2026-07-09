@@ -128,8 +128,24 @@ func TestNewRootCmd_ListAcceleratedExcludesContent(t *testing.T) {
 	assert.Contains(t, output, `"scope_id": "generate-api"`)
 	assert.Contains(t, output, `"artifact_id": "handlers.go"`)
 	assert.Contains(t, output, `"pending": true`)
+	assert.NotContains(t, output, `"artifact_id": "service.go"`)
 	assert.NotContains(t, output, `"content"`)
 	assert.NotContains(t, output, "package handlers")
+}
+
+func TestNewRootCmd_ListAcceleratedIncludeResolved(t *testing.T) {
+	configPath, _ := setupAcceleratorCLIProject(t)
+
+	cmd := newRootCmd(nil, nil)
+	var stdout bytes.Buffer
+	cmd.SetOut(&stdout)
+	cmd.SetArgs([]string{"--config", configPath, "list", "accelerated", "--include-resolved"})
+
+	require.NoError(t, cmd.Execute())
+	output := stdout.String()
+	assert.Contains(t, output, `"artifact_id": "handlers.go"`)
+	assert.Contains(t, output, `"artifact_id": "service.go"`)
+	assert.Contains(t, output, `"state": "adjusted"`)
 }
 
 func TestNewRootCmd_GetAcceleratedExcludesContent(t *testing.T) {
@@ -203,7 +219,16 @@ func TestNewRootCmd_ListInstructionsAndGetInstruction(t *testing.T) {
 	listCmd.SetArgs([]string{"--config", configPath, "list", "instructions"})
 	require.NoError(t, listCmd.Execute())
 	assert.Contains(t, listOut.String(), `"instructions_path": "instructions/handlers.md"`)
+	assert.NotContains(t, listOut.String(), `"instructions_path": "instructions/service.md"`)
 	assert.NotContains(t, listOut.String(), "package handlers")
+
+	includeResolvedCmd := newRootCmd(nil, nil)
+	var includeResolvedOut bytes.Buffer
+	includeResolvedCmd.SetOut(&includeResolvedOut)
+	includeResolvedCmd.SetArgs([]string{"--config", configPath, "list", "instructions", "--include-resolved"})
+	require.NoError(t, includeResolvedCmd.Execute())
+	assert.Contains(t, includeResolvedOut.String(), `"instructions_path": "instructions/handlers.md"`)
+	assert.Contains(t, includeResolvedOut.String(), `"instructions_path": "instructions/service.md"`)
 
 	getCmd := newRootCmd(nil, nil)
 	var getOut bytes.Buffer
@@ -234,15 +259,20 @@ func setupAcceleratorCLIProject(t *testing.T) (string, string) {
 	ccodePath := filepath.Join(rootDir, "ccode")
 	require.NoError(t, os.MkdirAll(filepath.Join(ccodePath, "instructions"), 0755))
 	require.NoError(t, os.WriteFile(filepath.Join(ccodePath, "instructions", "handlers.md"), []byte("# Update handlers"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(ccodePath, "instructions", "service.md"), []byte("# Update service"), 0644))
 
 	configPath := filepath.Join(rootDir, "ccode.yaml")
-	configYAML := "ccode_path: " + ccodePath + "\noutput_path: " + filepath.Join(rootDir, "out") + "\nversion: v1.2.3\n"
+	outputPath := filepath.Join(rootDir, "out")
+	configYAML := "ccode_path: " + ccodePath + "\noutput_path: " + outputPath + "\nversion: v1.2.3\n"
 	require.NoError(t, os.WriteFile(configPath, []byte(configYAML), 0644))
+	require.NoError(t, os.MkdirAll(outputPath, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(outputPath, "handlers.go"), []byte("package handlers"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(outputPath, "service.go"), []byte("package service"), 0644))
 
 	stateDir := filepath.Join(ccodePath, ".ccode", "accelerators", "generate-api")
 	require.NoError(t, os.MkdirAll(stateDir, 0755))
 	writeAcceleratorStateFileForCLITest(t, filepath.Join(stateDir, "handlers.go.accelerated.json"), true, "instructions/handlers.md", "package handlers", "# Update handlers")
-	writeAcceleratorStateFileForCLITest(t, filepath.Join(stateDir, "service.go.accelerated.json"), false, "", "package service", "")
+	writeAcceleratorStateFileForCLITest(t, filepath.Join(stateDir, "service.go.accelerated.json"), false, "instructions/service.md", "package service", "# Update service")
 
 	return configPath, ccodePath
 }
