@@ -110,6 +110,8 @@ ccode get accelerated <scopeId>:<artifactId> [--instructions]
 ccode get instruction <path>
 ```
 
+Inspection output includes a `state` field. Normal values are `pending` and `adjusted`; state-file issues are reported as `corrupt`, `ambiguous`, or `missing_instructions` with a short `message`. During inspection, repeated identical state lines are collapsed to one line, and changed instruction files refresh their saved checksum and mark the artifact pending again. Corrupt, ambiguous, or missing-instruction states are reported without stopping list commands.
+
 ## Releases
 
 Releases are automated with GoReleaser through GitHub Actions.

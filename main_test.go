@@ -79,7 +79,7 @@ func TestNewRootCmd_DefaultConfigWhenNoFile(t *testing.T) {
 		_ = os.Chdir(originalWD)
 	})
 
-	t.Setenv("CCODE_PATH", "")
+	t.Setenv("CCODE_CCODE_PATH", "")
 	t.Setenv("CCODE_OUTPUT_PATH", "")
 
 	var captured *ccode.Config
@@ -128,7 +128,6 @@ func TestNewRootCmd_ListAcceleratedExcludesContent(t *testing.T) {
 	assert.Contains(t, output, `"scope_id": "generate-api"`)
 	assert.Contains(t, output, `"artifact_id": "handlers.go"`)
 	assert.Contains(t, output, `"pending": true`)
-	assert.NotContains(t, output, `"adjusted_at"`)
 	assert.NotContains(t, output, `"content"`)
 	assert.NotContains(t, output, "package handlers")
 }
@@ -146,7 +145,6 @@ func TestNewRootCmd_GetAcceleratedExcludesContent(t *testing.T) {
 	assert.Contains(t, output, `"scope_id": "generate-api"`)
 	assert.Contains(t, output, `"artifact_id": "handlers.go"`)
 	assert.Contains(t, output, `"pending": true`)
-	assert.NotContains(t, output, `"adjusted_at"`)
 	assert.NotContains(t, output, `"content"`)
 	assert.NotContains(t, output, "package handlers")
 }

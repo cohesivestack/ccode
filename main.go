@@ -17,6 +17,8 @@ type acceleratorInstructionsAgentResult struct {
 	ScopeID              string  `json:"scope_id"`
 	ArtifactID           string  `json:"artifact_id"`
 	InstructionsPath     *string `json:"instructions_path"`
+	State                string  `json:"state"`
+	Message              string  `json:"message,omitempty"`
 	InstructionsMarkdown string  `json:"instructions_markdown"`
 	AcceleratedContent   string  `json:"accelerated_content"`
 	ComposedMarkdown     string  `json:"composed_markdown"`
@@ -81,7 +83,7 @@ func loadConfig(cmd *cobra.Command) (*ccode.Config, error) {
 }
 
 func applyEnvOverrides(cfg *ccode.Config) {
-	if value, ok := lookupEnv("CCODE_CCODE_PATH", "CCODE_PATH"); ok {
+	if value, ok := os.LookupEnv("CCODE_CCODE_PATH"); ok {
 		cfg.CCodePath = value
 	}
 	if value, ok := os.LookupEnv("CCODE_OUTPUT_PATH"); ok {
@@ -100,13 +102,6 @@ func applyFlagOverrides(cmd *cobra.Command, cfg *ccode.Config) error {
 		}
 		cfg.CCodePath = value
 	}
-	if cmd.Flags().Changed("path") {
-		value, err := cmd.Flags().GetString("path")
-		if err != nil {
-			return err
-		}
-		cfg.CCodePath = value
-	}
 	if cmd.Flags().Changed("output-path") {
 		value, err := cmd.Flags().GetString("output-path")
 		if err != nil {
@@ -115,15 +110,6 @@ func applyFlagOverrides(cmd *cobra.Command, cfg *ccode.Config) error {
 		cfg.OutputPath = value
 	}
 	return nil
-}
-
-func lookupEnv(names ...string) (string, bool) {
-	for _, name := range names {
-		if value, ok := os.LookupEnv(name); ok {
-			return value, true
-		}
-	}
-	return "", false
 }
 
 // newRootCmd creates the Cobra CLI and wires viper + config loading.
@@ -140,9 +126,7 @@ Syntax:
 
 	rootCmd.PersistentFlags().String("config", "", "Path to YAML config file")
 	rootCmd.PersistentFlags().String("ccode-path", "", "Path where the project structure resides")
-	rootCmd.PersistentFlags().String("path", "", "Deprecated alias for --ccode-path")
 	rootCmd.PersistentFlags().String("output-path", "", "Root path where generated artifacts are written")
-	_ = rootCmd.PersistentFlags().MarkDeprecated("path", "use --ccode-path instead")
 
 	runCmd := &cobra.Command{
 		Use:   "run [process]",
@@ -280,28 +264,35 @@ Syntax:
 					ArtifactID:       state.ArtifactID,
 					InstructionsPath: state.InstructionsPath,
 					Pending:          state.Pending,
+					State:            state.State,
+					Message:          state.Message,
 				})
 			}
 
-			acceleratedContent, err := ccode.DecodeAcceleratorContentSnapshot(state.Content)
-			if err != nil {
-				return err
-			}
-
-			instructionsMarkdown := ""
-			if state.InstructionsPath != nil && !isStringBlank(*state.InstructionsPath) {
-				instructionsMarkdown, err = context.GetAcceleratorInstruction(*state.InstructionsPath)
+			acceleratedContent := ""
+			if !isStringBlank(state.Content) {
+				acceleratedContent, err = ccode.DecodeAcceleratorContentSnapshot(state.Content)
 				if err != nil {
 					return err
 				}
 			}
 
-			composedMarkdown := composeAcceleratedInstructionsMarkdown(instructionsMarkdown, acceleratedContent, state.ArtifactID)
+			instructionsMarkdown := ""
+			if state.InstructionsPath != nil && !isStringBlank(*state.InstructionsPath) {
+				instructionsMarkdown, err = context.GetAcceleratorInstruction(*state.InstructionsPath)
+				if err != nil && state.Message == "" {
+					return err
+				}
+			}
+
+			composedMarkdown := composeAcceleratedInstructionsMarkdown(instructionsMarkdown, acceleratedContent, state.ArtifactID, state.Message)
 			if forAgent {
 				return writeJSON(cmd, acceleratorInstructionsAgentResult{
 					ScopeID:              state.ScopeID,
 					ArtifactID:           state.ArtifactID,
 					InstructionsPath:     state.InstructionsPath,
+					State:                state.State,
+					Message:              state.Message,
 					InstructionsMarkdown: instructionsMarkdown,
 					AcceleratedContent:   acceleratedContent,
 					ComposedMarkdown:     composedMarkdown,
@@ -383,7 +374,7 @@ func parseAcceleratorSelector(value string) (string, string, error) {
 	return parts[0], parts[1], nil
 }
 
-func composeAcceleratedInstructionsMarkdown(instructionsMarkdown string, acceleratedContent string, artifactID string) string {
+func composeAcceleratedInstructionsMarkdown(instructionsMarkdown string, acceleratedContent string, artifactID string, stateMessage string) string {
 	builder := &strings.Builder{}
 
 	if !isStringBlank(instructionsMarkdown) {
@@ -408,6 +399,11 @@ func composeAcceleratedInstructionsMarkdown(instructionsMarkdown string, acceler
 		builder.WriteString("\n")
 	}
 	builder.WriteString("```\n")
+	if !isStringBlank(stateMessage) {
+		builder.WriteString("\n")
+		builder.WriteString(strings.TrimSpace(stateMessage))
+		builder.WriteString("\n")
+	}
 
 	return builder.String()
 }

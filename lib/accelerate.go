@@ -32,41 +32,21 @@ type acceleratorStateArtifact struct {
 	InstructionsChecksum string  `json:"instructions_checksum"`
 }
 
-func (artifact *acceleratorStateArtifact) UnmarshalJSON(payload []byte) error {
-	type artifactJSON struct {
-		ID                   string  `json:"id"`
-		Content              string  `json:"content"`
-		InstructionsPath     *string `json:"instructions_path"`
-		Pending              *bool   `json:"pending"`
-		AdjustedAt           *string `json:"adjusted_at"`
-		AcceleratedChecksum  string  `json:"accelerated_checksum"`
-		InstructionsChecksum string  `json:"instructions_checksum"`
-	}
-
-	decoded := artifactJSON{}
-	if err := json.Unmarshal(payload, &decoded); err != nil {
-		return err
-	}
-
-	artifact.ID = decoded.ID
-	artifact.Content = decoded.Content
-	artifact.InstructionsPath = decoded.InstructionsPath
-	artifact.AcceleratedChecksum = decoded.AcceleratedChecksum
-	artifact.InstructionsChecksum = decoded.InstructionsChecksum
-	if decoded.Pending != nil {
-		artifact.Pending = *decoded.Pending
-	} else {
-		artifact.Pending = decoded.AdjustedAt == nil
-	}
-
-	return nil
-}
+const (
+	acceleratorReportStatePending             = "pending"
+	acceleratorReportStateAdjusted            = "adjusted"
+	acceleratorReportStateCorrupt             = "corrupt"
+	acceleratorReportStateAmbiguous           = "ambiguous"
+	acceleratorReportStateMissingInstructions = "missing_instructions"
+)
 
 type AcceleratorArtifactMetadata struct {
 	ScopeID          string  `json:"scope_id"`
 	ArtifactID       string  `json:"artifact_id"`
 	InstructionsPath *string `json:"instructions_path"`
 	Pending          bool    `json:"pending"`
+	State            string  `json:"state"`
+	Message          string  `json:"message,omitempty"`
 }
 
 type AcceleratorArtifactState struct {
@@ -75,12 +55,24 @@ type AcceleratorArtifactState struct {
 	Content          string  `json:"content"`
 	InstructionsPath *string `json:"instructions_path"`
 	Pending          bool    `json:"pending"`
+	State            string  `json:"state"`
+	Message          string  `json:"message,omitempty"`
 }
 
 type AcceleratorInstructionReference struct {
 	ScopeID          string  `json:"scope_id"`
 	ArtifactID       string  `json:"artifact_id"`
 	InstructionsPath *string `json:"instructions_path"`
+	State            string  `json:"state"`
+	Message          string  `json:"message,omitempty"`
+}
+
+type inspectedAcceleratorArtifact struct {
+	ScopeID    string
+	ArtifactID string
+	Artifact   *acceleratorStateArtifact
+	State      string
+	Message    string
 }
 
 func (ctx *RunnerContext) Accelerate(id string, templatePath string, data goja.Value, instructionsPath ...string) error {
@@ -218,10 +210,6 @@ func normalizeAcceleratorPathPart(value string, label string) (string, error) {
 
 func loadAcceleratorState(path string) (*acceleratorState, error) {
 	if !fileExists(path) {
-		legacyPath := legacyAcceleratorStateFilePath(path)
-		if fileExists(legacyPath) {
-			return loadLegacyAcceleratorState(legacyPath)
-		}
 		return &acceleratorState{
 			Version: 1,
 			Scopes:  []acceleratorStateScope{},
@@ -233,7 +221,7 @@ func loadAcceleratorState(path string) (*acceleratorState, error) {
 		return nil, fmt.Errorf("stat accelerator state %q: %w", path, err)
 	}
 	if !info.IsDir() {
-		return loadLegacyAcceleratorState(path)
+		return nil, fmt.Errorf("accelerator state %q is not a directory", path)
 	}
 
 	state := &acceleratorState{
@@ -279,46 +267,222 @@ func loadAcceleratorState(path string) (*acceleratorState, error) {
 	return state, nil
 }
 
-func loadLegacyAcceleratorState(path string) (*acceleratorState, error) {
-	payload, err := os.ReadFile(path)
+func (ctx *Context) inspectAcceleratorState() ([]inspectedAcceleratorArtifact, error) {
+	if ctx == nil || ctx.config == nil {
+		return nil, fmt.Errorf("context config is required")
+	}
+
+	statePath := ctx.acceleratorStateFilePath()
+	if !fileExists(statePath) {
+		return []inspectedAcceleratorArtifact{}, nil
+	}
+
+	info, err := os.Stat(statePath)
 	if err != nil {
-		return nil, fmt.Errorf("read accelerator state %q: %w", path, err)
+		return nil, fmt.Errorf("stat accelerator state %q: %w", statePath, err)
+	}
+	if !info.IsDir() {
+		return nil, fmt.Errorf("accelerator state %q is not a directory", statePath)
 	}
 
-	state := &acceleratorState{}
-	if err := json.Unmarshal(payload, state); err != nil {
-		return nil, fmt.Errorf("parse accelerator state %q: %w", path, err)
+	items := []inspectedAcceleratorArtifact{}
+	err = filepath.WalkDir(statePath, func(itemPath string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		if !strings.HasSuffix(entry.Name(), ".accelerated.json") {
+			return nil
+		}
+
+		relativePath, err := filepath.Rel(statePath, itemPath)
+		if err != nil {
+			return fmt.Errorf("resolve accelerator state file %q: %w", itemPath, err)
+		}
+
+		scopeID, artifactID, err := acceleratorStateIDsFromRelativePath(relativePath)
+		if err != nil {
+			return err
+		}
+
+		item, err := ctx.inspectAcceleratorArtifactStateFile(itemPath, scopeID, artifactID)
+		if err != nil {
+			return err
+		}
+		items = append(items, item)
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("read accelerator state %q: %w", statePath, err)
 	}
 
-	if state.Version != 0 && state.Version != 1 {
-		return nil, fmt.Errorf("unsupported accelerator state version %d", state.Version)
-	}
-	normalizeAcceleratorState(state)
-	return state, nil
+	return items, nil
 }
 
-func normalizeAcceleratorState(state *acceleratorState) {
-	if state.Version == 0 {
-		state.Version = 1
+func (ctx *Context) inspectAcceleratorArtifactStateFile(path string, scopeID string, artifactID string) (inspectedAcceleratorArtifact, error) {
+	item := inspectedAcceleratorArtifact{
+		ScopeID:    scopeID,
+		ArtifactID: artifactID,
+		State:      acceleratorReportStateCorrupt,
+		Message:    acceleratorStateMessage(acceleratorReportStateCorrupt),
 	}
-	if state.Scopes == nil {
-		state.Scopes = []acceleratorStateScope{}
+
+	payload, err := os.ReadFile(path)
+	if err != nil {
+		return item, fmt.Errorf("read accelerator artifact state %q: %w", path, err)
 	}
-	for scopeIndex := range state.Scopes {
-		if state.Scopes[scopeIndex].Artifacts == nil {
-			state.Scopes[scopeIndex].Artifacts = []acceleratorStateArtifact{}
+
+	lines := acceleratorStatePayloadLines(payload)
+	if len(lines) == 0 {
+		return item, nil
+	}
+
+	firstLine := lines[0]
+	for _, line := range lines[1:] {
+		if line != firstLine {
+			item.State = acceleratorReportStateAmbiguous
+			item.Message = acceleratorStateMessage(acceleratorReportStateAmbiguous)
+			return item, nil
 		}
-		for artifactIndex := range state.Scopes[scopeIndex].Artifacts {
-			artifact := &state.Scopes[scopeIndex].Artifacts[artifactIndex]
-			if artifact.AcceleratedChecksum == "" && artifact.Content != "" {
-				content, err := decodeAcceleratorContentSnapshot(artifact.Content)
-				if err == nil {
-					artifact.Content = encodeAcceleratorContentSnapshot(content, time.Now().UTC())
-					artifact.AcceleratedChecksum = checksumAcceleratorBytes([]byte(content))
-				}
+	}
+
+	if len(lines) > 1 || string(payload) != firstLine+"\n" {
+		if err := os.WriteFile(path, []byte(firstLine+"\n"), 0644); err != nil {
+			return item, fmt.Errorf("clean accelerator artifact state %q: %w", path, err)
+		}
+	}
+
+	artifact, err := parseAcceleratorArtifactStatePayload([]byte(firstLine))
+	if err != nil {
+		item.State = acceleratorReportStateCorrupt
+		item.Message = acceleratorStateMessage(acceleratorReportStateCorrupt)
+		return item, nil
+	}
+	artifact.ID = artifactID
+
+	return ctx.inspectParsedAcceleratorArtifact(path, scopeID, artifactID, artifact)
+}
+
+func (ctx *Context) inspectParsedAcceleratorArtifact(path string, scopeID string, artifactID string, artifact acceleratorStateArtifact) (inspectedAcceleratorArtifact, error) {
+	item := inspectedAcceleratorArtifact{
+		ScopeID:    scopeID,
+		ArtifactID: artifactID,
+		Artifact:   &artifact,
+		State:      acceleratorArtifactReportState(artifact),
+	}
+
+	if artifact.InstructionsPath == nil || isStringBlank(*artifact.InstructionsPath) {
+		return item, nil
+	}
+
+	normalizedInstructionsPath, err := ctx.normalizeAcceleratorInstructionPath(*artifact.InstructionsPath)
+	if err != nil {
+		item.State = acceleratorReportStateCorrupt
+		item.Message = acceleratorStateMessage(acceleratorReportStateCorrupt)
+		return item, nil
+	}
+	artifact.InstructionsPath = &normalizedInstructionsPath
+
+	instructionsFullPath := filepath.Join(ctx.config.CCodePath, filepath.FromSlash(normalizedInstructionsPath))
+	instructionsContent, err := os.ReadFile(instructionsFullPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			item.Artifact = &artifact
+			item.State = acceleratorReportStateMissingInstructions
+			item.Message = acceleratorStateMessage(acceleratorReportStateMissingInstructions)
+			return item, nil
+		}
+		return item, fmt.Errorf("read instruction file %q: %w", normalizedInstructionsPath, err)
+	}
+
+	instructionsChecksum := checksumAcceleratorBytes(instructionsContent)
+	if artifact.InstructionsChecksum != instructionsChecksum {
+		artifact.InstructionsChecksum = instructionsChecksum
+		artifact.Pending = true
+		if path != "" {
+			if err := saveAcceleratorArtifactStateFile(path, artifact); err != nil {
+				return item, err
 			}
 		}
 	}
+
+	item.Artifact = &artifact
+	item.State = acceleratorArtifactReportState(artifact)
+	return item, nil
+}
+
+func acceleratorArtifactReportState(artifact acceleratorStateArtifact) string {
+	if artifact.Pending {
+		return acceleratorReportStatePending
+	}
+	return acceleratorReportStateAdjusted
+}
+
+func acceleratorStateMessage(state string) string {
+	switch state {
+	case acceleratorReportStateCorrupt:
+		return "State file is corrupt. Re-run the accelerator to rebuild it."
+	case acceleratorReportStateAmbiguous:
+		return "State file is ambiguous. Re-run the accelerator to rebuild it."
+	case acceleratorReportStateMissingInstructions:
+		return "Instruction file is missing. Restore it or re-run the accelerator."
+	default:
+		return ""
+	}
+}
+
+func acceleratorReportStateIsActionable(state string) bool {
+	return state == acceleratorReportStatePending || acceleratorReportStateIsProblem(state)
+}
+
+func acceleratorReportStateIsProblem(state string) bool {
+	return state == acceleratorReportStateCorrupt ||
+		state == acceleratorReportStateAmbiguous ||
+		state == acceleratorReportStateMissingInstructions
+}
+
+func acceleratorMetadataFromInspected(item inspectedAcceleratorArtifact) AcceleratorArtifactMetadata {
+	metadata := AcceleratorArtifactMetadata{
+		ScopeID:    item.ScopeID,
+		ArtifactID: item.ArtifactID,
+		State:      item.State,
+		Message:    item.Message,
+	}
+	if item.Artifact != nil {
+		metadata.InstructionsPath = item.Artifact.InstructionsPath
+		metadata.Pending = item.Artifact.Pending
+	}
+	return metadata
+}
+
+func acceleratorStateFromInspected(item inspectedAcceleratorArtifact) *AcceleratorArtifactState {
+	state := &AcceleratorArtifactState{
+		ScopeID:    item.ScopeID,
+		ArtifactID: item.ArtifactID,
+		State:      item.State,
+		Message:    item.Message,
+	}
+	if item.Artifact != nil {
+		state.Content = item.Artifact.Content
+		state.InstructionsPath = item.Artifact.InstructionsPath
+		state.Pending = item.Artifact.Pending
+	}
+	return state
+}
+
+func acceleratorInstructionReferenceFromInspected(item inspectedAcceleratorArtifact) AcceleratorInstructionReference {
+	reference := AcceleratorInstructionReference{
+		ScopeID:    item.ScopeID,
+		ArtifactID: item.ArtifactID,
+		State:      item.State,
+		Message:    item.Message,
+	}
+	if item.Artifact != nil {
+		reference.InstructionsPath = item.Artifact.InstructionsPath
+	}
+	return reference
 }
 
 func saveAcceleratorState(path string, state *acceleratorState) error {
@@ -514,10 +678,6 @@ func saveAcceleratorArtifactStateFile(path string, artifact acceleratorStateArti
 
 func acceleratorArtifactStateFilePath(rootPath string, scopeID string, artifactID string) string {
 	return filepath.Join(rootPath, filepath.FromSlash(scopeID), filepath.FromSlash(artifactID)+".accelerated.json")
-}
-
-func legacyAcceleratorStateFilePath(rootPath string) string {
-	return filepath.Join(filepath.Dir(rootPath), "state", "accelerators.json")
 }
 
 func acceleratorStateIDsFromRelativePath(relativePath string) (string, string, error) {
@@ -738,30 +898,23 @@ func (ctx *Context) ListNotAdjustedAccelerators(scopeID *string) ([]AcceleratorA
 		filterScopeID = &normalizedScopeID
 	}
 
-	state, err := loadAcceleratorState(ctx.acceleratorStateFilePath())
+	items, err := ctx.inspectAcceleratorState()
 	if err != nil {
 		return nil, err
 	}
 
-	items := []AcceleratorArtifactMetadata{}
-	for _, scope := range state.Scopes {
-		if filterScopeID != nil && scope.ID != *filterScopeID {
+	metadataItems := []AcceleratorArtifactMetadata{}
+	for _, item := range items {
+		if filterScopeID != nil && item.ScopeID != *filterScopeID {
 			continue
 		}
-		for _, artifact := range scope.Artifacts {
-			if !artifact.Pending {
-				continue
-			}
-			items = append(items, AcceleratorArtifactMetadata{
-				ScopeID:          scope.ID,
-				ArtifactID:       artifact.ID,
-				InstructionsPath: artifact.InstructionsPath,
-				Pending:          artifact.Pending,
-			})
+		if !acceleratorReportStateIsActionable(item.State) {
+			continue
 		}
+		metadataItems = append(metadataItems, acceleratorMetadataFromInspected(item))
 	}
 
-	return items, nil
+	return metadataItems, nil
 }
 
 func (ctx *Context) GetAcceleratorState(scopeID string, artifactID string) (*AcceleratorArtifactState, error) {
@@ -778,27 +931,19 @@ func (ctx *Context) GetAcceleratorState(scopeID string, artifactID string) (*Acc
 		return nil, err
 	}
 
-	state, err := loadAcceleratorState(ctx.acceleratorStateFilePath())
+	items, err := ctx.inspectAcceleratorState()
 	if err != nil {
 		return nil, err
 	}
 
-	scope := state.findScopeByID(normalizedScopeID)
-	if scope == nil {
-		return nil, fmt.Errorf("accelerator scope %q not found", normalizedScopeID)
-	}
-	artifact := scope.findArtifactByID(normalizedArtifactID)
-	if artifact == nil {
-		return nil, fmt.Errorf("accelerator artifact %q not found in scope %q", normalizedArtifactID, normalizedScopeID)
+	for _, item := range items {
+		if item.ScopeID != normalizedScopeID || item.ArtifactID != normalizedArtifactID {
+			continue
+		}
+		return acceleratorStateFromInspected(item), nil
 	}
 
-	return &AcceleratorArtifactState{
-		ScopeID:          scope.ID,
-		ArtifactID:       artifact.ID,
-		Content:          artifact.Content,
-		InstructionsPath: artifact.InstructionsPath,
-		Pending:          artifact.Pending,
-	}, nil
+	return nil, fmt.Errorf("accelerator artifact %q not found in scope %q", normalizedArtifactID, normalizedScopeID)
 }
 
 func (ctx *Context) ListAcceleratorInstructions() ([]AcceleratorInstructionReference, error) {
@@ -806,26 +951,22 @@ func (ctx *Context) ListAcceleratorInstructions() ([]AcceleratorInstructionRefer
 		return nil, fmt.Errorf("context config is required")
 	}
 
-	state, err := loadAcceleratorState(ctx.acceleratorStateFilePath())
+	items, err := ctx.inspectAcceleratorState()
 	if err != nil {
 		return nil, err
 	}
 
-	items := []AcceleratorInstructionReference{}
-	for _, scope := range state.Scopes {
-		for _, artifact := range scope.Artifacts {
-			if artifact.InstructionsPath == nil || isStringBlank(*artifact.InstructionsPath) {
+	references := []AcceleratorInstructionReference{}
+	for _, item := range items {
+		if item.Artifact == nil || item.Artifact.InstructionsPath == nil || isStringBlank(*item.Artifact.InstructionsPath) {
+			if !acceleratorReportStateIsProblem(item.State) {
 				continue
 			}
-			items = append(items, AcceleratorInstructionReference{
-				ScopeID:          scope.ID,
-				ArtifactID:       artifact.ID,
-				InstructionsPath: artifact.InstructionsPath,
-			})
 		}
+		references = append(references, acceleratorInstructionReferenceFromInspected(item))
 	}
 
-	return items, nil
+	return references, nil
 }
 
 func (ctx *Context) GetAcceleratorInstruction(markdownPath string) (string, error) {
