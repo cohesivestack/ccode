@@ -1,184 +1,150 @@
 # Cohesive Code
 
-Cohesive Code is an AI-enabled code generation CLI built around TypeScript processes, template rendering, and accelerators.
+Cohesive Code is an AI-enabled code generation CLI built around TypeScript processes, Gonja templates, OpenAPI parsing, and accelerators for human or agent adjustment.
 
-> **Status:** Alpha/Experimental stage. Not ready for production use yet.
+It is designed for deterministic generation where generator authors control the process code and templates, while downstream developers or agents can safely inspect and adjust generated proposals.
 
-## What It Does
+> **Status:** Alpha/Experimental. Interfaces and generated support files may still change.
 
-* Executes TypeScript processes from a project workspace.
-* Renders Jinja templates into output files.
-* Parses JSON and OpenAPI documents from process code.
-* Supports accelerators for predictable generation of artifacts that are expected to be adjusted by humans or agents.
-
-## Core Concepts
-
-* **Process**: A TypeScript file with a default export:
-  * `export default function main(ctx: Context) { ... }`
-* **Scope**: Logical accelerator state namespace.
-  * Default scope is the process filename (without `.ts`).
-  * You can change it at runtime with `ctx.setScope(...)`.
-* **Accelerator**: A generated artifact tracked in state to avoid unsafe overwrites.
-  * Output target: `<output_path>/<artifact_id>`
-  * State file: `<hidden_path>/accelerators/<scope>/<artifact_id>.accelerated.json`
-  * Optional instructions markdown can be attached per artifact.
-  * After a successful `ccode run`, accelerator state files in scopes used by that run are removed when not produced during the run.
-
-## Runtime API (TypeScript)
-
-Import `Context` from `@ccode/context`:
-
-```ts
-import type { Context } from "@ccode/context";
-```
-
-Available methods:
-
-* `println(message: string)`
-* `setScope(scopeName: string)`
-* `scope(): string`
-* `renderTemplate(templatePath: string, data: any): string`
-* `generate(templatePath: string, filePath: string, data: any): void`
-* `accelerate(id: string, templatePath: string, data: any, instructionsPath?: string): void`
-* `parseJSONFromBytes(jsonBytes: number[]): Record<string, any>`
-* `parseJSONFromString(jsonString: string): Record<string, any>`
-* `parseJSONFromFile(filePath: string): Record<string, any>`
-* `parseOpenAPIFromBytes(specBytes: number[]): OpenAPIDocument`
-* `parseOpenAPIFromString(spec: string): OpenAPIDocument`
-* `parseOpenAPIFromFile(filePath: string): OpenAPIDocument`
-
-## Minimal Process Example
+## Quick example
 
 ```ts
 import type { Context } from "@ccode/context";
 
 export default function main(ctx: Context) {
-  const model = ctx.parseOpenAPIFromFile("specs/api.yaml");
+  const spec = ctx.parseOpenAPIFromFile("specs/api.yaml");
 
-  ctx.generate("templates/summary.tpl", "generated/summary.md", { model });
+  ctx.generate("templates/summary.tpl", "generated/summary.md", { spec });
 
   ctx.accelerate(
     "handlers.ts",
     "templates/handlers.tpl",
-    { model },
+    { spec },
     "instructions/handlers.md",
   );
 }
 ```
 
-## Installation
+Run the process and inspect accelerator work:
 
-### Wrapper installer (recommended)
+```bash
+ccode run api/generate
+ccode list accelerated --for-agent
+ccode get accelerated generate-api:handlers.ts --instructions --for-agent
+```
 
-Install the wrapper to `~/.local/bin/ccode` with `curl`:
+## Website and documentation
+
+The documentation source lives in [docs/src/content/docs](docs/src/content/docs).
+
+Start with:
+
+- [Getting Started](docs/src/content/docs/getting-started.md)
+- [Project Layout](docs/src/content/docs/using-ccode/project-layout.md)
+- [Processes](docs/src/content/docs/using-ccode/processes.md)
+- [Accelerators](docs/src/content/docs/using-ccode/accelerators.md)
+- [AI Skill Index](docs/src/content/docs/ai-skill-index.md)
+
+## Installing
+
+Install the wrapper to `~/.local/bin/ccode`:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cohesivestack/ccode/master/installer/install.sh | bash
 ```
 
-Or run the installer from this repository clone:
+From this repository clone:
 
 ```bash
 bash installer/install.sh
 ```
 
-## Config
+The wrapper resolves the binary version for each workspace and caches release binaries under `~/.cache/ccode/releases`.
 
-**Config sample**
+## Agent skills
 
-```yaml
-ccode_path: ccode # The path where the structure of the project resides. This accepts relative paths. Relative paths are resolved from the config file directory. By default is `ccode`.
-version: v1.2.3 # Required. The ccode release version used by the wrapper for this workspace.
-output_path: . # The root path where will be saved the produced artifacts. This is relative to the path where ccode command runs. By default is `.`
-hidden_path: .ccode # Internal state/build folder. By default is `.ccode`
-```
-
-## CLI
-
-### Main commands
-
-```bash
-ccode --config [config-path] init [path] [--version version]
-ccode --config [config-path] --ccode-path [path] --output-path [output-path] run [process]
-```
-
-### Accelerator inspection commands
-
-```bash
-ccode list accelerated [scopeId] [--include-resolved]
-ccode list instructions [--include-resolved]
-ccode get accelerated <scopeId>:<artifactId> [--instructions]
-ccode get instruction <path>
-```
-
-Inspection output includes a `state` field. Normal values are `pending` and `adjusted`; state-file issues are reported as `corrupt`, `ambiguous`, `missing_artifact`, or `missing_instructions` with a short `message`. List commands return unresolved resources by default (`pending`, `corrupt`, `ambiguous`, `missing_artifact`, or `missing_instructions`); use `--include-resolved` to include `adjusted` resources too. During inspection, repeated identical state lines are collapsed to one line, missing artifacts are reported before missing instructions, and changed instruction files refresh their saved checksum and mark the artifact pending again. Corrupt, ambiguous, missing-artifact, or missing-instruction states are reported without stopping list commands.
-
-## Releases
-
-Releases are automated with GoReleaser through GitHub Actions.
-
-* Trigger: push a Git tag matching `v*`
-* Accepted format: `vMAJOR.MINOR.PATCH` (for example, `v1.2.3`) and prereleases (for example, `v1.3.0-rc1`)
-* Published assets:
-  * `linux/amd64`
-  * `linux/arm64`
-  * `darwin/amd64`
-  * `darwin/arm64`
-  * `windows/amd64`
-* Each release includes platform archives and `checksums.txt` (SHA-256)
-
-**Create a release**
-
-```bash
-git tag v1.2.3
-git push origin v1.2.3
-```
-
-### How the wrapper works
-
-The wrapper at `installer/bin/ccode`:
-
-* Resolves version precedence in this order:
-  * `--version` flag
-  * nearest `ccode.yaml` `version` entry (searching upward from the current directory, unless `--config` is passed)
-  * `~/.config/ccode/version`
-  * latest stable GitHub release (non-draft, non-prerelease)
-* Caches binaries under `~/.cache/ccode/releases`
-* For normal execution, does not modify `ccode.yaml` or `~/.config/ccode/version`
-* For `ccode init`, forwards the resolved version to the binary so `ccode.yaml` includes `version` and generated support files are refreshed
-* `ccode init` creates `.ccode/.gitignore` so accelerator state can be tracked while generated support files and build cache stay ignored
-* `ccode run` expects an initialized workspace and fails clearly if init-managed support files are missing
-* Supports pinning:
-  * `ccode pin`
-  * `ccode pin <version>`
-  * `ccode pin latest`
-* `ccode pin` always writes `~/.config/ccode/version`
-
-## Install from release assets
-
-1. Open the GitHub Releases page: `https://github.com/cohesivestack/ccode/releases`
-2. Download the archive for your platform
-3. Verify the downloaded file with `checksums.txt`
-4. Extract and place the `ccode` binary in your `PATH`
-
-## Agent skill installation
-
-This repository includes an installable Agent Skill package for the `skills` CLI:
+This repository includes Cohesive Code Agent Skills installable with [`npx skills`](https://github.com/vercel-labs/skills):
 
 ```bash
 npx skills add cohesivestack/ccode
 ```
 
-To install only the broad Cohesive Code workspace skill:
+Install only the broad workspace skill:
 
 ```bash
 npx skills add cohesivestack/ccode --skill cohesive-code
 ```
 
-Focused workflow skills are also available:
+Focused workflow skills:
 
 ```bash
 npx skills add cohesivestack/ccode --skill author-ccode-generation
 npx skills add cohesivestack/ccode --skill run-ccode-generation
 npx skills add cohesivestack/ccode --skill merge-ccode-accelerator-state
 ```
+
+## Docs
+
+- Start Here
+  - [Getting Started](docs/src/content/docs/getting-started.md)
+  - [Philosophy](docs/src/content/docs/philosophy.md)
+  - [AI Skill Index](docs/src/content/docs/ai-skill-index.md)
+- Using Cohesive Code
+  - [Project Layout](docs/src/content/docs/using-ccode/project-layout.md)
+  - [Processes](docs/src/content/docs/using-ccode/processes.md)
+  - [Templates](docs/src/content/docs/using-ccode/templates.md)
+  - [Generation](docs/src/content/docs/using-ccode/generation.md)
+  - [Accelerators](docs/src/content/docs/using-ccode/accelerators.md)
+  - [OpenAPI Workflows](docs/src/content/docs/using-ccode/openapi-workflows.md)
+  - [Wrapper & Versions](docs/src/content/docs/using-ccode/wrapper-and-versions.md)
+- Reference
+  - [CLI](docs/src/content/docs/reference/cli.md)
+  - [Configuration](docs/src/content/docs/reference/configuration.md)
+  - [Runtime API](docs/src/content/docs/reference/runtime-api.md)
+  - [Accelerator States](docs/src/content/docs/reference/accelerator-states.md)
+- Cookbook
+  - [Overview](docs/src/content/docs/cookbook/index.mdx)
+  - [Minimal Process](docs/src/content/docs/cookbook/minimal-process.md)
+  - [OpenAPI Docs](docs/src/content/docs/cookbook/openapi-docs.md)
+  - [Accelerated Artifact](docs/src/content/docs/cookbook/accelerated-artifact.md)
+- About
+  - [License](docs/src/content/docs/about/license.md)
+
+## Releases
+
+Releases are automated with GoReleaser through GitHub Actions.
+
+- Trigger: push a Git tag matching `v*`
+- Accepted format: `vMAJOR.MINOR.PATCH`, for example `v1.2.3`, and prereleases such as `v1.3.0-rc1`
+- Published assets:
+  - `linux/amd64`
+  - `linux/arm64`
+  - `darwin/amd64`
+  - `darwin/arm64`
+  - `windows/amd64`
+
+Each release includes platform archives and `checksums.txt`.
+
+Create a release:
+
+```bash
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+## GitHub Code Contribution Guide
+
+We welcome contributions to the project. To make review smooth, please follow these guidelines:
+
+- **Discuss larger changes first**: Open an issue or discussion before starting broad design or behavior changes.
+- **Make commits small and cohesive**: Keep each commit focused on one task or change.
+- **Format Go code**: Run `gofmt` on changed Go files.
+- **Cover behavior with tests**: Add or update tests for runtime, CLI, wrapper, or accelerator-state changes.
+- **Update docs and skills when behavior changes**: Keep `docs/src/content/docs`, README, and installable skills aligned with user-facing behavior.
+- **Use respectful language**: Keep collaboration direct, specific, and constructive.
+
+## License
+
+Copyright © 2026 Carlos Forero
+
+Cohesive Code is developed and maintained by [Cohesive Stack LLC](https://cohesivestack.com) and released under the [MIT License](docs/src/content/docs/about/license.md).
