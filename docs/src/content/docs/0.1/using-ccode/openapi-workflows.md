@@ -6,6 +6,10 @@ slug: 0.1/using-ccode/openapi-workflows
 
 Cohesive Code can parse OpenAPI v3 documents from bytes, strings, or files. File parsing resolves paths relative to `ccode_path`, and local references are resolved from the spec directory.
 
+## OpenAPI reference
+
+OpenAPI describes HTTP APIs with a language-agnostic YAML or JSON document that can drive documentation, client/server generation, and tests. Cohesive Code expects OpenAPI v3 input. When you need schema or field-level details, use the official [OAI/OpenAPI Specification repository](https://github.com/oai/openapi-specification) as the external reference.
+
 ## Recommended layout
 
 ```text

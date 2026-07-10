@@ -28,6 +28,8 @@ Read these docs as needed:
 - Project paths: `using-ccode/project-layout.md`, `reference/configuration.md`
 - Minimal examples: `cookbook/minimal-process.md`
 
+For OpenAPI schema or field-level details not covered by local docs, use the official external reference: `https://github.com/oai/openapi-specification`.
+
 ## Authoring Pattern
 
 1. Read `ccode.yaml` before deciding where files belong.

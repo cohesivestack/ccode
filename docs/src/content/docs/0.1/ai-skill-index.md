@@ -46,6 +46,7 @@ For OpenAPI generation:
 
 * [OpenAPI Workflows](/0.1/using-ccode/openapi-workflows/)
 * [OpenAPI Docs](/0.1/cookbook/openapi-docs/)
+* External schema reference: [OAI/OpenAPI Specification](https://github.com/oai/openapi-specification)
 * [Runtime API](/0.1/reference/runtime-api/)
 
 For accelerated artifacts:

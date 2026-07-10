@@ -39,6 +39,8 @@ Use this routing table to choose the smallest relevant docs set:
 - CLI commands: `reference/cli.md`
 - Minimal examples: `cookbook/minimal-process.md`, `cookbook/accelerated-artifact.md`, `cookbook/openapi-docs.md`
 
+For OpenAPI schema or field-level details not covered by local docs, use the official external reference: `https://github.com/oai/openapi-specification`.
+
 ## Working Pattern
 
 When working in a Cohesive Code workspace:
