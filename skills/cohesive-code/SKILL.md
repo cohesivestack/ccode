@@ -1,72 +1,60 @@
 ---
-name: cohesive-code
-description: Use when working with Cohesive Code or ccode projects, including initializing workspaces, authoring TypeScript processes, rendering templates, generating and accelerating artifacts, and running adjustment workflows from the CLI.
-metadata:
-  author: cohesivestack
-  version: "1.1.0"
+name: "cohesive-code"
+description: "Use when working with Cohesive Code or ccode projects, including workspace detection, initialization, authoring TypeScript generation processes, running generators, inspecting accelerated artifacts, and understanding accelerator state. Prefer the specialized skills author-ccode-generation, run-ccode-generation, and merge-ccode-accelerator-state for focused authoring, execution, or Git conflict tasks."
 ---
 
 # Cohesive Code
 
-Use this skill when the task involves `ccode`, `ccode.yaml`, `ccode init`, `ccode run`, TypeScript process files, Gonja templates, OpenAPI-driven generation, or accelerator adjustment workflows.
+Use this skill as the broad Cohesive Code workspace guide. For focused tasks, prefer:
 
-## Core rules
+- `author-ccode-generation` for creating or changing processes, templates, OpenAPI workflows, generated artifacts, accelerated artifacts, and instruction markdown.
+- `run-ccode-generation` for running `ccode run`, inspecting accelerator output, and applying accelerator instruction bundles.
+- `merge-ccode-accelerator-state` for merge, rebase, cherry-pick, or conflict work involving `.ccode/accelerators/**/*.accelerated.json`.
 
-- Treat `ccode.yaml` as the source of truth for `ccode_path`, `output_path`, `hidden_path`, and required `version`.
-- Keep authored sources under `ccode_path`. Do not hand-edit `.ccode/build/*`; it is generated cache.
-- Avoid editing `.ccode/lib/*` in an application project; `ccode init` refreshes those generated support files.
-- A runnable process must be a `.ts` file under `ccode_path` that exports `default function <name>(ctx: Context)`.
-- Invoke processes as `ccode run <relative/process/path-without-.ts>`.
-- `renderTemplate`, `generate`, `parseJSONFromFile`, and `parseOpenAPIFromFile` resolve template/input paths relative to `ccode_path`.
-- `generate` writes relative outputs under `output_path`.
-- `accelerate` writes artifacts under `output_path/<artifact-id>` and tracks them by scope in `.ccode/accelerators/<scope>/<artifact-id>.accelerated.json`.
-- By default, accelerator scope is the process file name (without `.ts`); `ctx.setScope(...)` overrides it and `ctx.scope()` reads it.
-- Prefer the generated `.ccode/lib/context.ts` contract over stale docs if README text and runtime behavior disagree.
+## Documentation Source
 
-## Workflow
+Do not duplicate Cohesive Code docs into the skill context. Load only the docs needed for the user request.
 
-1. Detect the workspace. Look for `ccode.yaml`. If the user is starting new or support files are missing/stale, initialize with `ccode init [path]` and optionally `--version <version>`.
-2. Read `ccode.yaml` before editing files so path resolution is explicit.
-3. Author or update the target process in TypeScript and import `type { Context } from "@ccode/context"`.
-4. Keep templates, specs, and seed data inside `ccode_path` so the runner can resolve them consistently.
-5. Validate with `ccode run <process>` and inspect output under `output_path`.
-6. For accelerator workflows, use CLI metadata/instruction commands to review unresolved adjustments before editing target files.
-7. Fix runtime errors from real command output rather than guessing.
+1. First look for local docs in the current workspace:
+   - `docs/src/content/docs`
+   - For older versions: `docs/src/content/docs/<version>`
+2. If local docs are unavailable, fetch the matching Markdown file from:
+   - `https://raw.githubusercontent.com/cohesivestack/ccode/master/docs/src/content/docs/<path>`
+3. If the user names a version, prefer the versioned docs folder when it exists.
+4. If docs and local code disagree, trust the checked-out code, generated context types, tests, and actual CLI output, then mention the mismatch.
 
-## Authoring guidance
+Use this routing table to choose the smallest relevant docs set:
 
-- Keep transformation logic in TypeScript. Use templates for presentation, not deep branching or normalization.
-- Prefer small helper modules imported by the process over one large process file.
-- Use `ctx.println` for temporary trace output while iterating.
-- Use `ctx.parseJSONFromFile` when deterministic key order matters.
-- Use `ctx.parseOpenAPIFromFile` only for OpenAPI v3.x input. Swagger/OpenAPI v2 is rejected.
-- Pass plain objects and arrays into templates. Do not rely on class instances.
-- Use `ctx.generate(...)` for standard artifact writes.
-- Use `ctx.accelerate(...)` for artifacts that need human/agent adjustment and should avoid unsafe overwrite.
-- A successful `ccode run` removes accelerator state files in scopes used by that run when they were not produced during the run.
+- Workspace overview and agent map: `ai-skill-index.md`
+- Setup and first run: `getting-started.md`
+- Project paths and initialized layout: `using-ccode/project-layout.md`
+- Configuration: `reference/configuration.md`
+- Wrapper behavior and pinned versions: `using-ccode/wrapper-and-versions.md`
+- Process contract: `using-ccode/processes.md`
+- Templates: `using-ccode/templates.md`
+- Runtime API: `reference/runtime-api.md`
+- Standard generation: `using-ccode/generation.md`
+- OpenAPI generation: `using-ccode/openapi-workflows.md`, `cookbook/openapi-docs.md`
+- Accelerators: `using-ccode/accelerators.md`, `reference/accelerator-states.md`, `cookbook/accelerated-artifact.md`
+- CLI commands: `reference/cli.md`
+- Minimal examples: `cookbook/minimal-process.md`, `cookbook/accelerated-artifact.md`, `cookbook/openapi-docs.md`
 
-## Accelerator workflow guidance
+## Working Pattern
 
-- List unresolved adjustments: `ccode list accelerated [scopeId]`
-- Include resolved adjustments: `ccode list accelerated [scopeId] --include-resolved`
-- Inspect accelerator metadata: `ccode get accelerated <scopeId>:<artifactId>`
-- Fetch adjustment bundle (instructions + decoded accelerated content): `ccode get accelerated <scopeId>:<artifactId> --instructions`
-- List unresolved instruction references: `ccode list instructions`
-- Include resolved instruction references: `ccode list instructions --include-resolved`
-- Read raw instruction file: `ccode get instruction <path>`
-- For machine workflows, add `--for-agent` to list/get commands.
+When working in a Cohesive Code workspace:
 
-## Validation
+1. Detect `ccode.yaml` and read it before editing files.
+2. Resolve `ccode_path`, `output_path`, and `hidden_path` from config or CLI flags.
+3. Read the smallest relevant docs from the routing table.
+4. Prefer the generated local context contract at `<ccode_path>/.ccode/lib/context.ts` over stale examples.
+5. Do not hand-edit `<ccode_path>/.ccode/lib/*` or `.ccode/build/*` in application workspaces.
+6. Use exact CLI output to drive fixes when validation is practical.
 
-- Prefer executing the exact process you changed.
-- If `ccode` binary is unavailable and you are in the cohesive-code source repo, use `go run .`.
-- Treat README as background context, not final API contract. Validate against generated context types and current CLI implementation.
+## Core Conventions
 
-## Read next as needed
-
-- Path rules, config precedence, and initialized layout: [references/project-layout.md](references/project-layout.md)
-- Process contract and runtime API: [references/runtime-api.md](references/runtime-api.md)
-- OpenAPI generation patterns and pitfalls: [references/openapi-patterns.md](references/openapi-patterns.md)
-- Accelerator adjustment flow details: [references/accelerator-workflow.md](references/accelerator-workflow.md)
-- Concrete authoring examples: [examples/minimal-process.md](examples/minimal-process.md), [examples/openapi-generator.md](examples/openapi-generator.md), and [examples/accelerator-process.md](examples/accelerator-process.md)
-- Shell helpers for inspection and smoke validation: [scripts/check_project.sh](scripts/check_project.sh) and [scripts/smoke_run.sh](scripts/smoke_run.sh)
+- Keep process source, templates, specs, seed data, and accelerator instructions under `ccode_path`.
+- Invoke a process as `ccode run <relative/process/path-without-.ts>`.
+- Use `ctx.generate(...)` for artifacts that should be overwritten by generation.
+- Use `ctx.accelerate(...)` for artifacts that are generated proposals and may need human or agent adjustment.
+- Inspect unresolved accelerator work with `ccode list accelerated --for-agent`.
+- Fetch an accelerator instruction bundle with `ccode get accelerated <scopeId>:<artifactId> --instructions --for-agent`.

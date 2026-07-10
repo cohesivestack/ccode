@@ -169,8 +169,16 @@ This repository includes an installable Agent Skill package for the `skills` CLI
 npx skills add cohesivestack/ccode
 ```
 
-To install only the Cohesive Code skill:
+To install only the broad Cohesive Code workspace skill:
 
 ```bash
 npx skills add cohesivestack/ccode --skill cohesive-code
+```
+
+Focused workflow skills are also available:
+
+```bash
+npx skills add cohesivestack/ccode --skill author-ccode-generation
+npx skills add cohesivestack/ccode --skill run-ccode-generation
+npx skills add cohesivestack/ccode --skill merge-ccode-accelerator-state
 ```
