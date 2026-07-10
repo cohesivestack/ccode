@@ -5,7 +5,7 @@ description: Install Cohesive Code, initialize a workspace, and run a first Type
 
 Cohesive Code is an AI-enabled code generation CLI. It runs TypeScript processes from a workspace, renders Gonja templates, parses JSON and OpenAPI documents, and tracks generated artifacts that need human or agent adjustment.
 
-The project is alpha software. Treat the current CLI and generated support files as active interfaces that may still change.
+> **Experimental stage:** Cohesive Code is not recommended for use yet. The project is unstable, changing constantly, and may introduce breaking changes to interfaces, generated support files, accelerator state behavior, and CLI commands without notice.
 
 ## Install
 

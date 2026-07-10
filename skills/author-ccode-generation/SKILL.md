@@ -7,6 +7,10 @@ description: "Use when authoring or changing Cohesive Code generator source: Typ
 
 Use this skill when creating or changing the generator side of a Cohesive Code workspace: process code, templates, specs, generated artifacts, accelerated artifacts, scopes, and instruction markdown.
 
+## Experimental Project Handling
+
+Cohesive Code is experimental and changes frequently. Continue the requested authoring workflow, but verify behavior against local docs, generated context types, actual CLI output, and tests. Do not assume APIs, templates, or accelerator semantics are stable.
+
 ## Documentation Source
 
 Do not duplicate Cohesive Code docs into the skill context. Load only the docs needed for the user request.

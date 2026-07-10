@@ -7,6 +7,10 @@ description: "Use when resolving Git merge, rebase, cherry-pick, or conflict sta
 
 Use this skill for Git conflict work involving Cohesive Code accelerator state files.
 
+## Experimental Project Handling
+
+Cohesive Code is experimental and changes frequently. Continue the requested conflict-resolution workflow, but verify behavior against local docs, actual state files, CLI inspection output, and tests. Do not assume accelerator state semantics are stable.
+
 ## Documentation Source
 
 Do not duplicate Cohesive Code docs into the skill context. Load only the docs needed for the user request.

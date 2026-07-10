@@ -7,6 +7,10 @@ description: "Use when running Cohesive Code generator processes and inspecting 
 
 Use this skill for the operator stage: run a generator, inspect what it produced, fetch accelerator instruction bundles, and apply the requested adjustments to generated proposal artifacts.
 
+## Experimental Project Handling
+
+Cohesive Code is experimental and changes frequently. Continue the requested run or inspection workflow, but verify behavior against local docs, actual CLI output, and generated state. Do not assume commands, output shapes, or accelerator states are stable.
+
 ## Documentation Source
 
 Do not duplicate Cohesive Code docs into the skill context. Load only the docs needed for the user request.

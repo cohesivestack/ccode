@@ -11,6 +11,10 @@ Use this skill as the broad Cohesive Code workspace guide. For focused tasks, pr
 - `run-ccode-generation` for running `ccode run`, inspecting accelerator output, and applying accelerator instruction bundles.
 - `merge-ccode-accelerator-state` for merge, rebase, cherry-pick, or conflict work involving `.ccode/accelerators/**/*.accelerated.json`.
 
+## Experimental Project Handling
+
+Cohesive Code is experimental and changes frequently. Continue the requested workflow, but verify behavior against local docs, generated context types, actual CLI output, and tests. Do not assume APIs, state files, or wrapper behavior are stable.
+
 ## Documentation Source
 
 Do not duplicate Cohesive Code docs into the skill context. Load only the docs needed for the user request.
