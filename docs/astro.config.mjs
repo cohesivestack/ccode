@@ -18,7 +18,7 @@ export default defineConfig({
         alt: 'Cohesive Code',
         replacesTitle: true,
       },
-      favicon: '/favicon.svg',
+      favicon: '/favicon.png',
       social: [
         {
           icon: 'github',
