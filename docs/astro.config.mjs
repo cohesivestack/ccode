@@ -29,12 +29,13 @@ export default defineConfig({
       customCss: [
         "./src/styles/global.css",
       ],
-      plugins: [
-        starlightVersions({
-          versions: [{ slug: '0.1', label: 'v0.1' }],
-          current: { label: 'Latest' },
-        }),
-      ],
+      // Enable this plugin when a new version of the docs is released.
+      // plugins: [
+      //   starlightVersions({
+      //     versions: [],
+      //     current: { label: 'v0.3.0 Latest' },
+      //   }),
+      // ],
       sidebar: docsSidebar,
     }),
   ],
