@@ -1,1 +1,31 @@
-temp
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/settings.json
+!.vscode/tasks.json
+*.swp
+*.swo
+*~
+
+# Go build and test artifacts
+/ccode
+/bin/
+*.test
+*.prof
+coverage.out
+coverage.html
+
+# GoReleaser output
+/dist/
+
+# Logs and temporary files
+*.log
+*.tmp
+/temp/
+/tmp/
