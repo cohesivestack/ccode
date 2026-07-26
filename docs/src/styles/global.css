@@ -48,6 +48,11 @@ starlight-toc a[aria-current='true'] {
   font-family: 'Open Sans', sans-serif;
 }
 
+.sl-markdown-content :is(ul, ol):not(:where(.not-content *)) {
+  list-style: revert;
+  padding-inline-start: 1.5rem;
+}
+
 .title {
   font-family: 'Roboto Mono', monospace;
   size: 18px;
