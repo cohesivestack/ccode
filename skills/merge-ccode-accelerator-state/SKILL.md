@@ -1,102 +1,49 @@
 ---
-name: "merge-ccode-accelerator-state"
-description: "Use when resolving Git merge, rebase, cherry-pick, or conflict states involving Cohesive Code accelerator state files under .ccode/accelerators/**/*.accelerated.json, including conflict markers, add/delete conflicts, ambiguous state, missing instructions, and deciding how to preserve accelerator state candidates without rerunning generators during an in-progress Git operation."
+name: merge-ccode-accelerator-state
+description: Resolve Git merge, rebase, cherry-pick, and add/delete conflicts in Cohesive Code accelerator state files while preserving valid state candidates. Use when conflicts involve configured `accelerators/**/*.accelerated.json` state, conflict markers, ambiguous accelerator state, or related generator inputs that are temporarily inconsistent during an in-progress Git operation.
 ---
 
 # Merge Cohesive Code Accelerator State
 
-Use this skill for Git conflict work involving Cohesive Code accelerator state files.
+## Prepare
 
-## Experimental Project Handling
+1. Confirm the active Git operation and inspect `git status`.
+2. Read `ccode.yaml` and resolve `ccode_path`, `output_path`, and `hidden_path`.
+3. Read `docs/src/content/docs/reference/accelerator-states.md` and `docs/src/content/docs/using-ccode/accelerators.md` when available.
+4. Separate conflicts into generator inputs, output artifacts, and `<hidden_path>/accelerators/**/*.accelerated.json`.
+5. Keep user changes and unrelated conflicts out of scope unless the user asks to resolve them.
 
-Cohesive Code is experimental and changes frequently. Continue the requested conflict-resolution workflow, but verify behavior against local docs, actual state files, CLI inspection output, and tests. Do not assume accelerator state semantics are stable.
+Do not run a generator while its process, templates, specs, inputs, or instructions are conflicted. Preserve recoverable state until the Git operation and generator inputs are coherent.
 
-## Documentation Source
+## Resolve state files
 
-Do not duplicate Cohesive Code docs into the skill context. Load only the docs needed for the user request.
+1. Treat every non-empty line as a candidate for the scope and artifact encoded by the file path.
+2. Remove Git conflict markers and blank lines.
+3. Keep one copy of exact duplicate candidate lines.
+4. Keep multiple distinct valid JSON candidates when no candidate is clearly obsolete. The CLI will report the file as `ambiguous` for later repair.
+5. Preserve each candidate as a complete record. Never combine `code`, `accelerated_checksum`, `instructions_checksum`, `instructions`, or `pending` values from different candidates.
+6. Prefer keeping an added state file in an unclear add/delete conflict.
+7. Delete a state file only when the merged generator intentionally stops emitting that artifact or the user confirms the removal.
+8. Discard a candidate only when its removal is demonstrably intentional or another candidate clearly supersedes it. Do not infer obsolescence from a currently conflicted or renamed instruction file.
 
-1. First look for local docs in `docs/src/content/docs`.
-2. If the user names a version, prefer `docs/src/content/docs/<version>` when it exists.
-3. If local docs are unavailable, fetch from `https://raw.githubusercontent.com/cohesivestack/ccode/master/docs/src/content/docs/<path>`.
-4. If docs and local code disagree, trust the checked-out implementation and tests.
+## Verify
 
-Read these docs as needed:
+1. Confirm that state files contain no conflict markers.
+2. Validate each retained non-empty line as a complete JSON object.
+3. Confirm that every edited state path still identifies the intended scope and artifact.
+4. Inspect state only after the related conflicts are resolved:
 
-- Accelerator state format and state values: `reference/accelerator-states.md`
-- Accelerator workflow: `using-ccode/accelerators.md`
-- CLI inspection commands: `reference/cli.md`
-- Workspace paths: `using-ccode/project-layout.md`, `reference/configuration.md`
+   ```bash
+   ccode list accelerated --for-agent
+   ccode list instructions --for-agent
+   ```
 
-## Core Rule
+5. After the Git operation completes and generator inputs are coherent, run the affected process to rebuild or disambiguate state:
 
-During a merge, rebase, cherry-pick, or other in-progress Git operation, preserve accelerator state candidates and remove Git conflict syntax. Do not require `ccode run` to resolve state conflicts, because generator source, templates, specs, or instructions may be temporarily inconsistent.
+   ```bash
+   ccode run <process>
+   ccode list accelerated --for-agent
+   ccode list instructions --for-agent
+   ```
 
-Prefer ambiguity over destructive guessing. A state file with multiple different valid JSON lines is intentionally inspectable as `ambiguous` later.
-
-## State File Facts
-
-Accelerator state files live at:
-
-```text
-<hidden_path>/accelerators/<scope>/<artifact-id>.accelerated.json
-```
-
-Each non-empty line should be one JSON state candidate for the same scope/artifact. The CLI can collapse repeated identical lines and report different valid lines as ambiguous.
-
-State fields include:
-
-- `pending`
-- `instructions`
-- `accelerated_checksum`
-- `instructions_checksum`
-- `code`
-
-The `code` field is an encoded generated-content snapshot. Do not manually mix `code` from one candidate with checksum fields from another candidate.
-
-## Conflict Workflow
-
-1. Identify conflicted files with Git status.
-2. Classify conflicts:
-   - Generator inputs: process files, templates, specs, seed data, and instruction markdown.
-   - Accelerator state: `.ccode/accelerators/**/*.accelerated.json`.
-   - Output artifacts under `output_path`.
-3. If generator input files are conflicted, ask whether to resolve those conflicts too. If not, recommend resolving them manually and running this skill again.
-4. For accelerator state files, remove Git conflict markers while preserving valid candidate JSON lines.
-5. Collapse exact duplicate candidate lines to one line.
-6. If multiple different valid candidate lines remain, keep them unless one is clearly invalid or obsolete.
-7. Validate that no conflict markers remain in accelerator state files.
-8. At the end, recommend rerunning the generator only after the merge/rebase/cherry-pick is complete and the workspace is coherent.
-
-## Candidate Selection Rules
-
-- If conflict markers introduced identical JSON candidates, keep exactly one copy.
-- If candidates differ, keep all valid candidates unless a candidate can be safely discarded.
-- Safely discard a candidate only when it references an instruction path that is definitely gone and another candidate for the same artifact references an existing instruction path.
-- Do not discard a candidate for missing instructions when the instruction file is itself conflicted, renamed, or not yet restored.
-- For add/delete conflicts, keep the added state file when unclear.
-- Delete a state file only when generator source clearly no longer emits that artifact or the artifact/instruction removal is intentional.
-
-## What Not To Do
-
-- Do not rerun the generator as the first state-conflict resolution step during an in-progress Git operation.
-- Do not hand-merge `code`, `accelerated_checksum`, or `instructions_checksum` fields across candidates.
-- Do not set `pending: false` merely to quiet the state.
-- Do not remove an `instructions` path unless its removal is intentional or clearly superseded.
-- Do not leave Git conflict markers in `.accelerated.json` files.
-
-## Final Checks
-
-When Git conflicts are resolved, run inspection commands if practical:
-
-```bash
-ccode list accelerated --for-agent
-ccode list instructions --for-agent
-```
-
-If the workspace is still mid-merge or the generator source was not coherent, finish the Git operation first. Then recommend:
-
-```bash
-ccode run <process>
-ccode list accelerated --for-agent
-ccode list instructions --for-agent
-```
+6. Report retained ambiguity and any missing artifact or instruction instead of hiding it with `pending: false`.
