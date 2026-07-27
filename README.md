@@ -35,15 +35,15 @@ ccode get accelerated generate-api:handlers.ts --instructions --for-agent
 
 ## Website and documentation
 
-The documentation source lives in [docs/src/content/docs](docs/src/content/docs).
+[Website and documentation](https://cohesivecode.dev)
 
 Start with:
 
-- [Getting Started](docs/src/content/docs/getting-started.md)
-- [Project Layout](docs/src/content/docs/using-ccode/project-layout.md)
-- [Processes](docs/src/content/docs/using-ccode/processes.md)
-- [Accelerators](docs/src/content/docs/using-ccode/accelerators.md)
-- [AI Skill Index](docs/src/content/docs/ai-skill-index.md)
+- [Getting Started](https://cohesivecode.dev/getting-started/)
+- [Project Layout](https://cohesivecode.dev/using-ccode/project-layout/)
+- [Processes](https://cohesivecode.dev/using-ccode/processes/)
+- [Accelerators](https://cohesivecode.dev/using-ccode/accelerators/)
+- [AI Skill Index](https://cohesivecode.dev/ai-skill-index/)
 
 ## Installing
 
@@ -86,29 +86,29 @@ npx skills add cohesivestack/ccode --skill merge-ccode-accelerator-state
 ## Docs
 
 - Start Here
-  - [Getting Started](docs/src/content/docs/getting-started.md)
-  - [Philosophy](docs/src/content/docs/philosophy.md)
-  - [AI Skill Index](docs/src/content/docs/ai-skill-index.md)
+  - [Getting Started](https://cohesivecode.dev/getting-started/)
+  - [Philosophy](https://cohesivecode.dev/philosophy/)
+  - [AI Skill Index](https://cohesivecode.dev/ai-skill-index/)
 - Using Cohesive Code
-  - [Project Layout](docs/src/content/docs/using-ccode/project-layout.md)
-  - [Processes](docs/src/content/docs/using-ccode/processes.md)
-  - [Templates](docs/src/content/docs/using-ccode/templates.md)
-  - [Generation](docs/src/content/docs/using-ccode/generation.md)
-  - [Accelerators](docs/src/content/docs/using-ccode/accelerators.md)
-  - [OpenAPI Workflows](docs/src/content/docs/using-ccode/openapi-workflows.md)
-  - [Wrapper & Versions](docs/src/content/docs/using-ccode/wrapper-and-versions.md)
+  - [Project Layout](https://cohesivecode.dev/using-ccode/project-layout/)
+  - [Processes](https://cohesivecode.dev/using-ccode/processes/)
+  - [Templates](https://cohesivecode.dev/using-ccode/templates/)
+  - [Generation](https://cohesivecode.dev/using-ccode/generation/)
+  - [Accelerators](https://cohesivecode.dev/using-ccode/accelerators/)
+  - [OpenAPI Workflows](https://cohesivecode.dev/using-ccode/openapi-workflows/)
+  - [Wrapper & Versions](https://cohesivecode.dev/using-ccode/wrapper-and-versions/)
 - Reference
-  - [CLI](docs/src/content/docs/reference/cli.md)
-  - [Configuration](docs/src/content/docs/reference/configuration.md)
-  - [Runtime API](docs/src/content/docs/reference/runtime-api.md)
-  - [Accelerator States](docs/src/content/docs/reference/accelerator-states.md)
+  - [CLI](https://cohesivecode.dev/reference/cli/)
+  - [Configuration](https://cohesivecode.dev/reference/configuration/)
+  - [Runtime API](https://cohesivecode.dev/reference/runtime-api/)
+  - [Accelerator States](https://cohesivecode.dev/reference/accelerator-states/)
 - Cookbook
-  - [Overview](docs/src/content/docs/cookbook/index.mdx)
-  - [Minimal Process](docs/src/content/docs/cookbook/minimal-process.md)
-  - [OpenAPI Docs](docs/src/content/docs/cookbook/openapi-docs.md)
-  - [Accelerated Artifact](docs/src/content/docs/cookbook/accelerated-artifact.md)
+  - [Overview](https://cohesivecode.dev/cookbook/)
+  - [Minimal Process](https://cohesivecode.dev/cookbook/minimal-process/)
+  - [OpenAPI Docs](https://cohesivecode.dev/cookbook/openapi-docs/)
+  - [Accelerated Artifact](https://cohesivecode.dev/cookbook/accelerated-artifact/)
 - About
-  - [License](docs/src/content/docs/about/license.md)
+  - [License](https://cohesivecode.dev/about/license/)
 
 ## Releases
 
@@ -147,4 +147,4 @@ We welcome contributions to the project. To make review smooth, please follow th
 
 Copyright © 2026 Carlos Forero
 
-Cohesive Code is developed and maintained by [Cohesive Stack LLC](https://cohesivestack.com) and released under the [MIT License](docs/src/content/docs/about/license.md).
+Cohesive Code is developed and maintained by [Cohesive Stack LLC](https://cohesivestack.com) and released under the [MIT License](https://cohesivecode.dev/about/license/).
