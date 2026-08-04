@@ -201,6 +201,23 @@ func TestRunner_RunParsesOpenAPIThroughRunnerContextWithDeterministicOrder(t *te
 	assert.JSONEq(t, `{"pathKeys":["/z","/a","/m"],"propertyKeys":["beta","alpha"]}`, output.String())
 }
 
+func TestRunner_RunParsesOpenAPIWithExpectedVersion(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunParsesOpenAPIWithExpectedVersion")
+	processFile := filepath.Join(projectDir, "x", "generate.ts")
+	specFile := filepath.Join(projectDir, "specs", "api.yaml")
+
+	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
+	require.NoError(t, os.MkdirAll(filepath.Dir(specFile), 0755))
+	require.NoError(t, os.WriteFile(specFile, []byte(testOpenAPI3Document), 0644))
+	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/context\";\n\nexport default function main(ctx: Context) {\n\tconst spec = ctx.parseOpenAPIFromFile(\"specs/api.yaml\", { expectedVersion: \"3.1\" });\n\tctx.println(spec.openapi);\n}\n"), 0644))
+
+	var output bytes.Buffer
+	ctx.stdout = &output
+
+	require.NoError(t, ctx.Run("x/generate"))
+	assert.Equal(t, "3.1.0\n", output.String())
+}
+
 func TestRunner_RunOpenAPIErrorsCanBeCaughtInTypescript(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunOpenAPIErrorsCanBeCaughtInTypescript")
 	processFile := filepath.Join(projectDir, "x", "generate.ts")

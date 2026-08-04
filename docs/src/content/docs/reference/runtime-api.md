@@ -12,6 +12,9 @@ import type { Context } from "@ccode/context";
 ## Surface
 
 ```ts
+import type { OpenAPI } from "@ccode/openapi";
+import type { OpenAPIDocument } from "@ccode/context";
+
 interface Context {
   println(message: string): void;
   setScope(scopeName: string): void;
@@ -30,6 +33,10 @@ interface Context {
   parseOpenAPIFromBytes(specBytes: number[]): OpenAPIDocument;
   parseOpenAPIFromString(spec: string): OpenAPIDocument;
   parseOpenAPIFromFile(filePath: string): OpenAPIDocument;
+  parseOpenAPIFromFile<V extends OpenAPI.Version>(
+    filePath: string,
+    options: { expectedVersion: V },
+  ): OpenAPI.Document<V>;
 }
 ```
 
@@ -90,4 +97,10 @@ Parses OpenAPI v3 input and returns a JSON-like object. `parseOpenAPIFromFile` r
 
 ```ts
 const spec = ctx.parseOpenAPIFromFile("specs/api.yaml");
+
+const spec31 = ctx.parseOpenAPIFromFile("specs/api.yaml", {
+  expectedVersion: "3.1",
+});
 ```
+
+Without `expectedVersion`, the return type is the union of supported OpenAPI document versions. With `expectedVersion`, the runtime verifies the document's `openapi` field and TypeScript returns the corresponding version-specific document type.

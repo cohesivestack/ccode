@@ -47,6 +47,49 @@ func TestOpenAPI_ParseOpenAPIFromFileUsesConfigCCodePath(t *testing.T) {
 	assert.Equal(t, []string{"/z", "/a", "/m"}, document.Get("paths").ToObject(ctx.runtime).Keys())
 }
 
+func TestOpenAPI_ParseOpenAPIFromFileAcceptsExpectedVersion(t *testing.T) {
+	ctx := newRunnerOpenAPITestContext(t)
+
+	require.NoError(t, os.MkdirAll(filepath.Join(ctx.ccodeContext.config.CCodePath, "specs"), 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(ctx.ccodeContext.config.CCodePath, "specs", "api.yaml"), []byte(testOpenAPI3Document), 0644))
+
+	value, err := ctx.ParseOpenAPIFromFile(
+		"specs/api.yaml",
+		ctx.runtime.ToValue(map[string]any{"expectedVersion": "3.1"}),
+	)
+	require.NoError(t, err)
+
+	document := value.ToObject(ctx.runtime)
+	assert.Equal(t, "3.1.0", document.Get("openapi").String())
+}
+
+func TestOpenAPI_ParseOpenAPIFromFileRejectsUnexpectedVersion(t *testing.T) {
+	ctx := newRunnerOpenAPITestContext(t)
+
+	require.NoError(t, os.MkdirAll(filepath.Join(ctx.ccodeContext.config.CCodePath, "specs"), 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(ctx.ccodeContext.config.CCodePath, "specs", "api.yaml"), []byte(testOpenAPI3Document), 0644))
+
+	result, err := ctx.ParseOpenAPIFromFile(
+		"specs/api.yaml",
+		ctx.runtime.ToValue(map[string]any{"expectedVersion": "3.0"}),
+	)
+	require.Error(t, err)
+	assert.Nil(t, result)
+	assert.Contains(t, err.Error(), "expected OpenAPI 3.0.x, but specs/api.yaml declares 3.1.0")
+}
+
+func TestOpenAPI_ParseOpenAPIFromFileRejectsUnsupportedExpectedVersion(t *testing.T) {
+	ctx := newRunnerOpenAPITestContext(t)
+
+	result, err := ctx.ParseOpenAPIFromFile(
+		"specs/api.yaml",
+		ctx.runtime.ToValue(map[string]any{"expectedVersion": "2.0"}),
+	)
+	require.Error(t, err)
+	assert.Nil(t, result)
+	assert.Contains(t, err.Error(), `unsupported expected OpenAPI version "2.0"`)
+}
+
 func TestOpenAPI_ParseOpenAPIFromFileReturnsErrorForMissingFile(t *testing.T) {
 	ctx := newRunnerOpenAPITestContext(t)
 

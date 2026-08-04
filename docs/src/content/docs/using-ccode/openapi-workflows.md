@@ -36,7 +36,9 @@ type OperationView = {
 };
 
 export default function main(ctx: Context) {
-  const spec = ctx.parseOpenAPIFromFile("specs/api.yaml");
+  const spec = ctx.parseOpenAPIFromFile("specs/api.yaml", {
+    expectedVersion: "3.1",
+  });
   const operations: OperationView[] = [];
 
   for (const [path, item] of Object.entries(spec.paths ?? {})) {
@@ -68,6 +70,7 @@ function fallbackOperationId(method: string, path: string): string {
 ## Pitfalls
 
 - Swagger/OpenAPI v2 is rejected.
+- Pass `expectedVersion` when the process requires a specific OpenAPI version; parsing fails if the document declares a different version.
 - Optional fields such as `paths`, `components`, and `schemas` need guards.
 - Some OpenAPI values can be references or booleans depending on location.
 - Large templates that walk raw specs become hard to test and adjust.

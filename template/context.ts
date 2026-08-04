@@ -1,6 +1,6 @@
-import type { OpenAPIV3, OpenAPIV3_1 } from "./openapi";
+import type { OpenAPI } from "./openapi";
 
-export type OpenAPIDocument = OpenAPIV3.Document | OpenAPIV3_1.Document;
+export type OpenAPIDocument = OpenAPI.Document;
 
 export interface Context {
   println: (message: string) => void;
@@ -19,5 +19,9 @@ export interface Context {
   parseJSONFromFile: (filePath: string) => Record<string, any>;
   parseOpenAPIFromBytes: (specBytes: number[]) => OpenAPIDocument;
   parseOpenAPIFromString: (spec: string) => OpenAPIDocument;
-  parseOpenAPIFromFile: (filePath: string) => OpenAPIDocument;
+  parseOpenAPIFromFile(filePath: string): OpenAPIDocument;
+  parseOpenAPIFromFile<V extends OpenAPI.Version>(
+    filePath: string,
+    options: { expectedVersion: V },
+  ): OpenAPI.Document<V>;
 }
