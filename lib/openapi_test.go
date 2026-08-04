@@ -63,6 +63,28 @@ func TestOpenAPI_ParseOpenAPIFromFileAcceptsExpectedVersion(t *testing.T) {
 	assert.Equal(t, "3.1.0", document.Get("openapi").String())
 }
 
+func TestOpenAPI_ParseOpenAPIFromFileAcceptsOpenAPI32(t *testing.T) {
+	ctx := newRunnerOpenAPITestContext(t)
+
+	require.NoError(t, os.MkdirAll(filepath.Join(ctx.ccodeContext.config.CCodePath, "specs"), 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(ctx.ccodeContext.config.CCodePath, "specs", "api.yaml"), []byte(testOpenAPI32Document), 0644))
+
+	value, err := ctx.ParseOpenAPIFromFile(
+		"specs/api.yaml",
+		ctx.runtime.ToValue(map[string]any{"expectedVersion": "3.2"}),
+	)
+	require.NoError(t, err)
+
+	document := value.ToObject(ctx.runtime)
+	assert.Equal(t, "3.2.0", document.Get("openapi").String())
+	assert.Equal(t, "https://example.com/openapi.yaml", document.Get("$self").String())
+	queryOperation := document.Get("paths").ToObject(ctx.runtime).Get("/pets").ToObject(ctx.runtime).Get("query")
+	assert.False(t, goja.IsUndefined(queryOperation))
+	mediaTypes := document.Get("components").ToObject(ctx.runtime).Get("mediaTypes").ToObject(ctx.runtime)
+	itemSchema := mediaTypes.Get("EventStream").ToObject(ctx.runtime).Get("itemSchema").ToObject(ctx.runtime)
+	assert.Equal(t, "string", itemSchema.Get("type").String())
+}
+
 func TestOpenAPI_ParseOpenAPIFromFileRejectsUnexpectedVersion(t *testing.T) {
 	ctx := newRunnerOpenAPITestContext(t)
 
@@ -163,4 +185,22 @@ components:
           type: string
         alpha:
           type: string
+`
+
+const testOpenAPI32Document = `openapi: 3.2.0
+$self: https://example.com/openapi.yaml
+info:
+  title: OpenAPI 3.2 API
+  version: 1.0.0
+paths:
+  /pets:
+    query:
+      responses:
+        '200':
+          summary: Stream opened
+components:
+  mediaTypes:
+    EventStream:
+      itemSchema:
+        type: string
 `

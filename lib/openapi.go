@@ -80,7 +80,7 @@ func (ctx *RunnerContext) parseOpenAPIFileOptions(optionValues []goja.Value) (st
 	}
 
 	switch expectedVersion {
-	case "3.0", "3.1":
+	case "3.0", "3.1", "3.2":
 		return expectedVersion, nil
 	default:
 		return "", fmt.Errorf("unsupported expected OpenAPI version %q", expectedVersion)
