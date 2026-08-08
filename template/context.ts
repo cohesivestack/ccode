@@ -1,3 +1,17 @@
+import type {
+  DatabaseEngine,
+  DatabaseInspection,
+  DatabaseInspectionByEngine,
+  InspectDatabaseOptions,
+  MariaDBConnectionURL,
+  MariaDBInspection,
+  MySQLConnectionURL,
+  MySQLInspection,
+  PostgreSQLConnectionURL,
+  PostgreSQLInspection,
+  SQLiteConnectionURL,
+  SQLiteInspection,
+} from "./database";
 import type { OpenAPI } from "./openapi";
 
 export type OpenAPIDocument = OpenAPI.Document;
@@ -24,4 +38,15 @@ export interface Context {
     filePath: string,
     options: { expectedVersion: V },
   ): OpenAPI.Document<V>;
+  inspectDatabase(
+    connectionURL: PostgreSQLConnectionURL,
+  ): PostgreSQLInspection;
+  inspectDatabase(connectionURL: MySQLConnectionURL): MySQLInspection;
+  inspectDatabase(connectionURL: MariaDBConnectionURL): MariaDBInspection;
+  inspectDatabase(connectionURL: SQLiteConnectionURL): SQLiteInspection;
+  inspectDatabase<Engine extends DatabaseEngine>(
+    connectionURL: string,
+    options: InspectDatabaseOptions<Engine>,
+  ): DatabaseInspectionByEngine[Engine];
+  inspectDatabase(connectionURL: string): DatabaseInspection;
 }
