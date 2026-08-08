@@ -62,6 +62,11 @@ func (ctx *Context) validateWorkspaceSupportFiles() error {
 		filepath.Join(ctx.config.CCodePath, "tsconfig.json"),
 		filepath.Join(ctx.config.HiddenPath, "lib", "context.ts"),
 		filepath.Join(ctx.config.HiddenPath, "lib", "openapi.ts"),
+		filepath.Join(ctx.config.HiddenPath, "lib", "database.ts"),
+		filepath.Join(ctx.config.HiddenPath, "lib", "database-postgresql.ts"),
+		filepath.Join(ctx.config.HiddenPath, "lib", "database-mysql.ts"),
+		filepath.Join(ctx.config.HiddenPath, "lib", "database-mariadb.ts"),
+		filepath.Join(ctx.config.HiddenPath, "lib", "database-sqlite.ts"),
 	}
 
 	missingPaths := []string{}
@@ -219,6 +224,9 @@ func (ctx *RunnerContext) toValue(runtime *goja.Runtime) (goja.Value, error) {
 		return nil, fmt.Errorf("set runner context functions: %w", err)
 	}
 	if err := object.Set("parseOpenAPIFromFile", ctx.ParseOpenAPIFromFile); err != nil {
+		return nil, fmt.Errorf("set runner context functions: %w", err)
+	}
+	if err := object.Set("inspectDatabase", ctx.InspectDatabase); err != nil {
 		return nil, fmt.Errorf("set runner context functions: %w", err)
 	}
 	return object, nil

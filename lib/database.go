@@ -2,12 +2,14 @@ package ccode
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
 
 	"ariga.io/atlas/sql/schema"
 	"ariga.io/atlas/sql/sqlclient"
+	"github.com/dop251/goja"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
@@ -110,4 +112,65 @@ func databaseNameFromURL(connectionURL *url.URL) string {
 		return decoded
 	}
 	return name
+}
+
+// InspectDatabase exposes database schema inspection to a TypeScript process.
+func (ctx *RunnerContext) InspectDatabase(connectionURL string, optionValues ...goja.Value) (goja.Value, error) {
+	if ctx == nil || ctx.ccodeContext == nil || ctx.runtime == nil {
+		return nil, fmt.Errorf("runner context is not initialized")
+	}
+
+	expectedEngine, err := ctx.parseInspectDatabaseOptions(optionValues)
+	if err != nil {
+		return nil, err
+	}
+	if expectedEngine != "" {
+		_, actualEngine, err := parseDatabaseURL(connectionURL)
+		if err != nil {
+			return nil, err
+		}
+		if actualEngine != expectedEngine {
+			return nil, fmt.Errorf("expected %s database, but connection URL uses %s", expectedEngine, actualEngine)
+		}
+	}
+
+	inspection, err := InspectDatabase(context.Background(), connectionURL)
+	if err != nil {
+		return nil, err
+	}
+	payload, err := json.Marshal(inspection)
+	if err != nil {
+		return nil, fmt.Errorf("serialize database inspection: %w", err)
+	}
+	return ctx.parseJSON(string(payload))
+}
+
+func (ctx *RunnerContext) parseInspectDatabaseOptions(optionValues []goja.Value) (DatabaseEngine, error) {
+	if len(optionValues) == 0 {
+		return "", nil
+	}
+	if len(optionValues) > 1 {
+		return "", fmt.Errorf("inspect database accepts at most one options argument")
+	}
+
+	optionsValue := optionValues[0]
+	if optionsValue == nil || goja.IsUndefined(optionsValue) || goja.IsNull(optionsValue) {
+		return "", fmt.Errorf("inspect database options must be an object")
+	}
+
+	expectedEngineValue := optionsValue.ToObject(ctx.runtime).Get("expectedEngine")
+	if expectedEngineValue == nil || goja.IsUndefined(expectedEngineValue) || goja.IsNull(expectedEngineValue) {
+		return "", fmt.Errorf("inspect database options must include expectedEngine")
+	}
+	expectedEngine, ok := expectedEngineValue.Export().(string)
+	if !ok {
+		return "", fmt.Errorf("inspect database expectedEngine must be a string")
+	}
+
+	switch DatabaseEngine(expectedEngine) {
+	case DatabaseEnginePostgreSQL, DatabaseEngineMySQL, DatabaseEngineMariaDB, DatabaseEngineSQLite:
+		return DatabaseEngine(expectedEngine), nil
+	default:
+		return "", fmt.Errorf("unsupported expected database engine %q", expectedEngine)
+	}
 }

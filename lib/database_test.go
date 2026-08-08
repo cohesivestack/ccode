@@ -1,11 +1,15 @@
 package ccode
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
+	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/dop251/goja"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -98,4 +102,165 @@ func TestDatabase_InspectSQLiteDatabase(t *testing.T) {
 	require.Len(t, sqliteInspection.Databases[0].Relationships, 1)
 	assert.Equal(t, "one-to-one", sqliteInspection.Databases[0].Relationships[0].Cardinality)
 	assert.False(t, sqliteInspection.Databases[0].Relationships[0].Optional)
+}
+
+func TestDatabaseTypeScript_InspectDatabaseReturnsGojaObject(t *testing.T) {
+	databasePath := filepath.Join(t.TempDir(), "application.db")
+	createTypeScriptTestDatabase(t, databasePath)
+	ctx := newRunnerDatabaseTestContext(t)
+
+	value, err := ctx.InspectDatabase(
+		"sqlite://"+databasePath,
+		ctx.runtime.ToValue(map[string]any{"expectedEngine": "sqlite"}),
+	)
+	require.NoError(t, err)
+
+	inspection := value.ToObject(ctx.runtime)
+	assert.Equal(t, "sqlite", inspection.Get("engine").String())
+	databases := inspection.Get("databases").ToObject(ctx.runtime)
+	assert.Equal(t, int64(1), databases.Get("length").ToInteger())
+	mainDatabase := databases.Get("0").ToObject(ctx.runtime)
+	assert.Equal(t, "main", mainDatabase.Get("name").String())
+	assert.Equal(t, int64(2), mainDatabase.Get("tables").ToObject(ctx.runtime).Get("length").ToInteger())
+}
+
+func TestDatabaseTypeScript_InspectDatabaseRejectsExpectedEngineMismatch(t *testing.T) {
+	ctx := newRunnerDatabaseTestContext(t)
+
+	value, err := ctx.InspectDatabase(
+		"sqlite://database.db",
+		ctx.runtime.ToValue(map[string]any{"expectedEngine": "mysql"}),
+	)
+	require.Error(t, err)
+	assert.Nil(t, value)
+	assert.Equal(t, "expected mysql database, but connection URL uses sqlite", err.Error())
+}
+
+func TestDatabaseTypeScript_InspectDatabaseValidatesOptions(t *testing.T) {
+	ctx := newRunnerDatabaseTestContext(t)
+
+	tests := []struct {
+		name    string
+		options []goja.Value
+		message string
+	}{
+		{
+			name:    "missing expected engine",
+			options: []goja.Value{ctx.runtime.ToValue(map[string]any{})},
+			message: "inspect database options must include expectedEngine",
+		},
+		{
+			name:    "non-string expected engine",
+			options: []goja.Value{ctx.runtime.ToValue(map[string]any{"expectedEngine": true})},
+			message: "inspect database expectedEngine must be a string",
+		},
+		{
+			name:    "unsupported expected engine",
+			options: []goja.Value{ctx.runtime.ToValue(map[string]any{"expectedEngine": "oracle"})},
+			message: `unsupported expected database engine "oracle"`,
+		},
+		{
+			name:    "too many options",
+			options: []goja.Value{ctx.runtime.NewObject(), ctx.runtime.NewObject()},
+			message: "inspect database accepts at most one options argument",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			value, err := ctx.InspectDatabase("sqlite://database.db", test.options...)
+			require.Error(t, err)
+			assert.Nil(t, value)
+			assert.Equal(t, test.message, err.Error())
+		})
+	}
+}
+
+func TestDatabaseTypeScript_RunnerInspectsDatabaseAndUsesTypeGuards(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestDatabaseTypeScript_RunnerInspectsDatabaseAndUsesTypeGuards")
+	databasePath := filepath.Join(t.TempDir(), "application.db")
+	createTypeScriptTestDatabase(t, databasePath)
+	processFile := filepath.Join(projectDir, "database", "inspect.ts")
+
+	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
+	process := fmt.Sprintf(`import type { Context } from "@ccode/context";
+import type { DatabaseInspection } from "@ccode/database";
+import {
+  isMariaDBInspection,
+  isMySQLInspection,
+  isPostgreSQLInspection,
+  isSQLiteInspection,
+} from "@ccode/database";
+
+export default function main(ctx: Context) {
+  const literalInspection = ctx.inspectDatabase(%q);
+  const dynamicURL: string = %q;
+  const dynamicInspection = ctx.inspectDatabase(dynamicURL, {
+    expectedEngine: "sqlite",
+  });
+
+  if (!isSQLiteInspection(dynamicInspection)) {
+    throw new Error("expected SQLite inspection");
+  }
+
+  const guardResults = [
+    isPostgreSQLInspection({ engine: "postgresql" } as DatabaseInspection),
+    isMySQLInspection({ engine: "mysql" } as DatabaseInspection),
+    isMariaDBInspection({ engine: "mariadb" } as DatabaseInspection),
+    isSQLiteInspection({ engine: "sqlite" } as DatabaseInspection),
+  ];
+
+  ctx.println(JSON.stringify({
+    literalEngine: literalInspection.engine,
+    database: dynamicInspection.databases[0].name,
+    tableCount: dynamicInspection.databases[0].tables.length,
+    guardResults,
+  }));
+}
+`, "sqlite://"+databasePath, "sqlite://"+databasePath)
+	require.NoError(t, os.WriteFile(processFile, []byte(process), 0644))
+
+	var output bytes.Buffer
+	ctx.stdout = &output
+
+	require.NoError(t, ctx.Run("database/inspect"))
+	assert.JSONEq(t, `{
+		"literalEngine": "sqlite",
+		"database": "main",
+		"tableCount": 2,
+		"guardResults": [true, true, true, true]
+	}`, output.String())
+}
+
+func newRunnerDatabaseTestContext(t *testing.T) *RunnerContext {
+	t.Helper()
+
+	runtime := goja.New()
+	ctx := &RunnerContext{
+		ccodeContext: NewContext(&Config{CCodePath: t.TempDir()}),
+		runtime:      runtime,
+	}
+	require.NoError(t, ctx.initializeJSONParser())
+	return ctx
+}
+
+func createTypeScriptTestDatabase(t *testing.T, databasePath string) {
+	t.Helper()
+
+	db, err := sql.Open("sqlite3", databasePath)
+	require.NoError(t, err)
+	_, err = db.Exec(`
+		PRAGMA foreign_keys = ON;
+		CREATE TABLE users (
+			id INTEGER PRIMARY KEY,
+			email TEXT NOT NULL
+		);
+		CREATE TABLE profiles (
+			id INTEGER PRIMARY KEY,
+			user_id INTEGER NOT NULL UNIQUE,
+			FOREIGN KEY (user_id) REFERENCES users (id)
+		);
+	`)
+	require.NoError(t, err)
+	require.NoError(t, db.Close())
 }

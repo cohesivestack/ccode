@@ -92,22 +92,36 @@ func Init(projectPath string, configPath string, version string) error {
 		return fmt.Errorf("create %s: %w", buildPath, err)
 	}
 
-	if err := writeConfigIfMissing(options.ConfigPath, options.ProjectPath, options.Version); err != nil {
+	configContents, err := renderConfigTemplate(options.ProjectPath, options.Version)
+	if err != nil {
 		return err
+	}
+	for _, asset := range []struct {
+		path      string
+		contents  string
+		name      string
+		overwrite bool
+	}{
+		{path: options.ConfigPath, contents: configContents, name: "config file"},
+		{path: filepath.Join(hiddenPath, ".gitignore"), contents: templateassets.HiddenGitIgnoreTemplate, name: ".ccode gitignore"},
+		{path: filepath.Join(hiddenLibPath, "context.ts"), contents: templateassets.ContextTemplate, name: "context template", overwrite: true},
+		{path: filepath.Join(hiddenLibPath, "openapi.ts"), contents: templateassets.OpenAPITemplate, name: "openapi template", overwrite: true},
+		{path: filepath.Join(hiddenLibPath, "database.ts"), contents: templateassets.DatabaseTemplate, name: "database.ts template", overwrite: true},
+		{path: filepath.Join(hiddenLibPath, "database-postgresql.ts"), contents: templateassets.DatabasePostgreSQLTemplate, name: "database-postgresql.ts template", overwrite: true},
+		{path: filepath.Join(hiddenLibPath, "database-mysql.ts"), contents: templateassets.DatabaseMySQLTemplate, name: "database-mysql.ts template", overwrite: true},
+		{path: filepath.Join(hiddenLibPath, "database-mariadb.ts"), contents: templateassets.DatabaseMariaDBTemplate, name: "database-mariadb.ts template", overwrite: true},
+		{path: filepath.Join(hiddenLibPath, "database-sqlite.ts"), contents: templateassets.DatabaseSQLiteTemplate, name: "database-sqlite.ts template", overwrite: true},
+		{path: filepath.Join(workspacePath, "tsconfig.json"), contents: templateassets.TSConfigTemplate, name: "tsconfig"},
+	} {
+		writeAsset := writeFileIfMissing
+		if asset.overwrite {
+			writeAsset = writeFile
+		}
+		if err := writeAsset(asset.path, asset.contents, asset.name); err != nil {
+			return err
+		}
 	}
 	if err := updateConfigVersion(options.ConfigPath, options.Version); err != nil {
-		return err
-	}
-	if err := writeFileIfMissing(filepath.Join(hiddenPath, ".gitignore"), templateassets.HiddenGitIgnoreTemplate, ".ccode gitignore"); err != nil {
-		return err
-	}
-	if err := writeFile(filepath.Join(hiddenLibPath, "context.ts"), templateassets.ContextTemplate, "context template"); err != nil {
-		return err
-	}
-	if err := writeFile(filepath.Join(hiddenLibPath, "openapi.ts"), templateassets.OpenAPITemplate, "openapi template"); err != nil {
-		return err
-	}
-	if err := writeFileIfMissing(filepath.Join(workspacePath, "tsconfig.json"), templateassets.TSConfigTemplate, "tsconfig"); err != nil {
 		return err
 	}
 
@@ -147,19 +161,6 @@ func resolveInitWorkspacePaths(options *initOptions) (string, string, error) {
 	}
 
 	return workspacePath, hiddenPath, nil
-}
-
-func writeConfigIfMissing(configPath string, projectPath string, version string) error {
-	if fileExists(configPath) {
-		return nil
-	}
-
-	rendered, err := renderConfigTemplate(projectPath, version)
-	if err != nil {
-		return err
-	}
-
-	return writeFileIfMissing(configPath, rendered, "config file")
 }
 
 func updateConfigVersion(configPath string, version string) error {
