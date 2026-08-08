@@ -48,6 +48,13 @@ For OpenAPI generation:
 - External schema reference: [OAI/OpenAPI Specification](https://github.com/oai/openapi-specification)
 - [Runtime API](/reference/runtime-api/)
 
+For database schema generation:
+
+- [Database Workflows](/using-ccode/database-workflows/)
+- [Database Inspection](/reference/database-inspection/)
+- [Database Schema](/cookbook/database-schema/)
+- [Runtime API](/reference/runtime-api/)
+
 For accelerated artifacts:
 
 - [Accelerators](/using-ccode/accelerators/)
@@ -98,4 +105,6 @@ ctx.parseJSONFromFile(filePath)
 ctx.parseOpenAPIFromBytes(specBytes)
 ctx.parseOpenAPIFromString(spec)
 ctx.parseOpenAPIFromFile(filePath)
+ctx.inspectDatabase(connectionURL)
+ctx.inspectDatabase(connectionURL, { expectedEngine })
 ```

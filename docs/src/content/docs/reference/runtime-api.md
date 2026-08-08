@@ -14,6 +14,20 @@ import type { Context } from "@ccode/context";
 ```ts
 import type { OpenAPI } from "@ccode/openapi";
 import type { OpenAPIDocument } from "@ccode/context";
+import type {
+  MariaDBConnectionURL,
+  MariaDBInspection,
+  MySQLConnectionURL,
+  MySQLInspection,
+  PostgreSQLConnectionURL,
+  PostgreSQLInspection,
+  SQLiteConnectionURL,
+  SQLiteInspection,
+  DatabaseInspection,
+  DatabaseInspectionByEngine,
+  DatabaseEngine,
+  InspectDatabaseOptions,
+} from "@ccode/database";
 
 interface Context {
   println(message: string): void;
@@ -37,6 +51,17 @@ interface Context {
     filePath: string,
     options: { expectedVersion: V },
   ): OpenAPI.Document<V>;
+  inspectDatabase(
+    connectionURL: PostgreSQLConnectionURL,
+  ): PostgreSQLInspection;
+  inspectDatabase(connectionURL: MySQLConnectionURL): MySQLInspection;
+  inspectDatabase(connectionURL: MariaDBConnectionURL): MariaDBInspection;
+  inspectDatabase(connectionURL: SQLiteConnectionURL): SQLiteInspection;
+  inspectDatabase<Engine extends DatabaseEngine>(
+    connectionURL: string,
+    options: InspectDatabaseOptions<Engine>,
+  ): DatabaseInspectionByEngine[Engine];
+  inspectDatabase(connectionURL: string): DatabaseInspection;
 }
 ```
 
@@ -104,3 +129,45 @@ const spec31 = ctx.parseOpenAPIFromFile("specs/api.yaml", {
 ```
 
 Without `expectedVersion`, the return type is the union of supported OpenAPI document versions. With `expectedVersion`, the runtime verifies the document's `openapi` field and TypeScript returns the corresponding version-specific document type.
+
+## inspectDatabase
+
+Inspects a PostgreSQL, MySQL, MariaDB, or SQLite database and returns the
+corresponding Cohesive Code model. Literal connection URLs infer the engine from
+their prefix:
+
+```ts
+const database = ctx.inspectDatabase("postgresql://localhost/app");
+// PostgreSQLInspection
+```
+
+For a connection URL held in a general `string`, provide `expectedEngine` when
+an engine-specific return type is needed. The runtime verifies that it agrees
+with the URL before inspecting the database.
+
+```ts
+const connectionURL: string = "mysql://user:password@localhost/app";
+const database = ctx.inspectDatabase(connectionURL, {
+  expectedEngine: "mysql",
+});
+// MySQLInspection
+```
+
+The supported URL prefixes are `postgres://`, `postgresql://`, `mysql://`,
+`maria://`, `mariadb://`, and `sqlite://`. Engine-specific models and narrowing
+helpers are exported from `@ccode/database`:
+
+```ts
+import { isSQLiteInspection } from "@ccode/database";
+
+const database = ctx.inspectDatabase(connectionURL);
+if (isSQLiteInspection(database)) {
+  ctx.println(database.databases[0]?.name ?? "no database");
+}
+```
+
+The inspection call opens the database, reads the schema visible to that
+connection, and closes the connection before returning. Connection failures and
+schema inspection failures are runtime errors, so a process stops unless it
+handles them explicitly. Keep credentials out of generated output and process
+logs.

@@ -44,9 +44,14 @@ ccode/
     lib/
       context.ts
       openapi.ts
+      database.ts
+      database-postgresql.ts
+      database-mysql.ts
+      database-mariadb.ts
+      database-sqlite.ts
 ```
 
-`ccode init` writes the configuration file when it is missing, refreshes generated support files under `.ccode/lib/`, preserves an existing `tsconfig.json`, clears `.ccode/build/`, and leaves accelerator state untouched.
+`ccode init` writes the configuration file when it is missing, refreshes generated support files under `.ccode/lib/`, preserves an existing `tsconfig.json`, clears `.ccode/build/`, and leaves accelerator state untouched. The database support files are generated locally so TypeScript processes can import the database inspection models and guards.
 
 ## Create a process
 

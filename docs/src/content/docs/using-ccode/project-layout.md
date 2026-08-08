@@ -20,6 +20,11 @@ ccode/
     lib/
       context.ts
       openapi.ts
+      database.ts
+      database-postgresql.ts
+      database-mysql.ts
+      database-mariadb.ts
+      database-sqlite.ts
 ```
 
 ## Important folders
@@ -84,6 +89,7 @@ The CLI appends `.ts` when the process argument does not include it.
 - Template paths resolve relative to `ccode_path`.
 - JSON file paths resolve relative to `ccode_path`.
 - OpenAPI file paths resolve relative to `ccode_path`.
+- Database connection URLs are passed directly to `inspectDatabase`; they do not resolve through `ccode_path`.
 - Relative `generate` output paths resolve under `output_path`.
 - `accelerate` targets `output_path/<artifact-id>`.
 - Relative `hidden_path` resolves under `ccode_path`.
