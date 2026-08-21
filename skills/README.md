@@ -1,35 +1,17 @@
-# Cohesive Code Skills
+# Cohesive Code Skill
 
-This repository exposes installable Agent Skills for `npx skills`.
+This repository provides one installable Agent Skill containing the complete Cohesive Code workflow.
 
 ## Install
 
 ```bash
-# from GitHub shorthand
 npx skills add cohesivestack/ccode
-
-# install only the broad workspace skill
-npx skills add cohesivestack/ccode --skill cohesive-code
-
-# install a focused workflow skill
-npx skills add cohesivestack/ccode --skill author-ccode-generation
-npx skills add cohesivestack/ccode --skill run-ccode-generation
-npx skills add cohesivestack/ccode --skill merge-ccode-accelerator-state
-
-# list available skills without installing
-npx skills add cohesivestack/ccode --list
 ```
 
-## Included skills
+The installed skill is `cohesive-code`. It covers workspace setup and diagnosis, generator authoring, process execution, accelerator application, validation, and accelerator-state conflict resolution.
 
-- `cohesive-code`: broad workspace orientation and doc routing.
-- `author-ccode-generation`: author TypeScript processes, templates, OpenAPI workflows, accelerators, and instructions.
-- `run-ccode-generation`: run processes, inspect outputs, and apply accelerator instruction bundles.
-- `merge-ccode-accelerator-state`: resolve Git conflicts in accelerator state files.
+To preview the repository's installable skill without installing it:
 
-## Skill layout
-
-Each installable skill is self-contained under `skills/<skill-name>/` and includes:
-
-- `SKILL.md`
-- optional `agents/`
+```bash
+npx skills add cohesivestack/ccode --list
+```

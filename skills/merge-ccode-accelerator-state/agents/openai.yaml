@@ -1,7 +1,0 @@
-interface:
-  display_name: "Merge CCode Accelerator State"
-  short_description: "Resolve accelerator state conflicts"
-  default_prompt: "Use $merge-ccode-accelerator-state to resolve Git conflicts in Cohesive Code accelerator state files without discarding valid candidates."
-
-policy:
-  allow_implicit_invocation: true

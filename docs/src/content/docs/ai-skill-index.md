@@ -1,9 +1,9 @@
 ---
 title: AI Skill Index
-description: A structured index for agents and future Cohesive Code skill documentation.
+description: The documentation map used by the installable Cohesive Code agent skill.
 ---
 
-This page is written as an index for a future AI skill. It is not the skill itself. Use it as the stable map of concepts, files, commands, and docs pages an agent should read before acting in a Cohesive Code workspace.
+This page is the stable documentation map for the installable `cohesive-code` skill. It indexes the concepts, files, commands, and pages an agent should read before acting in a Cohesive Code workspace; the skill itself lives at `skills/cohesive-code/SKILL.md` in the repository.
 
 ## Detection
 

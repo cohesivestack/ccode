@@ -1,7 +1,7 @@
 interface:
   display_name: "Cohesive Code"
-  short_description: "Orient and diagnose ccode workspaces"
-  default_prompt: "Use $cohesive-code to inspect this Cohesive Code workspace, resolve its configuration and paths, and route the work."
+  short_description: "Build and operate ccode workspaces"
+  default_prompt: "Use $cohesive-code to work with this Cohesive Code workspace, from configuration and authoring through generation, accelerators, validation, and conflict resolution."
 
 policy:
   allow_implicit_invocation: true

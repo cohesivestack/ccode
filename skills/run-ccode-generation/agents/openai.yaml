@@ -1,7 +1,0 @@
-interface:
-  display_name: "Run CCode Generation"
-  short_description: "Run ccode and apply accelerator instructions"
-  default_prompt: "Use $run-ccode-generation to run a Cohesive Code process, inspect its outputs, and apply unresolved accelerator instructions."
-
-policy:
-  allow_implicit_invocation: true

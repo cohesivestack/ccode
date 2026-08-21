@@ -1,7 +1,0 @@
-interface:
-  display_name: "Author CCode Generation"
-  short_description: "Author ccode processes and accelerators"
-  default_prompt: "Use $author-ccode-generation to author or revise a Cohesive Code process, its templates, outputs, and accelerator instructions."
-
-policy:
-  allow_implicit_invocation: true
