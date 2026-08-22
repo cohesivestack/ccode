@@ -12,9 +12,7 @@ import type {
   SQLiteConnectionURL,
   SQLiteInspection,
 } from "./database";
-import type { OpenAPI } from "./openapi";
-
-export type OpenAPIDocument = OpenAPI.Document;
+import type { OpenAPIDocument, OpenAPIVersion } from "./openapi";
 
 export interface Context {
   println: (message: string) => void;
@@ -34,10 +32,10 @@ export interface Context {
   parseOpenAPIFromBytes: (specBytes: number[]) => OpenAPIDocument;
   parseOpenAPIFromString: (spec: string) => OpenAPIDocument;
   parseOpenAPIFromFile(filePath: string): OpenAPIDocument;
-  parseOpenAPIFromFile<V extends OpenAPI.Version>(
+  parseOpenAPIFromFile<V extends OpenAPIVersion>(
     filePath: string,
     options: { expectedVersion: V },
-  ): OpenAPI.Document<V>;
+  ): OpenAPIDocument<V>;
   inspectDatabase(
     connectionURL: PostgreSQLConnectionURL,
   ): PostgreSQLInspection;

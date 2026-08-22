@@ -2,49 +2,47 @@
 // OpenAPI v2 declarations have been removed; Cohesive Code supports OpenAPI v3+.
 
 /* tslint:disable:no-namespace no-empty-interface */
-export namespace OpenAPI {
-  export type Version = '3.0' | '3.1' | '3.2';
+export type OpenAPIVersion = '3.0' | '3.1' | '3.2';
 
-  export interface DocumentByVersion<T extends {} = {}> {
-    '3.0': OpenAPIV3.Document<T>;
-    '3.1': OpenAPIV3_1.Document<T>;
-    '3.2': OpenAPIV3_2.Document<T>;
-  }
+export interface OpenAPIDocumentByVersion<T extends {} = {}> {
+  '3.0': OpenAPIV3.Document<T>;
+  '3.1': OpenAPIV3_1.Document<T>;
+  '3.2': OpenAPIV3_2.Document<T>;
+}
 
-  // OpenAPI extensions can be declared using generics
-  // e.g.:
-  // OpenAPI.Document<'3.1', {
-  //   'x-amazon-apigateway-integration': AWSAPITGatewayDefinition
-  // }>
-  export type Document<
-    V extends Version = Version,
-    T extends {} = {},
-  > = DocumentByVersion<T>[V];
+// OpenAPI extensions can be declared using generics
+// e.g.:
+// OpenAPIDocument<'3.1', {
+//   'x-amazon-apigateway-integration': AWSAPITGatewayDefinition
+// }>
+export type OpenAPIDocument<
+  V extends OpenAPIVersion = OpenAPIVersion,
+  T extends {} = {},
+> = OpenAPIDocumentByVersion<T>[V];
 
-  export type Operation<T extends {} = {}> =
-    | OpenAPIV3.OperationObject<T>
-    | OpenAPIV3_1.OperationObject<T>
-    | OpenAPIV3_2.OperationObject<T>;
+export type OpenAPIOperation<T extends {} = {}> =
+  | OpenAPIV3.OperationObject<T>
+  | OpenAPIV3_1.OperationObject<T>
+  | OpenAPIV3_2.OperationObject<T>;
 
-  export type Parameter =
-    | OpenAPIV3_2.ReferenceObject
-    | OpenAPIV3_2.ParameterObject
-    | OpenAPIV3_1.ReferenceObject
-    | OpenAPIV3_1.ParameterObject
-    | OpenAPIV3.ReferenceObject
-    | OpenAPIV3.ParameterObject;
+export type OpenAPIParameter =
+  | OpenAPIV3_2.ReferenceObject
+  | OpenAPIV3_2.ParameterObject
+  | OpenAPIV3_1.ReferenceObject
+  | OpenAPIV3_1.ParameterObject
+  | OpenAPIV3.ReferenceObject
+  | OpenAPIV3.ParameterObject;
 
-  export type Parameters =
-    | (OpenAPIV3_2.ReferenceObject | OpenAPIV3_2.ParameterObject)[]
-    | (OpenAPIV3_1.ReferenceObject | OpenAPIV3_1.ParameterObject)[]
-    | (OpenAPIV3.ReferenceObject | OpenAPIV3.ParameterObject)[];
+export type OpenAPIParameters =
+  | (OpenAPIV3_2.ReferenceObject | OpenAPIV3_2.ParameterObject)[]
+  | (OpenAPIV3_1.ReferenceObject | OpenAPIV3_1.ParameterObject)[]
+  | (OpenAPIV3.ReferenceObject | OpenAPIV3.ParameterObject)[];
 
-  export interface Request {
-    body?: any;
-    headers?: object;
-    params?: object;
-    query?: object;
-  }
+export interface OpenAPIRequest {
+  body?: any;
+  headers?: object;
+  params?: object;
+  query?: object;
 }
 
 // OpenAPI 3.2 declarations follow the normative specification at:

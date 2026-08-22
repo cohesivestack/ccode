@@ -12,8 +12,10 @@ import type { Context } from "@ccode/context";
 ## Surface
 
 ```ts
-import type { OpenAPI } from "@ccode/openapi";
-import type { OpenAPIDocument } from "@ccode/context";
+import type {
+  OpenAPIDocument,
+  OpenAPIVersion,
+} from "@ccode/openapi";
 import type {
   MariaDBConnectionURL,
   MariaDBInspection,
@@ -47,10 +49,10 @@ interface Context {
   parseOpenAPIFromBytes(specBytes: number[]): OpenAPIDocument;
   parseOpenAPIFromString(spec: string): OpenAPIDocument;
   parseOpenAPIFromFile(filePath: string): OpenAPIDocument;
-  parseOpenAPIFromFile<V extends OpenAPI.Version>(
+  parseOpenAPIFromFile<V extends OpenAPIVersion>(
     filePath: string,
     options: { expectedVersion: V },
-  ): OpenAPI.Document<V>;
+  ): OpenAPIDocument<V>;
   inspectDatabase(
     connectionURL: PostgreSQLConnectionURL,
   ): PostgreSQLInspection;
@@ -66,6 +68,12 @@ interface Context {
 ```
 
 Use the local generated `context.ts` as the final contract for the installed workspace version.
+
+General OpenAPI types are top-level exports from `@ccode/openapi`, including
+`OpenAPIVersion`, `OpenAPIDocument`, `OpenAPIDocumentByVersion`,
+`OpenAPIOperation`, `OpenAPIParameter`, `OpenAPIParameters`, and
+`OpenAPIRequest`. Version-specific declarations remain grouped under the
+`OpenAPIV3`, `OpenAPIV3_1`, and `OpenAPIV3_2` namespaces.
 
 ## println
 
