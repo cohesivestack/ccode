@@ -218,6 +218,38 @@ func TestRunner_RunParsesOpenAPIWithExpectedVersion(t *testing.T) {
 	assert.Equal(t, "3.1.0\n", output.String())
 }
 
+func TestRunner_RunParsesResolvedExternalOpenAPIPathItemWithProvenance(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunParsesResolvedExternalOpenAPIPathItemWithProvenance")
+	processFile := filepath.Join(projectDir, "x", "generate.ts")
+	specFile := filepath.Join(projectDir, "app", "server.yaml")
+	pathFile := filepath.Join(projectDir, "app", "paths", "countries.yaml")
+
+	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
+	require.NoError(t, os.MkdirAll(filepath.Dir(pathFile), 0755))
+	require.NoError(t, os.WriteFile(specFile, []byte(testOpenAPIExternalPathDocument), 0644))
+	require.NoError(t, os.WriteFile(pathFile, []byte("countries:\n  get:\n    operationId: getCountries\n    responses:\n      '200':\n        description: OK\n"), 0644))
+	require.NoError(t, os.WriteFile(processFile, []byte(`import type { Context } from "@ccode/context";
+
+export default function main(ctx: Context) {
+  const spec = ctx.parseOpenAPIFromFile("app/server.yaml", {
+    expectedVersion: "3.1",
+  });
+  const pathItem = spec.paths?.["/countries"];
+  if (!pathItem?.$ref || !pathItem.get?.operationId) {
+    throw new Error("expected a resolved Path Item with provenance");
+  }
+  const sourceFile = pathItem.$ref.split("#", 1)[0].split("/").at(-1);
+  ctx.println(JSON.stringify({ sourceFile, operationId: pathItem.get.operationId }));
+}
+`), 0644))
+
+	var output bytes.Buffer
+	ctx.stdout = &output
+
+	require.NoError(t, ctx.Run("x/generate"))
+	assert.JSONEq(t, `{"sourceFile":"countries.yaml","operationId":"getCountries"}`, output.String())
+}
+
 func TestRunner_RunOpenAPIErrorsCanBeCaughtInTypescript(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunOpenAPIErrorsCanBeCaughtInTypescript")
 	processFile := filepath.Join(projectDir, "x", "generate.ts")

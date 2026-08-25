@@ -53,7 +53,12 @@ func (ctx *RunnerContext) ParseOpenAPIFromFile(filePath string, optionValues ...
 	config.SpecFilePath = filepath.Base(fullPath)
 	config.AllowFileReferences = true
 
-	return ctx.parseOpenAPIDocument(specBytes, config, filePath, expectedVersion)
+	resolvedSpecBytes, err := resolveOpenAPIFileReferences(specBytes, fullPath)
+	if err != nil {
+		return nil, fmt.Errorf("resolve OpenAPI document %s: %w", filePath, err)
+	}
+
+	return ctx.parseResolvedOpenAPIDocument(resolvedSpecBytes, config, filePath, expectedVersion)
 }
 
 func (ctx *RunnerContext) parseOpenAPIFileOptions(optionValues []goja.Value) (string, error) {
@@ -126,6 +131,46 @@ func (ctx *RunnerContext) parseOpenAPIDocument(specBytes []byte, config *datamod
 	}
 
 	return ctx.parseJSON(string(renderedJSON))
+}
+
+func (ctx *RunnerContext) parseResolvedOpenAPIDocument(specBytes []byte, config *datamodel.DocumentConfiguration, source string, expectedVersion string) (goja.Value, error) {
+	validationBytes, err := stripMaterializedOpenAPIReferences(specBytes, source)
+	if err != nil {
+		return nil, err
+	}
+
+	document, err := libopenapi.NewDocumentWithConfiguration(validationBytes, config)
+	if err != nil {
+		return nil, fmt.Errorf("parse OpenAPI document %s: %w", source, err)
+	}
+	defer document.Release()
+
+	specInfo := document.GetSpecInfo()
+	if specInfo == nil {
+		return nil, fmt.Errorf("parse OpenAPI document %s: missing spec info", source)
+	}
+
+	switch specInfo.SpecType {
+	case openapiutils.OpenApi2:
+		return nil, fmt.Errorf("swagger is not supported")
+	case openapiutils.OpenApi3:
+		// supported
+	default:
+		return nil, fmt.Errorf("unsupported OpenAPI spec type %q", specInfo.SpecType)
+	}
+
+	if expectedVersion != "" {
+		actualVersion := openAPIMajorMinorVersion(specInfo.Version)
+		if actualVersion != expectedVersion {
+			return nil, fmt.Errorf("expected OpenAPI %s.x, but %s declares %s", expectedVersion, source, specInfo.Version)
+		}
+	}
+
+	if _, err := document.BuildV3Model(); err != nil {
+		return nil, fmt.Errorf("build OpenAPI v3 model %s: %w", source, err)
+	}
+
+	return ctx.parseJSON(string(specBytes))
 }
 
 func openAPIMajorMinorVersion(version string) string {

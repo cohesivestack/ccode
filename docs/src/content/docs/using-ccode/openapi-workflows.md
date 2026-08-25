@@ -3,7 +3,7 @@ title: OpenAPI Workflows
 description: Parse OpenAPI documents and generate deterministic artifacts.
 ---
 
-Cohesive Code can parse OpenAPI v3 documents from bytes, strings, or files. File parsing resolves paths relative to `ccode_path`, and local references are resolved from the spec directory.
+Cohesive Code can parse OpenAPI v3 documents from bytes, strings, or files. File parsing resolves paths relative to `ccode_path`. Local and external file references are resolved recursively by default, relative to the file that contains each reference.
 
 ## OpenAPI reference
 
@@ -67,10 +67,13 @@ function fallbackOperationId(method: string, path: string): string {
 }
 ```
 
+Referenced Path Items are materialized without losing their source reference. For example, a Path Item declared as `$ref: ./paths/countries.yaml#/countries` exposes both `item.$ref` and resolved operations such as `item.get`. Generators can therefore infer the source file directly from `$ref`; no separate manifest or second parse is needed. Nested references, including schemas referenced from Path Item files, resolve automatically as well.
+
 ## Pitfalls
 
 - Swagger/OpenAPI v2 is rejected.
 - Pass `expectedVersion` when the process requires a specific OpenAPI version; parsing fails if the document declares a different version.
+- `parseOpenAPIFromFile` resolves internal and external file references automatically. A missing file or fragment fails parsing with reference context rather than returning a partial document.
 - Optional fields such as `paths`, `components`, and `schemas` need guards.
 - Some OpenAPI values can be references or booleans depending on location.
 - Large templates that walk raw specs become hard to test and adjust.

@@ -144,6 +144,244 @@ func TestOpenAPI_ParseOpenAPIFromFilePreservesDeterministicOrder(t *testing.T) {
 	assert.Equal(t, []string{"beta", "alpha"}, document.Get("components").ToObject(ctx.runtime).Get("schemas").ToObject(ctx.runtime).Get("Sample").ToObject(ctx.runtime).Get("properties").ToObject(ctx.runtime).Keys())
 }
 
+func TestOpenAPI_ParseOpenAPIFromFileResolvesExternalPathItemFragmentWithProvenance(t *testing.T) {
+	ctx := newRunnerOpenAPITestContext(t)
+	writeOpenAPITestFile(t, ctx, "app/server.yaml", `openapi: 3.1.0
+info:
+  title: Example API
+  version: 0.1.0
+paths:
+  /countries:
+    $ref: ./paths/countries.yaml#/countries
+`)
+	writeOpenAPITestFile(t, ctx, "app/paths/countries.yaml", `countries:
+  get:
+    operationId: getCountries
+    responses:
+      '200':
+        description: OK
+`)
+
+	value, err := ctx.ParseOpenAPIFromFile("app/server.yaml", ctx.runtime.ToValue(map[string]any{"expectedVersion": "3.1"}))
+	require.NoError(t, err)
+
+	pathItem := openAPITestPathItem(t, ctx, value, "/countries")
+	assert.Equal(t, "./paths/countries.yaml#/countries", pathItem.Get("$ref").String())
+	assert.Equal(t, "getCountries", pathItem.Get("get").ToObject(ctx.runtime).Get("operationId").String())
+}
+
+func TestOpenAPI_ParseOpenAPIFromFileResolvesReferencedPathItemWithMultipleMethods(t *testing.T) {
+	ctx := newRunnerOpenAPITestContext(t)
+	writeOpenAPITestFile(t, ctx, "server.yaml", testOpenAPIExternalPathDocument)
+	writeOpenAPITestFile(t, ctx, "paths/countries.yaml", `countries:
+  get:
+    operationId: getCountries
+    responses:
+      '200':
+        description: OK
+  post:
+    operationId: createCountry
+    responses:
+      '201':
+        description: Created
+`)
+
+	value, err := ctx.ParseOpenAPIFromFile("server.yaml")
+	require.NoError(t, err)
+
+	pathItem := openAPITestPathItem(t, ctx, value, "/countries")
+	assert.Equal(t, "getCountries", pathItem.Get("get").ToObject(ctx.runtime).Get("operationId").String())
+	assert.Equal(t, "createCountry", pathItem.Get("post").ToObject(ctx.runtime).Get("operationId").String())
+}
+
+func TestOpenAPI_ParseOpenAPIFromFileResolvesNestedExternalSchemaReferences(t *testing.T) {
+	ctx := newRunnerOpenAPITestContext(t)
+	writeOpenAPITestFile(t, ctx, "server.yaml", testOpenAPIExternalPathDocument)
+	writeOpenAPITestFile(t, ctx, "paths/countries.yaml", `countries:
+  get:
+    operationId: getCountries
+    responses:
+      '200':
+        description: OK
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/countries.yaml#/Countries
+`)
+	writeOpenAPITestFile(t, ctx, "schemas/countries.yaml", `Countries:
+  type: array
+  items:
+    $ref: ./country.yaml#/Country
+`)
+	writeOpenAPITestFile(t, ctx, "schemas/country.yaml", `Country:
+  type: object
+  properties:
+    code:
+      type: string
+`)
+
+	value, err := ctx.ParseOpenAPIFromFile("server.yaml")
+	require.NoError(t, err)
+
+	pathItem := openAPITestPathItem(t, ctx, value, "/countries")
+	schema := pathItem.Get("get").ToObject(ctx.runtime).
+		Get("responses").ToObject(ctx.runtime).
+		Get("200").ToObject(ctx.runtime).
+		Get("content").ToObject(ctx.runtime).
+		Get("application/json").ToObject(ctx.runtime).
+		Get("schema").ToObject(ctx.runtime)
+	assert.Equal(t, "../schemas/countries.yaml#/Countries", schema.Get("$ref").String())
+	assert.Equal(t, "array", schema.Get("type").String())
+	items := schema.Get("items").ToObject(ctx.runtime)
+	assert.Equal(t, "./country.yaml#/Country", items.Get("$ref").String())
+	assert.Equal(t, "object", items.Get("type").String())
+	assert.Equal(t, "string", items.Get("properties").ToObject(ctx.runtime).Get("code").ToObject(ctx.runtime).Get("type").String())
+}
+
+func TestOpenAPI_ParseOpenAPIFromFileResolvesInternalReferences(t *testing.T) {
+	ctx := newRunnerOpenAPITestContext(t)
+	writeOpenAPITestFile(t, ctx, "server.yaml", `openapi: 3.1.0
+info:
+  title: Internal API
+  version: 1.0.0
+paths:
+  /health:
+    $ref: '#/components/pathItems/Health'
+components:
+  pathItems:
+    Health:
+      get:
+        operationId: getHealth
+        responses:
+          '200':
+            description: OK
+`)
+
+	value, err := ctx.ParseOpenAPIFromFile("server.yaml")
+	require.NoError(t, err)
+
+	pathItem := openAPITestPathItem(t, ctx, value, "/health")
+	assert.Equal(t, "#/components/pathItems/Health", pathItem.Get("$ref").String())
+	assert.Equal(t, "getHealth", pathItem.Get("get").ToObject(ctx.runtime).Get("operationId").String())
+}
+
+func TestOpenAPI_ParseOpenAPIFromFileResolvesEscapedJSONPointerTokens(t *testing.T) {
+	ctx := newRunnerOpenAPITestContext(t)
+	writeOpenAPITestFile(t, ctx, "server.yaml", `openapi: 3.1.0
+info:
+  title: Escaped Pointer API
+  version: 1.0.0
+paths:
+  /escaped:
+    $ref: './paths.yaml#/a~1b~0c'
+`)
+	writeOpenAPITestFile(t, ctx, "paths.yaml", `'a/b~c':
+  get:
+    operationId: escapedPointer
+    responses:
+      '200':
+        description: OK
+`)
+
+	value, err := ctx.ParseOpenAPIFromFile("server.yaml")
+	require.NoError(t, err)
+	pathItem := openAPITestPathItem(t, ctx, value, "/escaped")
+	assert.Equal(t, "escapedPointer", pathItem.Get("get").ToObject(ctx.runtime).Get("operationId").String())
+}
+
+func TestOpenAPI_ParseOpenAPIFromFileReturnsContextForMissingReferencedFile(t *testing.T) {
+	ctx := newRunnerOpenAPITestContext(t)
+	writeOpenAPITestFile(t, ctx, "server.yaml", testOpenAPIExternalPathDocument)
+
+	value, err := ctx.ParseOpenAPIFromFile("server.yaml")
+	require.Error(t, err)
+	assert.Nil(t, value)
+	assert.Contains(t, err.Error(), `resolve reference "./paths/countries.yaml#/countries"`)
+	assert.Contains(t, err.Error(), "read referenced OpenAPI file")
+	assert.Contains(t, err.Error(), "countries.yaml")
+}
+
+func TestOpenAPI_ParseOpenAPIFromFileReturnsContextForMissingFragment(t *testing.T) {
+	ctx := newRunnerOpenAPITestContext(t)
+	writeOpenAPITestFile(t, ctx, "server.yaml", testOpenAPIExternalPathDocument)
+	writeOpenAPITestFile(t, ctx, "paths/countries.yaml", "anotherPath: {}\n")
+
+	value, err := ctx.ParseOpenAPIFromFile("server.yaml")
+	require.Error(t, err)
+	assert.Nil(t, value)
+	assert.Contains(t, err.Error(), "JSON Pointer #/countries does not exist")
+}
+
+func TestOpenAPI_ParseOpenAPIFromFileDetectsCircularReferences(t *testing.T) {
+	ctx := newRunnerOpenAPITestContext(t)
+	writeOpenAPITestFile(t, ctx, "server.yaml", `openapi: 3.1.0
+info:
+  title: Circular API
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Node:
+      $ref: ./schemas/node.yaml#/Node
+`)
+	writeOpenAPITestFile(t, ctx, "schemas/node.yaml", `Node:
+  type: object
+  properties:
+    child:
+      $ref: '#/Node'
+`)
+
+	value, err := ctx.ParseOpenAPIFromFile("server.yaml")
+	require.NoError(t, err)
+
+	node := value.ToObject(ctx.runtime).Get("components").ToObject(ctx.runtime).Get("schemas").ToObject(ctx.runtime).Get("Node").ToObject(ctx.runtime)
+	assert.Equal(t, "./schemas/node.yaml#/Node", node.Get("$ref").String())
+	child := node.Get("properties").ToObject(ctx.runtime).Get("child").ToObject(ctx.runtime)
+	assert.Equal(t, "#/Node", child.Get("$ref").String())
+}
+
+func TestOpenAPI_ParseOpenAPIFromFilePreservesDeterministicOrderAfterResolution(t *testing.T) {
+	ctx := newRunnerOpenAPITestContext(t)
+	writeOpenAPITestFile(t, ctx, "server.yaml", testOpenAPIExternalPathDocument)
+	writeOpenAPITestFile(t, ctx, "paths/countries.yaml", `countries:
+  summary: Countries
+  get:
+    operationId: getCountries
+    responses:
+      '200':
+        description: OK
+  post:
+    operationId: createCountry
+    responses:
+      '201':
+        description: Created
+`)
+
+	first, err := ctx.ParseOpenAPIFromFile("server.yaml")
+	require.NoError(t, err)
+	second, err := ctx.ParseOpenAPIFromFile("server.yaml")
+	require.NoError(t, err)
+
+	firstKeys := openAPITestPathItem(t, ctx, first, "/countries").Keys()
+	secondKeys := openAPITestPathItem(t, ctx, second, "/countries").Keys()
+	assert.Equal(t, []string{"$ref", "summary", "get", "post"}, firstKeys)
+	assert.Equal(t, firstKeys, secondKeys)
+}
+
+func writeOpenAPITestFile(t *testing.T, ctx *RunnerContext, relativePath, contents string) {
+	t.Helper()
+	fullPath := filepath.Join(ctx.ccodeContext.config.CCodePath, relativePath)
+	require.NoError(t, os.MkdirAll(filepath.Dir(fullPath), 0755))
+	require.NoError(t, os.WriteFile(fullPath, []byte(contents), 0644))
+}
+
+func openAPITestPathItem(t *testing.T, ctx *RunnerContext, value goja.Value, path string) *goja.Object {
+	t.Helper()
+	pathItem := value.ToObject(ctx.runtime).Get("paths").ToObject(ctx.runtime).Get(path)
+	require.False(t, goja.IsUndefined(pathItem))
+	return pathItem.ToObject(ctx.runtime)
+}
+
 func newRunnerOpenAPITestContext(t *testing.T) *RunnerContext {
 	t.Helper()
 
@@ -203,4 +441,13 @@ components:
     EventStream:
       itemSchema:
         type: string
+`
+
+const testOpenAPIExternalPathDocument = `openapi: 3.1.0
+info:
+  title: Example API
+  version: 0.1.0
+paths:
+  /countries:
+    $ref: ./paths/countries.yaml#/countries
 `

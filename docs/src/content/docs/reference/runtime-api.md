@@ -126,7 +126,7 @@ const settings = ctx.parseJSONFromFile("data/settings.json");
 
 ## parseOpenAPIFrom*
 
-Parses OpenAPI v3 input and returns a JSON-like object. `parseOpenAPIFromFile` resolves paths relative to `ccode_path`.
+Parses OpenAPI v3 input and returns a JSON-like object. `parseOpenAPIFromFile` resolves paths relative to `ccode_path` and recursively resolves internal and external file references by default. External paths are relative to the document containing the reference. Resolved objects retain their original `$ref`, so a referenced Path Item exposes both provenance such as `pathItem.$ref` and materialized operations such as `pathItem.get`.
 
 ```ts
 const spec = ctx.parseOpenAPIFromFile("specs/api.yaml");
@@ -134,6 +134,11 @@ const spec = ctx.parseOpenAPIFromFile("specs/api.yaml");
 const spec31 = ctx.parseOpenAPIFromFile("specs/api.yaml", {
   expectedVersion: "3.1",
 });
+
+const countries = spec31.paths?.["/countries"];
+if (countries?.$ref && countries.get) {
+  console.log(countries.$ref, countries.get.operationId);
+}
 ```
 
 Without `expectedVersion`, the return type is the union of supported OpenAPI document versions. With `expectedVersion`, the runtime verifies the document's `openapi` field and TypeScript returns the corresponding version-specific document type.
