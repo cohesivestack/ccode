@@ -11,12 +11,7 @@ Import the shared types and narrowing helpers from the generated module:
 
 ```ts
 import type { Context } from "@ccode/context";
-import type {
-  DatabaseInspection,
-  PostgreSQLInspection,
-  SQLiteInspection,
-} from "@ccode/database";
-import { isPostgreSQLInspection, isSQLiteInspection } from "@ccode/database";
+import * as Database from "@ccode/database";
 ```
 
 ## Top-level shapes
@@ -29,11 +24,11 @@ import { isPostgreSQLInspection, isSQLiteInspection } from "@ccode/database";
 | SQLite | `inspection.databases` | `inspection.databases[n].relationships` |
 
 Every inspection also has an `engine` discriminator. Use it directly or use a
-type guard when the value is a `DatabaseInspection` union:
+type guard when the value is a `Database.Inspection` union:
 
 ```ts
-function listTables(inspection: DatabaseInspection): string[] {
-  if (isPostgreSQLInspection(inspection)) {
+function listTables(inspection: Database.Inspection): string[] {
+  if (Database.PostgreSQL.isInspection(inspection)) {
     return inspection.database.schemas.flatMap((schema) =>
       schema.tables.map((table) => `${schema.name}.${table.name}`),
     );
@@ -75,7 +70,7 @@ PostgreSQL returns one `database` object containing schemas. Each schema has
 `name`, `tables`, and named `enumTypes`:
 
 ```ts
-function enumValues(inspection: PostgreSQLInspection): string[] {
+function enumValues(inspection: Database.PostgreSQL.Inspection): string[] {
   return inspection.database.schemas.flatMap((schema) =>
     schema.enumTypes.flatMap((enumType) => enumType.values),
   );
@@ -114,8 +109,8 @@ SQLite returns a `databases` array. Its type model preserves both the declared
 type and SQLite's inferred affinity:
 
 ```ts
-function printSQLiteTypes(ctx: Context, inspection: DatabaseInspection) {
-  if (!isSQLiteInspection(inspection)) return;
+function printSQLiteTypes(ctx: Context, inspection: Database.Inspection) {
+  if (!Database.SQLite.isInspection(inspection)) return;
 
   for (const database of inspection.databases) {
     for (const table of database.tables) {
@@ -145,7 +140,7 @@ deferrability fields.
 Relationships summarize foreign-key connections with `fromTable`,
 `fromColumns`, `toTable`, `toColumns`, `cardinality`, and `optional`. The
 cardinality is currently `many-to-one` or `one-to-one`. The exact table
-reference shape follows the engine's namespace rules described above.
+reference shape follows the engine module's rules described above.
 
 For complete property names and literal unions, open the generated files under
 `.ccode/lib/` or import the corresponding types from `@ccode/database`.

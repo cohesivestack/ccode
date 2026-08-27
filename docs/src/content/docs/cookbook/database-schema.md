@@ -21,11 +21,11 @@ ccode/
 
 ```ts
 import type { Context } from "@ccode/context";
-import { isSQLiteInspection } from "@ccode/database";
+import * as Database from "@ccode/database";
 
 export default function main(ctx: Context) {
   const inspection = ctx.inspectDatabase("sqlite://./data/application.db");
-  if (!isSQLiteInspection(inspection)) {
+  if (!Database.SQLite.isInspection(inspection)) {
     throw new Error("expected a SQLite inspection");
   }
 

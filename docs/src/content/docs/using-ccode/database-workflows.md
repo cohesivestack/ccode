@@ -17,7 +17,7 @@ controls; do not print it because it may contain credentials.
 
 ```ts
 import type { Context } from "@ccode/context";
-import { isSQLiteInspection } from "@ccode/database";
+import * as Database from "@ccode/database";
 
 export default function main(ctx: Context) {
   const connectionURL: string = "sqlite://./data/application.db";
@@ -25,7 +25,7 @@ export default function main(ctx: Context) {
     expectedEngine: "sqlite",
   });
 
-  if (!isSQLiteInspection(inspection)) {
+  if (!Database.SQLite.isInspection(inspection)) {
     throw new Error("expected a SQLite inspection");
   }
 
@@ -77,7 +77,7 @@ engine-specific model:
 
 ```ts
 const inspection = ctx.inspectDatabase("postgresql://localhost/application");
-// PostgreSQLInspection
+// Database.PostgreSQL.Inspection
 ```
 
 When the URL is held in a general `string`, pass `expectedEngine` to get a
@@ -88,7 +88,7 @@ const connectionURL: string = "postgresql://user:password@localhost/application"
 const inspection = ctx.inspectDatabase(connectionURL, {
   expectedEngine: "postgresql",
 });
-// PostgreSQLInspection
+// Database.PostgreSQL.Inspection
 ```
 
 If the URL scheme and `expectedEngine` disagree, inspection fails before the

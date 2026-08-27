@@ -12,24 +12,8 @@ import type { Context } from "@ccode/context";
 ## Surface
 
 ```ts
-import type {
-  OpenAPIDocument,
-  OpenAPIVersion,
-} from "@ccode/openapi";
-import type {
-  MariaDBConnectionURL,
-  MariaDBInspection,
-  MySQLConnectionURL,
-  MySQLInspection,
-  PostgreSQLConnectionURL,
-  PostgreSQLInspection,
-  SQLiteConnectionURL,
-  SQLiteInspection,
-  DatabaseInspection,
-  DatabaseInspectionByEngine,
-  DatabaseEngine,
-  InspectDatabaseOptions,
-} from "@ccode/database";
+import * as OpenAPI from "@ccode/openapi";
+import * as Database from "@ccode/database";
 
 interface Context {
   println(message: string): void;
@@ -46,34 +30,39 @@ interface Context {
   parseJSONFromBytes(jsonBytes: number[]): Record<string, any>;
   parseJSONFromString(jsonString: string): Record<string, any>;
   parseJSONFromFile(filePath: string): Record<string, any>;
-  parseOpenAPIFromBytes(specBytes: number[]): OpenAPIDocument;
-  parseOpenAPIFromString(spec: string): OpenAPIDocument;
-  parseOpenAPIFromFile(filePath: string): OpenAPIDocument;
-  parseOpenAPIFromFile<V extends OpenAPIVersion>(
+  parseOpenAPIFromBytes(specBytes: number[]): OpenAPI.Document;
+  parseOpenAPIFromString(spec: string): OpenAPI.Document;
+  parseOpenAPIFromFile(filePath: string): OpenAPI.Document;
+  parseOpenAPIFromFile<V extends OpenAPI.Version>(
     filePath: string,
     options: { expectedVersion: V },
-  ): OpenAPIDocument<V>;
+  ): OpenAPI.Document<V>;
   inspectDatabase(
-    connectionURL: PostgreSQLConnectionURL,
-  ): PostgreSQLInspection;
-  inspectDatabase(connectionURL: MySQLConnectionURL): MySQLInspection;
-  inspectDatabase(connectionURL: MariaDBConnectionURL): MariaDBInspection;
-  inspectDatabase(connectionURL: SQLiteConnectionURL): SQLiteInspection;
-  inspectDatabase<Engine extends DatabaseEngine>(
+    connectionURL: Database.PostgreSQL.ConnectionURL,
+  ): Database.PostgreSQL.Inspection;
+  inspectDatabase(
+    connectionURL: Database.MySQL.ConnectionURL,
+  ): Database.MySQL.Inspection;
+  inspectDatabase(
+    connectionURL: Database.MariaDB.ConnectionURL,
+  ): Database.MariaDB.Inspection;
+  inspectDatabase(
+    connectionURL: Database.SQLite.ConnectionURL,
+  ): Database.SQLite.Inspection;
+  inspectDatabase<Engine extends Database.Engine>(
     connectionURL: string,
-    options: InspectDatabaseOptions<Engine>,
-  ): DatabaseInspectionByEngine[Engine];
-  inspectDatabase(connectionURL: string): DatabaseInspection;
+    options: Database.InspectOptions<Engine>,
+  ): Database.InspectionByEngine[Engine];
+  inspectDatabase(connectionURL: string): Database.Inspection;
 }
 ```
 
 Use the local generated `context.ts` as the final contract for the installed workspace version.
 
 General OpenAPI types are top-level exports from `@ccode/openapi`, including
-`OpenAPIVersion`, `OpenAPIDocument`, `OpenAPIDocumentByVersion`,
-`OpenAPIOperation`, `OpenAPIParameter`, `OpenAPIParameters`, and
-`OpenAPIRequest`. Version-specific declarations remain grouped under the
-`OpenAPIV3`, `OpenAPIV3_1`, and `OpenAPIV3_2` namespaces.
+`Version`, `Document`, `DocumentByVersion`, `Operation`, `Parameter`,
+`Parameters`, and `Request`. Normative version-specific declarations are
+ES modules exposed as `V3_0`, `V3_1`, and `V3_2`.
 
 ## println
 
@@ -151,7 +140,7 @@ their prefix:
 
 ```ts
 const database = ctx.inspectDatabase("postgresql://localhost/app");
-// PostgreSQLInspection
+// Database.PostgreSQL.Inspection
 ```
 
 For a connection URL held in a general `string`, provide `expectedEngine` when
@@ -163,7 +152,7 @@ const connectionURL: string = "mysql://user:password@localhost/app";
 const database = ctx.inspectDatabase(connectionURL, {
   expectedEngine: "mysql",
 });
-// MySQLInspection
+// Database.MySQL.Inspection
 ```
 
 The supported URL prefixes are `postgres://`, `postgresql://`, `mysql://`,
@@ -171,10 +160,10 @@ The supported URL prefixes are `postgres://`, `postgresql://`, `mysql://`,
 helpers are exported from `@ccode/database`:
 
 ```ts
-import { isSQLiteInspection } from "@ccode/database";
+import * as Database from "@ccode/database";
 
 const database = ctx.inspectDatabase(connectionURL);
-if (isSQLiteInspection(database)) {
+if (Database.SQLite.isInspection(database)) {
   ctx.println(database.databases[0]?.name ?? "no database");
 }
 ```

@@ -19,12 +19,18 @@ ccode/
     build/
     lib/
       context.ts
-      openapi.ts
-      database.ts
-      database-postgresql.ts
-      database-mysql.ts
-      database-mariadb.ts
-      database-sqlite.ts
+      openapi/
+        index.ts
+        types.ts
+        v3_0.ts
+        v3_1.ts
+        v3_2.ts
+      database/
+        index.ts
+        postgresql.ts
+        mysql.ts
+        mariadb.ts
+        sqlite.ts
 ```
 
 ## Important folders
