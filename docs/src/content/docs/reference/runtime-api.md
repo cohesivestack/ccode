@@ -61,8 +61,10 @@ Use the local generated `context.ts` as the final contract for the installed wor
 
 General OpenAPI types are top-level exports from `@ccode/openapi`, including
 `Version`, `Document`, `DocumentByVersion`, `Operation`, `Parameter`,
-`Parameters`, and `Request`. Normative version-specific declarations are
-ES modules exposed as `V3_0`, `V3_1`, and `V3_2`.
+`Parameters`, `Request`, `ReferenceLike`, and `ReferenceParts`. Normative
+version-specific declarations are ES modules exposed as `V3_0`, `V3_1`,
+and `V3_2`. The module also exports `isReference` and `parseReference` for
+working with preserved `$ref` values.
 
 ## println
 
@@ -131,6 +133,50 @@ if (countries?.$ref && countries.get) {
 ```
 
 Without `expectedVersion`, the return type is the union of supported OpenAPI document versions. With `expectedVersion`, the runtime verifies the document's `openapi` field and TypeScript returns the corresponding version-specific document type.
+
+## OpenAPI reference helpers
+
+`parseReference` extracts portable parts from a local OpenAPI reference
+without resolving or loading the referenced document:
+
+```ts
+export interface ReferenceLike {
+  readonly $ref: string;
+}
+
+export interface ReferenceParts {
+  readonly raw: string;
+  readonly document: string;
+  readonly directory: string;
+  readonly directorySegments: readonly string[];
+  readonly filename: string;
+  readonly documentName: string;
+  readonly fragment: string;
+}
+
+export function isReference(value: unknown): value is ReferenceLike;
+export function parseReference(
+  input: string | ReferenceLike,
+): ReferenceParts;
+```
+
+```ts
+import * as OpenAPI from "@ccode/openapi";
+
+const source = OpenAPI.parseReference(
+  "./paths/app/common/countries.yaml#/countries",
+);
+
+source.documentName; // "countries"
+source.directorySegments; // ["paths", "app", "common"]
+```
+
+Calculated path and fragment fields are percent-decoded, while `raw` and
+`document` preserve the original text. The helper accepts only the same local
+reference subset as file parsing: no URI scheme or host, protocol-relative
+remote reference, query string, malformed percent-encoding, or non-pointer
+fragment. It validates and describes the reference but does not resolve files
+or JSON Pointers.
 
 ## inspectDatabase
 

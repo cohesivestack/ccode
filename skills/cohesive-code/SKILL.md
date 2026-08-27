@@ -30,6 +30,7 @@ Use this workflow for processes, templates, OpenAPI or database inputs, generate
 - Keep process source, templates, specs, seed data, and instructions under `ccode_path`.
 - Export the required default process function and import `Context` from `@ccode/context`.
 - Parse each input once and normalize it into plain template data in TypeScript.
+- Import `* as OpenAPI` from `@ccode/openapi` and use `OpenAPI.parseReference` when a process needs the document and fragment parts of a preserved `$ref`.
 - Keep templates focused on presentation; move schema traversal, fallback naming, and branching decisions into TypeScript.
 - Use `ctx.generate(...)` only for files the generator may overwrite.
 - Use `ctx.accelerate(...)` for proposals that must preserve later human or agent edits.

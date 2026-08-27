@@ -107,4 +107,6 @@ ctx.parseOpenAPIFromString(spec)
 ctx.parseOpenAPIFromFile(filePath)
 ctx.inspectDatabase(connectionURL)
 ctx.inspectDatabase(connectionURL, { expectedEngine })
+OpenAPI.isReference(value)
+OpenAPI.parseReference(reference)
 ```

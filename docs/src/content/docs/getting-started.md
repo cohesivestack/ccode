@@ -45,6 +45,7 @@ ccode/
       context.ts
       openapi/
         index.ts
+        reference.ts
         types.ts
         v3_0.ts
         v3_1.ts

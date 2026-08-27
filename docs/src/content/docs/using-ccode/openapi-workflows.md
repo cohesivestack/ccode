@@ -28,6 +28,7 @@ Parse the spec once, reduce it to a template-friendly model, then generate outpu
 
 ```ts
 import type { Context } from "@ccode/context";
+import * as OpenAPI from "@ccode/openapi";
 
 type OperationView = {
   method: string;
@@ -53,6 +54,11 @@ export default function main(ctx: Context) {
         path,
         operationId: operation.operationId ?? fallbackOperationId(method, path),
       });
+
+      if (item.$ref) {
+        const source = OpenAPI.parseReference(item.$ref);
+        ctx.println(`loaded ${source.documentName} from ${source.directory}`);
+      }
     }
   }
 
@@ -68,6 +74,11 @@ function fallbackOperationId(method: string, path: string): string {
 ```
 
 Referenced Path Items are materialized without losing their source reference. For example, a Path Item declared as `$ref: ./paths/countries.yaml#/countries` exposes both `item.$ref` and resolved operations such as `item.get`. Generators can therefore infer the source file directly from `$ref`; no separate manifest or second parse is needed. Nested references, including schemas referenced from Path Item files, resolve automatically as well.
+
+Use `OpenAPI.isReference(value)` to narrow an unknown value with a string
+`$ref`, and `OpenAPI.parseReference(value)` to derive its decoded directory,
+filename, document name, and JSON Pointer fragment. This is a pure string
+helper; it does not load or resolve the referenced document.
 
 ## Pitfalls
 
