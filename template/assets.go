@@ -1,6 +1,11 @@
 package templateassets
 
-import _ "embed"
+import (
+	"embed"
+	"io/fs"
+	"sort"
+	"strings"
+)
 
 //go:embed ccode.yaml.tpl
 var ConfigTemplate string
@@ -8,26 +13,32 @@ var ConfigTemplate string
 //go:embed tsconfig.json
 var TSConfigTemplate string
 
-//go:embed context.ts
-var ContextTemplate string
-
-//go:embed openapi.ts
-var OpenAPITemplate string
-
-//go:embed database.ts
-var DatabaseTemplate string
-
-//go:embed database-postgresql.ts
-var DatabasePostgreSQLTemplate string
-
-//go:embed database-mysql.ts
-var DatabaseMySQLTemplate string
-
-//go:embed database-mariadb.ts
-var DatabaseMariaDBTemplate string
-
-//go:embed database-sqlite.ts
-var DatabaseSQLiteTemplate string
+// SupportFS contains the TypeScript support API installed under .ccode/lib.
+//
+//go:embed context.ts openapi database
+var SupportFS embed.FS
 
 //go:embed ccode.gitignore
 var HiddenGitIgnoreTemplate string
+
+// SupportFilePaths returns every embedded TypeScript support file in stable
+// path order.
+func SupportFilePaths() ([]string, error) {
+	paths := []string{}
+	err := fs.WalkDir(SupportFS, ".", func(path string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() || !strings.HasSuffix(path, ".ts") {
+			return nil
+		}
+		paths = append(paths, path)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	sort.Strings(paths)
+	return paths, nil
+}

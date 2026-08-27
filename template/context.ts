@@ -1,18 +1,5 @@
-import type {
-  DatabaseEngine,
-  DatabaseInspection,
-  DatabaseInspectionByEngine,
-  InspectDatabaseOptions,
-  MariaDBConnectionURL,
-  MariaDBInspection,
-  MySQLConnectionURL,
-  MySQLInspection,
-  PostgreSQLConnectionURL,
-  PostgreSQLInspection,
-  SQLiteConnectionURL,
-  SQLiteInspection,
-} from "./database";
-import type { OpenAPIDocument, OpenAPIVersion } from "./openapi";
+import type * as Database from "./database";
+import type * as OpenAPI from "./openapi";
 
 export interface Context {
   println: (message: string) => void;
@@ -29,22 +16,28 @@ export interface Context {
   parseJSONFromBytes: (jsonBytes: number[]) => Record<string, any>;
   parseJSONFromString: (jsonString: string) => Record<string, any>;
   parseJSONFromFile: (filePath: string) => Record<string, any>;
-  parseOpenAPIFromBytes: (specBytes: number[]) => OpenAPIDocument;
-  parseOpenAPIFromString: (spec: string) => OpenAPIDocument;
-  parseOpenAPIFromFile(filePath: string): OpenAPIDocument;
-  parseOpenAPIFromFile<V extends OpenAPIVersion>(
+  parseOpenAPIFromBytes: (specBytes: number[]) => OpenAPI.Document;
+  parseOpenAPIFromString: (spec: string) => OpenAPI.Document;
+  parseOpenAPIFromFile(filePath: string): OpenAPI.Document;
+  parseOpenAPIFromFile<V extends OpenAPI.Version>(
     filePath: string,
     options: { expectedVersion: V },
-  ): OpenAPIDocument<V>;
+  ): OpenAPI.Document<V>;
   inspectDatabase(
-    connectionURL: PostgreSQLConnectionURL,
-  ): PostgreSQLInspection;
-  inspectDatabase(connectionURL: MySQLConnectionURL): MySQLInspection;
-  inspectDatabase(connectionURL: MariaDBConnectionURL): MariaDBInspection;
-  inspectDatabase(connectionURL: SQLiteConnectionURL): SQLiteInspection;
-  inspectDatabase<Engine extends DatabaseEngine>(
+    connectionURL: Database.PostgreSQL.ConnectionURL,
+  ): Database.PostgreSQL.Inspection;
+  inspectDatabase(
+    connectionURL: Database.MySQL.ConnectionURL,
+  ): Database.MySQL.Inspection;
+  inspectDatabase(
+    connectionURL: Database.MariaDB.ConnectionURL,
+  ): Database.MariaDB.Inspection;
+  inspectDatabase(
+    connectionURL: Database.SQLite.ConnectionURL,
+  ): Database.SQLite.Inspection;
+  inspectDatabase<E extends Database.Engine>(
     connectionURL: string,
-    options: InspectDatabaseOptions<Engine>,
-  ): DatabaseInspectionByEngine[Engine];
-  inspectDatabase(connectionURL: string): DatabaseInspection;
+    options: Database.InspectOptions<E>,
+  ): Database.InspectionByEngine[E];
+  inspectDatabase(connectionURL: string): Database.Inspection;
 }

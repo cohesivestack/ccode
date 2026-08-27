@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 
+	templateassets "github.com/cohesivestack/ccode/template"
 	"github.com/dop251/goja"
 	"github.com/evanw/esbuild/pkg/api"
 )
@@ -60,13 +61,16 @@ func (ctx *Context) validateWorkspaceSupportFiles() error {
 	requiredPaths := []string{
 		ctx.config.CCodePath,
 		filepath.Join(ctx.config.CCodePath, "tsconfig.json"),
-		filepath.Join(ctx.config.HiddenPath, "lib", "context.ts"),
-		filepath.Join(ctx.config.HiddenPath, "lib", "openapi.ts"),
-		filepath.Join(ctx.config.HiddenPath, "lib", "database.ts"),
-		filepath.Join(ctx.config.HiddenPath, "lib", "database-postgresql.ts"),
-		filepath.Join(ctx.config.HiddenPath, "lib", "database-mysql.ts"),
-		filepath.Join(ctx.config.HiddenPath, "lib", "database-mariadb.ts"),
-		filepath.Join(ctx.config.HiddenPath, "lib", "database-sqlite.ts"),
+	}
+	supportFilePaths, err := templateassets.SupportFilePaths()
+	if err != nil {
+		return fmt.Errorf("list required support files: %w", err)
+	}
+	for _, path := range supportFilePaths {
+		requiredPaths = append(
+			requiredPaths,
+			filepath.Join(ctx.config.HiddenPath, "lib", filepath.FromSlash(path)),
+		)
 	}
 
 	missingPaths := []string{}

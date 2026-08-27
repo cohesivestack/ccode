@@ -98,6 +98,22 @@ func TestCompiler_CompileTypescript_RebuildsForChangedSources(t *testing.T) {
 	require.Contains(t, string(bundleContent), "second build")
 }
 
+func TestCompiler_SourceHashIncludesNestedSupportModules(t *testing.T) {
+	ctx, config, _, _ := setupLoaderTestProject(t, "TestCompiler_SourceHashIncludesNestedSupportModules")
+
+	initialHash, err := ctx.getSourceHash()
+	require.NoError(t, err)
+
+	supportPath := filepath.Join(config.HiddenPath, "lib", "openapi", "types.ts")
+	contents, err := os.ReadFile(supportPath)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(supportPath, append(contents, []byte("\n// changed support module\n")...), 0644))
+
+	updatedHash, err := ctx.getSourceHash()
+	require.NoError(t, err)
+	require.NotEqual(t, initialHash, updatedHash)
+}
+
 func setupLoaderTestProject(t *testing.T, folderName string) (*Context, *Config, string, string) {
 	t.Helper()
 

@@ -184,13 +184,7 @@ func TestDatabaseTypeScript_RunnerInspectsDatabaseAndUsesTypeGuards(t *testing.T
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
 	process := fmt.Sprintf(`import type { Context } from "@ccode/context";
-import type { DatabaseInspection } from "@ccode/database";
-import {
-  isMariaDBInspection,
-  isMySQLInspection,
-  isPostgreSQLInspection,
-  isSQLiteInspection,
-} from "@ccode/database";
+import * as Database from "@ccode/database";
 
 export default function main(ctx: Context) {
   const literalInspection = ctx.inspectDatabase(%q);
@@ -199,15 +193,19 @@ export default function main(ctx: Context) {
     expectedEngine: "sqlite",
   });
 
-  if (!isSQLiteInspection(dynamicInspection)) {
+  if (!Database.SQLite.isInspection(dynamicInspection)) {
     throw new Error("expected SQLite inspection");
   }
 
   const guardResults = [
-    isPostgreSQLInspection({ engine: "postgresql" } as DatabaseInspection),
-    isMySQLInspection({ engine: "mysql" } as DatabaseInspection),
-    isMariaDBInspection({ engine: "mariadb" } as DatabaseInspection),
-    isSQLiteInspection({ engine: "sqlite" } as DatabaseInspection),
+    Database.PostgreSQL.isInspection(
+      { engine: "postgresql" } as Database.Inspection,
+    ),
+    Database.MySQL.isInspection({ engine: "mysql" } as Database.Inspection),
+    Database.MariaDB.isInspection(
+      { engine: "mariadb" } as Database.Inspection,
+    ),
+    Database.SQLite.isInspection({ engine: "sqlite" } as Database.Inspection),
   ];
 
   ctx.println(JSON.stringify({

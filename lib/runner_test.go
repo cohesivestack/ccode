@@ -34,6 +34,17 @@ func TestRunner_RunFailsWhenWorkspaceSupportFilesAreMissing(t *testing.T) {
 	assert.Contains(t, err.Error(), filepath.Join(projectDir, DefaultHiddenFolderName, "lib", "context.ts"))
 }
 
+func TestRunner_RunRequiresNestedWorkspaceSupportFiles(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunRequiresNestedWorkspaceSupportFiles")
+	missingPath := filepath.Join(ctx.config.HiddenPath, "lib", "openapi", "v3_2.ts")
+	require.NoError(t, os.Remove(missingPath))
+
+	err := ctx.Run("x/generate")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "ccode workspace is not initialized or support files are missing")
+	assert.Contains(t, err.Error(), filepath.Join(projectDir, DefaultHiddenFolderName, "lib", "openapi", "v3_2.ts"))
+}
+
 func TestRunner_RunRecreatesMissingBuildCache(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunRecreatesMissingBuildCache")
 	processFile := filepath.Join(projectDir, "x", "generate.ts")
@@ -65,6 +76,51 @@ func TestRunner_RunExecutesDefaultExport(t *testing.T) {
 
 	require.NoError(t, ctx.Run("x/generate"))
 	assert.Equal(t, "runner executed\n", output.String())
+}
+
+func TestRunner_RunBundlesPublicSupportModules(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunBundlesPublicSupportModules")
+	processFile := filepath.Join(projectDir, "x", "support-modules.ts")
+
+	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
+	require.NoError(t, os.WriteFile(processFile, []byte(`import type { Context } from "@ccode/context";
+import * as OpenAPI from "@ccode/openapi";
+import * as Database from "@ccode/database";
+
+export default function main(ctx: Context) {
+  const document: OpenAPI.Document<"3.1"> = ctx.parseOpenAPIFromString(
+    '{"openapi":"3.1.0","info":{"title":"Example","version":"1.0.0"},"paths":{}}',
+  );
+  const operation: OpenAPI.Operation = {
+    responses: { default: { description: "ok" } },
+  };
+  const versionSpecific: OpenAPI.V3_1.Document = document;
+  const inspection: Database.Inspection =
+    ctx.inspectDatabase("sqlite://:memory:");
+  const sqlite: Database.SQLite.Inspection =
+    ctx.inspectDatabase("sqlite://:memory:");
+
+  ctx.println(JSON.stringify({
+    version: versionSpecific.openapi,
+    method: OpenAPI.V3_0.HttpMethods.GET,
+    responseCount: Object.keys(operation.responses).length,
+    inspectionEngine: inspection.engine,
+    sqlite: Database.SQLite.isInspection(sqlite),
+  }));
+}
+`), 0644))
+
+	var output bytes.Buffer
+	ctx.stdout = &output
+
+	require.NoError(t, ctx.Run("x/support-modules"))
+	assert.JSONEq(t, `{
+		"version": "3.1.0",
+		"method": "get",
+		"responseCount": 1,
+		"inspectionEngine": "sqlite",
+		"sqlite": true
+	}`, output.String())
 }
 
 func TestRunner_RunRendersTemplates(t *testing.T) {

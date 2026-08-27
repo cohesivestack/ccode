@@ -92,6 +92,13 @@ func Init(projectPath string, configPath string, version string) error {
 		return fmt.Errorf("create %s: %w", buildPath, err)
 	}
 
+	if err := removeObsoleteSupportFiles(hiddenLibPath); err != nil {
+		return err
+	}
+	if err := installSupportFiles(hiddenLibPath); err != nil {
+		return err
+	}
+
 	configContents, err := renderConfigTemplate(options.ProjectPath, options.Version)
 	if err != nil {
 		return err
@@ -104,13 +111,6 @@ func Init(projectPath string, configPath string, version string) error {
 	}{
 		{path: options.ConfigPath, contents: configContents, name: "config file"},
 		{path: filepath.Join(hiddenPath, ".gitignore"), contents: templateassets.HiddenGitIgnoreTemplate, name: ".ccode gitignore"},
-		{path: filepath.Join(hiddenLibPath, "context.ts"), contents: templateassets.ContextTemplate, name: "context template", overwrite: true},
-		{path: filepath.Join(hiddenLibPath, "openapi.ts"), contents: templateassets.OpenAPITemplate, name: "openapi template", overwrite: true},
-		{path: filepath.Join(hiddenLibPath, "database.ts"), contents: templateassets.DatabaseTemplate, name: "database.ts template", overwrite: true},
-		{path: filepath.Join(hiddenLibPath, "database-postgresql.ts"), contents: templateassets.DatabasePostgreSQLTemplate, name: "database-postgresql.ts template", overwrite: true},
-		{path: filepath.Join(hiddenLibPath, "database-mysql.ts"), contents: templateassets.DatabaseMySQLTemplate, name: "database-mysql.ts template", overwrite: true},
-		{path: filepath.Join(hiddenLibPath, "database-mariadb.ts"), contents: templateassets.DatabaseMariaDBTemplate, name: "database-mariadb.ts template", overwrite: true},
-		{path: filepath.Join(hiddenLibPath, "database-sqlite.ts"), contents: templateassets.DatabaseSQLiteTemplate, name: "database-sqlite.ts template", overwrite: true},
 		{path: filepath.Join(workspacePath, "tsconfig.json"), contents: templateassets.TSConfigTemplate, name: "tsconfig"},
 	} {
 		writeAsset := writeFileIfMissing
@@ -125,6 +125,58 @@ func Init(projectPath string, configPath string, version string) error {
 		return err
 	}
 
+	return nil
+}
+
+var obsoleteSupportFileNames = []string{
+	"openapi.ts",
+	"database.ts",
+	"database-postgresql.ts",
+	"database-mysql.ts",
+	"database-mariadb.ts",
+	"database-sqlite.ts",
+}
+
+func installSupportFiles(hiddenLibPath string) error {
+	paths, err := templateassets.SupportFilePaths()
+	if err != nil {
+		return fmt.Errorf("list embedded support files: %w", err)
+	}
+
+	for _, path := range paths {
+		contents, err := templateassets.SupportFS.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("read embedded support file %s: %w", path, err)
+		}
+		if err := writeFile(
+			filepath.Join(hiddenLibPath, filepath.FromSlash(path)),
+			string(contents),
+			fmt.Sprintf("%s support file", path),
+		); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func removeObsoleteSupportFiles(hiddenLibPath string) error {
+	for _, name := range obsoleteSupportFileNames {
+		path := filepath.Join(hiddenLibPath, name)
+		info, err := os.Lstat(path)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil {
+			return fmt.Errorf("inspect obsolete support file %s: %w", path, err)
+		}
+		if !info.Mode().IsRegular() {
+			continue
+		}
+		if err := os.Remove(path); err != nil {
+			return fmt.Errorf("remove obsolete support file %s: %w", path, err)
+		}
+	}
 	return nil
 }
 

@@ -1,32 +1,36 @@
-export interface MySQLInspection {
-  engine: "mysql";
-  databases: MySQLDatabase[];
-  relationships: MySQLRelationship[];
+export type ConnectionURL =
+  | `maria://${string}`
+  | `mariadb://${string}`;
+
+export interface Inspection {
+  engine: "mariadb";
+  databases: Database[];
+  relationships: Relationship[];
 }
 
-export interface MySQLDatabase {
+export interface Database {
   name: string;
   characterSet?: string;
   collation?: string;
-  tables: MySQLTable[];
+  tables: Table[];
 }
 
-export interface MySQLTable {
+export interface Table {
   name: string;
   storageEngine: string;
   characterSet?: string;
   collation?: string;
   comment?: string;
-  columns: MySQLColumn[];
-  primaryKey?: MySQLPrimaryKey;
-  indexes: MySQLIndex[];
-  foreignKeys: MySQLForeignKey[];
+  columns: Column[];
+  primaryKey?: PrimaryKey;
+  indexes: Index[];
+  foreignKeys: ForeignKey[];
 }
 
-export interface MySQLColumn {
+export interface Column {
   name: string;
   position: number;
-  type: MySQLType;
+  type: Type;
   nullable: boolean;
   defaultExpression?: string;
   generatedExpression?: string;
@@ -36,7 +40,7 @@ export interface MySQLColumn {
   comment?: string;
 }
 
-export interface MySQLType {
+export interface Type {
   name: string;
   nativeType: string;
   length?: number;
@@ -47,56 +51,63 @@ export interface MySQLType {
   setValues?: string[];
 }
 
-export interface MySQLPrimaryKey {
+export interface PrimaryKey {
   name?: string;
   columns: string[];
 }
 
-export interface MySQLIndex {
+export interface Index {
   name: string;
   unique: boolean;
   kind: "btree" | "hash" | "fulltext" | "spatial" | "other";
-  parts: MySQLIndexPart[];
-  visible: boolean;
+  parts: IndexPart[];
+  ignored: boolean;
 }
 
-export interface MySQLIndexPart {
+export interface IndexPart {
   column?: string;
   expression?: string;
   prefixLength?: number;
   descending: boolean;
 }
 
-export interface MySQLForeignKey {
+export interface ForeignKey {
   name?: string;
-  columns: MySQLForeignKeyColumn[];
-  referencedTable: MySQLTableReference;
-  onUpdate: MySQLReferentialAction;
-  onDelete: MySQLReferentialAction;
+  columns: ForeignKeyColumn[];
+  referencedTable: TableReference;
+  onUpdate: ReferentialAction;
+  onDelete: ReferentialAction;
 }
 
-export interface MySQLForeignKeyColumn {
+export interface ForeignKeyColumn {
   column: string;
   referencedColumn: string;
 }
 
-export interface MySQLTableReference {
+export interface TableReference {
   database: string;
   table: string;
 }
 
-export type MySQLReferentialAction =
+export type ReferentialAction =
   | "no-action"
   | "restrict"
   | "cascade"
   | "set-null";
 
-export interface MySQLRelationship {
-  fromTable: MySQLTableReference;
+export interface Relationship {
+  fromTable: TableReference;
   fromColumns: string[];
-  toTable: MySQLTableReference;
+  toTable: TableReference;
   toColumns: string[];
   foreignKey?: string;
   cardinality: "many-to-one" | "one-to-one";
   optional: boolean;
 }
+
+export function isInspection(
+  inspection: { engine: string },
+): inspection is Inspection {
+  return inspection.engine === "mariadb";
+}
+

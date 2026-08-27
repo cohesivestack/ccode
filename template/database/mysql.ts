@@ -1,32 +1,34 @@
-export interface MariaDBInspection {
-  engine: "mariadb";
-  databases: MariaDBDatabase[];
-  relationships: MariaDBRelationship[];
+export type ConnectionURL = `mysql://${string}`;
+
+export interface Inspection {
+  engine: "mysql";
+  databases: Database[];
+  relationships: Relationship[];
 }
 
-export interface MariaDBDatabase {
+export interface Database {
   name: string;
   characterSet?: string;
   collation?: string;
-  tables: MariaDBTable[];
+  tables: Table[];
 }
 
-export interface MariaDBTable {
+export interface Table {
   name: string;
   storageEngine: string;
   characterSet?: string;
   collation?: string;
   comment?: string;
-  columns: MariaDBColumn[];
-  primaryKey?: MariaDBPrimaryKey;
-  indexes: MariaDBIndex[];
-  foreignKeys: MariaDBForeignKey[];
+  columns: Column[];
+  primaryKey?: PrimaryKey;
+  indexes: Index[];
+  foreignKeys: ForeignKey[];
 }
 
-export interface MariaDBColumn {
+export interface Column {
   name: string;
   position: number;
-  type: MariaDBType;
+  type: Type;
   nullable: boolean;
   defaultExpression?: string;
   generatedExpression?: string;
@@ -36,7 +38,7 @@ export interface MariaDBColumn {
   comment?: string;
 }
 
-export interface MariaDBType {
+export interface Type {
   name: string;
   nativeType: string;
   length?: number;
@@ -47,56 +49,63 @@ export interface MariaDBType {
   setValues?: string[];
 }
 
-export interface MariaDBPrimaryKey {
+export interface PrimaryKey {
   name?: string;
   columns: string[];
 }
 
-export interface MariaDBIndex {
+export interface Index {
   name: string;
   unique: boolean;
   kind: "btree" | "hash" | "fulltext" | "spatial" | "other";
-  parts: MariaDBIndexPart[];
-  ignored: boolean;
+  parts: IndexPart[];
+  visible: boolean;
 }
 
-export interface MariaDBIndexPart {
+export interface IndexPart {
   column?: string;
   expression?: string;
   prefixLength?: number;
   descending: boolean;
 }
 
-export interface MariaDBForeignKey {
+export interface ForeignKey {
   name?: string;
-  columns: MariaDBForeignKeyColumn[];
-  referencedTable: MariaDBTableReference;
-  onUpdate: MariaDBReferentialAction;
-  onDelete: MariaDBReferentialAction;
+  columns: ForeignKeyColumn[];
+  referencedTable: TableReference;
+  onUpdate: ReferentialAction;
+  onDelete: ReferentialAction;
 }
 
-export interface MariaDBForeignKeyColumn {
+export interface ForeignKeyColumn {
   column: string;
   referencedColumn: string;
 }
 
-export interface MariaDBTableReference {
+export interface TableReference {
   database: string;
   table: string;
 }
 
-export type MariaDBReferentialAction =
+export type ReferentialAction =
   | "no-action"
   | "restrict"
   | "cascade"
   | "set-null";
 
-export interface MariaDBRelationship {
-  fromTable: MariaDBTableReference;
+export interface Relationship {
+  fromTable: TableReference;
   fromColumns: string[];
-  toTable: MariaDBTableReference;
+  toTable: TableReference;
   toColumns: string[];
   foreignKey?: string;
   cardinality: "many-to-one" | "one-to-one";
   optional: boolean;
 }
+
+export function isInspection(
+  inspection: { engine: string },
+): inspection is Inspection {
+  return inspection.engine === "mysql";
+}
+

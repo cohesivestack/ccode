@@ -29,29 +29,18 @@ func TestInitializer_InitCreatesProjectStructure(t *testing.T) {
 	hiddenPath := filepath.Join(projectPath, DefaultHiddenFolderName)
 	hiddenGitIgnorePath := filepath.Join(hiddenPath, ".gitignore")
 	buildPath := filepath.Join(hiddenPath, "build")
-	contextPath := filepath.Join(hiddenPath, "lib", "context.ts")
-	openapiPath := filepath.Join(hiddenPath, "lib", "openapi.ts")
-	databasePath := filepath.Join(hiddenPath, "lib", "database.ts")
-	databasePostgreSQLPath := filepath.Join(hiddenPath, "lib", "database-postgresql.ts")
-	databaseMySQLPath := filepath.Join(hiddenPath, "lib", "database-mysql.ts")
-	databaseMariaDBPath := filepath.Join(hiddenPath, "lib", "database-mariadb.ts")
-	databaseSQLitePath := filepath.Join(hiddenPath, "lib", "database-sqlite.ts")
 	tsconfigPath := filepath.Join(projectPath, "tsconfig.json")
 
 	require.DirExists(t, projectPath)
 	require.DirExists(t, hiddenPath)
 	require.DirExists(t, filepath.Join(hiddenPath, "lib"))
+	require.DirExists(t, filepath.Join(hiddenPath, "lib", "openapi"))
+	require.DirExists(t, filepath.Join(hiddenPath, "lib", "database"))
 	require.DirExists(t, buildPath)
 	require.FileExists(t, configPath)
 	require.FileExists(t, hiddenGitIgnorePath)
-	require.FileExists(t, contextPath)
-	require.FileExists(t, openapiPath)
-	require.FileExists(t, databasePath)
-	require.FileExists(t, databasePostgreSQLPath)
-	require.FileExists(t, databaseMySQLPath)
-	require.FileExists(t, databaseMariaDBPath)
-	require.FileExists(t, databaseSQLitePath)
 	require.FileExists(t, tsconfigPath)
+	assertInstalledSupportFiles(t, filepath.Join(hiddenPath, "lib"))
 
 	configContent, err := os.ReadFile(configPath)
 	require.NoError(t, err)
@@ -61,34 +50,6 @@ func TestInitializer_InitCreatesProjectStructure(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, templateassets.HiddenGitIgnoreTemplate, string(hiddenGitIgnoreContent))
 	assert.Contains(t, string(hiddenGitIgnoreContent), "!accelerators/**")
-
-	contextContent, err := os.ReadFile(contextPath)
-	require.NoError(t, err)
-	assert.Equal(t, templateassets.ContextTemplate, string(contextContent))
-
-	openapiContent, err := os.ReadFile(openapiPath)
-	require.NoError(t, err)
-	assert.Equal(t, templateassets.OpenAPITemplate, string(openapiContent))
-
-	databaseContent, err := os.ReadFile(databasePath)
-	require.NoError(t, err)
-	assert.Equal(t, templateassets.DatabaseTemplate, string(databaseContent))
-
-	databasePostgreSQLContent, err := os.ReadFile(databasePostgreSQLPath)
-	require.NoError(t, err)
-	assert.Equal(t, templateassets.DatabasePostgreSQLTemplate, string(databasePostgreSQLContent))
-
-	databaseMySQLContent, err := os.ReadFile(databaseMySQLPath)
-	require.NoError(t, err)
-	assert.Equal(t, templateassets.DatabaseMySQLTemplate, string(databaseMySQLContent))
-
-	databaseMariaDBContent, err := os.ReadFile(databaseMariaDBPath)
-	require.NoError(t, err)
-	assert.Equal(t, templateassets.DatabaseMariaDBTemplate, string(databaseMariaDBContent))
-
-	databaseSQLiteContent, err := os.ReadFile(databaseSQLitePath)
-	require.NoError(t, err)
-	assert.Equal(t, templateassets.DatabaseSQLiteTemplate, string(databaseSQLiteContent))
 
 	tsconfigContent, err := os.ReadFile(tsconfigPath)
 	require.NoError(t, err)
@@ -107,33 +68,26 @@ func TestInitializer_InitRefreshesGeneratedSupportFilesAndPreservesUserFiles(t *
 
 	projectPath := filepath.Join(tmp, "ccode")
 	hiddenPath := filepath.Join(projectPath, DefaultHiddenFolderName)
-	hiddenLibPath := filepath.Join(projectPath, DefaultHiddenFolderName, "lib")
+	hiddenLibPath := filepath.Join(hiddenPath, "lib")
 	configPath := filepath.Join(tmp, DefaultConfigFileName)
 	hiddenGitIgnorePath := filepath.Join(hiddenPath, ".gitignore")
-	contextPath := filepath.Join(hiddenLibPath, "context.ts")
-	openapiPath := filepath.Join(hiddenLibPath, "openapi.ts")
-	databasePath := filepath.Join(hiddenLibPath, "database.ts")
-	databasePostgreSQLPath := filepath.Join(hiddenLibPath, "database-postgresql.ts")
-	databaseMySQLPath := filepath.Join(hiddenLibPath, "database-mysql.ts")
-	databaseMariaDBPath := filepath.Join(hiddenLibPath, "database-mariadb.ts")
-	databaseSQLitePath := filepath.Join(hiddenLibPath, "database-sqlite.ts")
-	buildPath := filepath.Join(projectPath, DefaultHiddenFolderName, "build")
+	buildPath := filepath.Join(hiddenPath, "build")
 	buildCachePath := filepath.Join(buildPath, "process.old.js")
-	statePath := filepath.Join(projectPath, DefaultHiddenFolderName, "accelerators", "generate-api", "handlers.go.accelerated.json")
+	statePath := filepath.Join(hiddenPath, "accelerators", "generate-api", "handlers.go.accelerated.json")
+	userSupportPath := filepath.Join(hiddenLibPath, "custom.ts")
 	tsconfigPath := filepath.Join(projectPath, "tsconfig.json")
 
-	require.NoError(t, os.MkdirAll(hiddenLibPath, 0755))
+	require.NoError(t, os.MkdirAll(filepath.Join(hiddenLibPath, "openapi"), 0755))
 	require.NoError(t, os.MkdirAll(buildPath, 0755))
 	require.NoError(t, os.MkdirAll(filepath.Dir(statePath), 0755))
 	require.NoError(t, os.WriteFile(configPath, []byte("ccode_path: ccode\nversion: v0.1.0\n"), 0644))
 	require.NoError(t, os.WriteFile(hiddenGitIgnorePath, []byte("custom ignore"), 0644))
-	require.NoError(t, os.WriteFile(contextPath, []byte("existing context"), 0644))
-	require.NoError(t, os.WriteFile(openapiPath, []byte("existing openapi"), 0644))
-	require.NoError(t, os.WriteFile(databasePath, []byte("existing database"), 0644))
-	require.NoError(t, os.WriteFile(databasePostgreSQLPath, []byte("existing postgresql"), 0644))
-	require.NoError(t, os.WriteFile(databaseMySQLPath, []byte("existing mysql"), 0644))
-	require.NoError(t, os.WriteFile(databaseMariaDBPath, []byte("existing mariadb"), 0644))
-	require.NoError(t, os.WriteFile(databaseSQLitePath, []byte("existing sqlite"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(hiddenLibPath, "context.ts"), []byte("stale context"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(hiddenLibPath, "openapi", "index.ts"), []byte("stale openapi"), 0644))
+	require.NoError(t, os.WriteFile(userSupportPath, []byte("user owned"), 0644))
+	for _, name := range obsoleteSupportFileNames {
+		require.NoError(t, os.WriteFile(filepath.Join(hiddenLibPath, name), []byte("obsolete generated support"), 0644))
+	}
 	require.NoError(t, os.WriteFile(buildCachePath, []byte("cached bundle"), 0644))
 	require.NoError(t, os.WriteFile(statePath, []byte(`{"pending":true,"instructions":"","accelerated_checksum":"sha256:test","instructions_checksum":"","code":"dGVzdA=="}`+"\n"), 0644))
 	require.NoError(t, os.WriteFile(tsconfigPath, []byte(`{"existing":true}`), 0644))
@@ -150,34 +104,14 @@ func TestInitializer_InitRefreshesGeneratedSupportFilesAndPreservesUserFiles(t *
 	configContent, err := os.ReadFile(configPath)
 	require.NoError(t, err)
 	assert.Equal(t, "ccode_path: ccode\nversion: v1.2.3\n", string(configContent))
+	assertInstalledSupportFiles(t, hiddenLibPath)
 
-	contextContent, err := os.ReadFile(contextPath)
+	for _, name := range obsoleteSupportFileNames {
+		assert.NoFileExists(t, filepath.Join(hiddenLibPath, name))
+	}
+	userSupportContent, err := os.ReadFile(userSupportPath)
 	require.NoError(t, err)
-	assert.Equal(t, templateassets.ContextTemplate, string(contextContent))
-
-	openapiContent, err := os.ReadFile(openapiPath)
-	require.NoError(t, err)
-	assert.Equal(t, templateassets.OpenAPITemplate, string(openapiContent))
-
-	databaseContent, err := os.ReadFile(databasePath)
-	require.NoError(t, err)
-	assert.Equal(t, templateassets.DatabaseTemplate, string(databaseContent))
-
-	databasePostgreSQLContent, err := os.ReadFile(databasePostgreSQLPath)
-	require.NoError(t, err)
-	assert.Equal(t, templateassets.DatabasePostgreSQLTemplate, string(databasePostgreSQLContent))
-
-	databaseMySQLContent, err := os.ReadFile(databaseMySQLPath)
-	require.NoError(t, err)
-	assert.Equal(t, templateassets.DatabaseMySQLTemplate, string(databaseMySQLContent))
-
-	databaseMariaDBContent, err := os.ReadFile(databaseMariaDBPath)
-	require.NoError(t, err)
-	assert.Equal(t, templateassets.DatabaseMariaDBTemplate, string(databaseMariaDBContent))
-
-	databaseSQLiteContent, err := os.ReadFile(databaseSQLitePath)
-	require.NoError(t, err)
-	assert.Equal(t, templateassets.DatabaseSQLiteTemplate, string(databaseSQLiteContent))
+	assert.Equal(t, "user owned", string(userSupportContent))
 
 	hiddenGitIgnoreContent, err := os.ReadFile(hiddenGitIgnorePath)
 	require.NoError(t, err)
@@ -211,4 +145,32 @@ func TestInitializer_InitAddsVersionToExistingConfig(t *testing.T) {
 	configContent, err := os.ReadFile(configPath)
 	require.NoError(t, err)
 	assert.Equal(t, "ccode_path: ccode\nversion: v1.2.3\n", string(configContent))
+}
+
+func assertInstalledSupportFiles(t *testing.T, hiddenLibPath string) {
+	t.Helper()
+
+	paths, err := templateassets.SupportFilePaths()
+	require.NoError(t, err)
+	assert.Equal(t, []string{
+		"context.ts",
+		"database/index.ts",
+		"database/mariadb.ts",
+		"database/mysql.ts",
+		"database/postgresql.ts",
+		"database/sqlite.ts",
+		"openapi/index.ts",
+		"openapi/types.ts",
+		"openapi/v3_0.ts",
+		"openapi/v3_1.ts",
+		"openapi/v3_2.ts",
+	}, paths)
+
+	for _, path := range paths {
+		embedded, err := templateassets.SupportFS.ReadFile(path)
+		require.NoError(t, err)
+		installed, err := os.ReadFile(filepath.Join(hiddenLibPath, filepath.FromSlash(path)))
+		require.NoError(t, err)
+		assert.Equal(t, embedded, installed, path)
+	}
 }
