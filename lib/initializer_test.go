@@ -160,6 +160,7 @@ func assertInstalledSupportFiles(t *testing.T, hiddenLibPath string) {
 		"database/postgresql.ts",
 		"database/sqlite.ts",
 		"openapi/index.ts",
+		"openapi/reference.ts",
 		"openapi/types.ts",
 		"openapi/v3_0.ts",
 		"openapi/v3_1.ts",
