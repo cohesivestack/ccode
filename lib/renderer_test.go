@@ -47,6 +47,24 @@ func TestRenderer_RenderTemplateUsesConfigCCodePath(t *testing.T) {
 	assert.Equal(t, "Hello Carlos!", rendered)
 }
 
+func TestRenderer_PreservesValidationAndTemplatePathErrors(t *testing.T) {
+	_, err := (&RunnerContext{}).renderTemplate("templates/greeting.tpl", nil)
+	require.EqualError(t, err, "context config is required")
+
+	ctx := newRunnerTemplateTestContext(t)
+	_, err = ctx.renderTemplate(" ", nil)
+	require.EqualError(t, err, "template path is required")
+
+	_, err = ctx.renderTemplate("templates/missing.tpl", nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "create template loader:")
+
+	require.NoError(t, os.MkdirAll(ctx.ccodeContext.config.CCodePath, 0755))
+	_, err = ctx.renderTemplate("templates/missing.tpl", nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), `parse template "templates/missing.tpl"`)
+}
+
 func newRunnerTemplateTestContext(t *testing.T) *RunnerContext {
 	t.Helper()
 

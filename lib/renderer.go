@@ -28,7 +28,12 @@ func (ctx *RunnerContext) renderTemplate(templatePath string, data any) (string,
 		"data": data,
 	})
 
-	tmpl, err := exec.NewTemplate(filepath.Clean(templatePath), gonja.NewConfig(), loader, gonja.DefaultEnvironment)
+	environment, err := cohesiveTemplateEnvironment()
+	if err != nil {
+		return "", fmt.Errorf("create template environment: %w", err)
+	}
+
+	tmpl, err := exec.NewTemplate(filepath.Clean(templatePath), gonja.NewConfig(), loader, environment)
 	if err != nil {
 		return "", fmt.Errorf("parse template %q: %w", templatePath, err)
 	}
