@@ -10,7 +10,10 @@ description: Work with Cohesive Code (`ccode`) workspaces end to end, including 
 1. Locate the applicable `ccode.yaml`; honor an explicit `--config` path.
 2. Read the configuration before editing or running anything. Resolve `ccode_path`, `output_path`, `hidden_path`, and `version`, including overrides in the request.
 3. Inspect existing inputs, targets, and Git status so project changes remain distinct from generated changes and pre-existing work.
-4. Inspect `<ccode_path>/.ccode/lib/context.ts` when runtime API details matter.
+4. Inspect the generated modules under `<ccode_path>/.ccode/lib/` when runtime
+   API details matter. Use `context.ts` for `Context`; use the public module
+   declarations for imports such as `@ccode/openapi`, `@ccode/database`,
+   `@ccode/string`, and `@ccode/go`. Do not import `internal/` modules.
 5. Read `docs/src/content/docs/ai-skill-index.md`, then load only the pages it identifies for the task.
 
 If local docs are unavailable, retrieve the matching Markdown from `https://raw.githubusercontent.com/cohesivestack/ccode/master/docs/src/content/docs/`. Prefer sources in this order: generated local types, checked-out implementation and CLI output, local docs, then older examples. Use the official `https://github.com/OAI/OpenAPI-Specification` reference only when local types and docs do not answer an OpenAPI schema question.
@@ -31,7 +34,22 @@ Use this workflow for processes, templates, OpenAPI or database inputs, generate
 - Export the required default process function and import `Context` from `@ccode/context`.
 - Parse each input once and normalize it into plain template data in TypeScript.
 - Import `* as OpenAPI` from `@ccode/openapi` and use `OpenAPI.parseReference` when a process needs the document and fragment parts of a preserved `$ref`.
+- Import `* as Strings` from `@ccode/string` for general case and whitespace
+  transformations. Import `* as Go` from `@ccode/go` for valid exported,
+  unexported, or package names; do not recreate these transformations locally.
+- Pass an initialism list to `Strings.camelCase`, `Strings.pascalCase`,
+  `Strings.titleCase`, or `Strings.sentenceCase` when exact spellings such as
+  `OpenAPI` or `GraphQL` must be preserved. Generic string helpers have no
+  built-in initialisms. Go identifier helpers include the conventional Go
+  initialisms; custom values extend that set and can override a default
+  spelling.
 - Keep templates focused on presentation; move schema traversal, fallback naming, and branching decisions into TypeScript.
+- For presentation-level naming in Gonja, use the built-in Cohesive Code filters
+  (`camelCase`, `pascalCase`, `snakeCase`, `kebabCase`, `constantCase`,
+  `dotCase`, `pathCase`, `titleCase`, `sentenceCase`, `upperFirst`,
+  `lowerFirst`, `normalizeSpace`, `goExported`, `goUnexported`, and
+  `goPackage`). Only the case filters and Go identifier filters documented as
+  initialism-aware accept `initialisms=[...]`, and it is a keyword argument.
 - Use `ctx.generate(...)` only for files the generator may overwrite.
 - Use `ctx.accelerate(...)` for proposals that must preserve later human or agent edits.
 - Use stable artifact IDs. Call `ctx.setScope(...)` when the process filename is not a durable state namespace.
