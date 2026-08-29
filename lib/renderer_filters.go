@@ -160,23 +160,35 @@ func templateFilterInitialisms(params *exec.VarArgs) ([]string, error) {
 		return nil, fmt.Errorf("%q must be a list of strings", "initialisms")
 	}
 
-	initialisms := make([]string, 0, value.Len())
-	var validationErr error
-	value.Iterate(func(index, _ int, item, _ *exec.Value) bool {
+	values := make([]initialismValue, 0, value.Len())
+	value.Iterate(func(_ int, _ int, item, _ *exec.Value) bool {
 		if item == nil || !item.IsString() {
-			validationErr = fmt.Errorf("initialisms[%d] must be a string", index)
-			return false
+			values = append(values, initialismValue{})
+		} else {
+			values = append(values, initialismValue{text: item.String(), isString: true})
 		}
-		if isStringBlank(item.String()) {
-			validationErr = fmt.Errorf("initialisms[%d] must not be blank", index)
-			return false
-		}
-
-		initialisms = append(initialisms, item.String())
 		return true
 	}, func() {})
-	if validationErr != nil {
-		return nil, validationErr
+
+	return parseInitialisms(values)
+}
+
+type initialismValue struct {
+	text     string
+	isString bool
+}
+
+func parseInitialisms(values []initialismValue) ([]string, error) {
+	initialisms := make([]string, 0, len(values))
+	for index, value := range values {
+		if !value.isString {
+			return nil, fmt.Errorf("initialisms[%d] must be a string", index)
+		}
+		if isStringBlank(value.text) {
+			return nil, fmt.Errorf("initialisms[%d] must not be blank", index)
+		}
+
+		initialisms = append(initialisms, value.text)
 	}
 
 	return initialisms, nil

@@ -128,6 +128,10 @@ func (ctx *Context) executeRunnerBundle(outputFiles []api.OutputFile, defaultSco
 	}
 
 	runtime := goja.New()
+	if err := installRunnerNativeUtilities(runtime); err != nil {
+		return err
+	}
+
 	module := runtime.NewObject()
 	exports := runtime.NewObject()
 	if err := module.Set("exports", exports); err != nil {

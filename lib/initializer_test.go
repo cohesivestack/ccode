@@ -159,12 +159,15 @@ func assertInstalledSupportFiles(t *testing.T, hiddenLibPath string) {
 		"database/mysql.ts",
 		"database/postgresql.ts",
 		"database/sqlite.ts",
+		"go/index.ts",
+		"internal/native.ts",
 		"openapi/index.ts",
 		"openapi/reference.ts",
 		"openapi/types.ts",
 		"openapi/v3_0.ts",
 		"openapi/v3_1.ts",
 		"openapi/v3_2.ts",
+		"string/index.ts",
 	}, paths)
 
 	for _, path := range paths {

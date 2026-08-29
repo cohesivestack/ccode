@@ -78,6 +78,122 @@ func TestRunner_RunExecutesDefaultExport(t *testing.T) {
 	assert.Equal(t, "runner executed\n", output.String())
 }
 
+func TestRunner_RunBundlesPublicUtilityModulesAtModuleInitialization(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunBundlesPublicUtilityModulesAtModuleInitialization")
+	processFile := filepath.Join(projectDir, "x", "utility-modules.ts")
+
+	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
+	require.NoError(t, os.WriteFile(processFile, []byte(`import type { Context } from "@ccode/context";
+import * as Go from "@ccode/go";
+import * as Strings from "@ccode/string";
+
+const results = {
+  camelCase: Strings.camelCase("hello world"),
+  pascalCase: Strings.pascalCase("hello world"),
+  snakeCase: Strings.snakeCase("hello world"),
+  kebabCase: Strings.kebabCase("hello world"),
+  constantCase: Strings.constantCase("hello world"),
+  dotCase: Strings.dotCase("hello world"),
+  pathCase: Strings.pathCase("hello world"),
+  titleCase: Strings.titleCase("hello world"),
+  sentenceCase: Strings.sentenceCase("hello world"),
+  upperFirst: Strings.upperFirst("hello world"),
+  lowerFirst: Strings.lowerFirst("Hello World"),
+  normalizeSpace: Strings.normalizeSpace("  hello   world  "),
+  goExported: Go.toExportedIdentifier("user id", ["ID"]),
+  goUnexported: Go.toUnexportedIdentifier("user id", ["ID"]),
+  goPackage: Go.toPackageName("HTTP Utils"),
+};
+
+export default function main(ctx: Context) {
+  if ("go" in (ctx as any) || "string" in (ctx as any)) {
+    throw new Error("native utilities must not be installed on Context");
+  }
+  ctx.println(JSON.stringify(results));
+}
+`), 0644))
+
+	var output bytes.Buffer
+	ctx.stdout = &output
+
+	require.NoError(t, ctx.Run("x/utility-modules"))
+	assert.JSONEq(t, `{
+		"camelCase": "helloWorld",
+		"pascalCase": "HelloWorld",
+		"snakeCase": "hello_world",
+		"kebabCase": "hello-world",
+		"constantCase": "HELLO_WORLD",
+		"dotCase": "hello.world",
+		"pathCase": "hello/world",
+		"titleCase": "Hello World",
+		"sentenceCase": "Hello world",
+		"upperFirst": "Hello world",
+		"lowerFirst": "hello World",
+		"normalizeSpace": "hello world",
+		"goExported": "UserID",
+		"goUnexported": "userID",
+		"goPackage": "httputils"
+	}`, output.String())
+}
+
+func TestRunner_PublicUtilityModulesForwardInitialismsAndPreserveDefaults(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_PublicUtilityModulesForwardInitialismsAndPreserveDefaults")
+	processFile := filepath.Join(projectDir, "x", "utility-initialisms.ts")
+
+	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
+	require.NoError(t, os.WriteFile(processFile, []byte(`import type { Context } from "@ccode/context";
+import * as Go from "@ccode/go";
+import * as Strings from "@ccode/string";
+
+const initialisms = ["API", "ID"] as const;
+const results = {
+  configured: {
+    camelCase: Strings.camelCase("api response id", initialisms),
+    pascalCase: Strings.pascalCase("api response id", initialisms),
+    titleCase: Strings.titleCase("api response id", initialisms),
+    sentenceCase: Strings.sentenceCase("api response id", initialisms),
+    goExported: Go.toExportedIdentifier("api response id", initialisms),
+    goUnexported: Go.toUnexportedIdentifier("api response id", initialisms),
+  },
+  defaults: {
+    camelCase: Strings.camelCase("HTTP server ID"),
+    pascalCase: Strings.pascalCase("HTTP server ID"),
+    titleCase: Strings.titleCase("HTTP server ID"),
+    sentenceCase: Strings.sentenceCase("HTTP server ID"),
+    goExported: Go.toExportedIdentifier("HTTP server ID"),
+    goUnexported: Go.toUnexportedIdentifier("HTTP server ID"),
+  },
+};
+
+export default function main(ctx: Context) {
+  ctx.println(JSON.stringify(results));
+}
+`), 0644))
+
+	var output bytes.Buffer
+	ctx.stdout = &output
+
+	require.NoError(t, ctx.Run("x/utility-initialisms"))
+	assert.JSONEq(t, `{
+		"configured": {
+			"camelCase": "apiResponseID",
+			"pascalCase": "APIResponseID",
+			"titleCase": "API Response ID",
+			"sentenceCase": "API response ID",
+			"goExported": "APIResponseID",
+			"goUnexported": "apiResponseID"
+		},
+		"defaults": {
+			"camelCase": "httpServerId",
+			"pascalCase": "HttpServerId",
+			"titleCase": "Http Server Id",
+			"sentenceCase": "Http server id",
+			"goExported": "HTTPServerID",
+			"goUnexported": "httpServerID"
+		}
+	}`, output.String())
+}
+
 func TestRunner_RunBundlesPublicSupportModules(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunBundlesPublicSupportModules")
 	processFile := filepath.Join(projectDir, "x", "support-modules.ts")
