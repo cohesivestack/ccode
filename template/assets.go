@@ -15,7 +15,7 @@ var TSConfigTemplate string
 
 // SupportFS contains the TypeScript support API installed under .ccode/lib.
 //
-//go:embed context.ts openapi database
+//go:embed context.ts database go internal openapi string
 var SupportFS embed.FS
 
 //go:embed ccode.gitignore
