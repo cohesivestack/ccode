@@ -19,6 +19,12 @@ ccode/
     build/
     lib/
       context.ts
+      go/
+        index.ts
+      internal/
+        native.ts
+      string/
+        index.ts
       openapi/
         index.ts
         reference.ts
@@ -43,6 +49,10 @@ ccode/
 `hidden_path` is internal state. The default is `.ccode`, and relative values resolve under `ccode_path`.
 
 `<hidden_path>/lib/` contains generated TypeScript support files. Do not edit these in application workspaces.
+
+The public `go/` and `string/` modules provide typed naming utilities to
+processes through `@ccode/go` and `@ccode/string`. The `internal/` module is a
+runtime implementation detail and should not be imported directly.
 
 `<hidden_path>/build/` is compiler cache and can be recreated.
 

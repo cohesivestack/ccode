@@ -109,4 +109,22 @@ ctx.inspectDatabase(connectionURL)
 ctx.inspectDatabase(connectionURL, { expectedEngine })
 OpenAPI.isReference(value)
 OpenAPI.parseReference(reference)
+Strings.camelCase(value, initialisms?)
+Strings.pascalCase(value, initialisms?)
+Strings.snakeCase(value)
+Strings.kebabCase(value)
+Strings.constantCase(value)
+Strings.dotCase(value)
+Strings.pathCase(value)
+Strings.titleCase(value, initialisms?)
+Strings.sentenceCase(value, initialisms?)
+Strings.upperFirst(value)
+Strings.lowerFirst(value)
+Strings.normalizeSpace(value)
+Go.toExportedIdentifier(value, initialisms?)
+Go.toUnexportedIdentifier(value, initialisms?)
+Go.toPackageName(value)
 ```
+
+Import `Strings` from `@ccode/string` and `Go` from `@ccode/go`. Templates
+provide equivalent string and Go naming filters; see [Templates](/using-ccode/templates/).

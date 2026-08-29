@@ -56,6 +56,49 @@ Then render with simple loops:
 {% endfor %}
 ```
 
+## String and Go naming filters
+
+Cohesive Code adds naming filters to Gonja's standard filters. All of these
+filters require a string input:
+
+| Filter | Example result |
+| --- | --- |
+| `camelCase` | `"HTTP server"` → `"httpServer"` |
+| `pascalCase` | `"HTTP server"` → `"HttpServer"` |
+| `snakeCase` | `"HTTP server"` → `"http_server"` |
+| `kebabCase` | `"HTTP server"` → `"http-server"` |
+| `constantCase` | `"HTTP server"` → `"HTTP_SERVER"` |
+| `dotCase` | `"HTTP server"` → `"http.server"` |
+| `pathCase` | `"HTTP server"` → `"http/server"` |
+| `titleCase` | `"HTTP server"` → `"Http Server"` |
+| `sentenceCase` | `"HTTP server"` → `"Http server"` |
+| `upperFirst` | `"userAccount"` → `"UserAccount"` |
+| `lowerFirst` | `"UserAccount"` → `"userAccount"` |
+| `normalizeSpace` | `"  user   account  "` → `"user account"` |
+| `goExported` | `"user id"` → `"UserID"` |
+| `goUnexported` | `"user id"` → `"userID"` |
+| `goPackage` | `"HTTP Utils"` → `"httputils"` |
+
+Use them with the normal Gonja pipe syntax:
+
+```jinja
+type {{ data.name | goExported }} struct {}
+```
+
+`camelCase`, `pascalCase`, `titleCase`, `sentenceCase`, `goExported`, and
+`goUnexported` accept a keyword-only `initialisms` list:
+
+```jinja
+{{ data.name | pascalCase(initialisms=["API", "ID"]) }}
+{{ data.name | goUnexported(initialisms=data.initialisms) }}
+```
+
+Generic case filters have no built-in initialisms. The Go filters include the
+conventional Go initialism set, and a supplied list extends or overrides that
+set. Initialisms match case-insensitively and preserve the supplied spelling.
+The list must contain only non-blank strings. Other filters do not accept
+arguments.
+
 ## Path rules
 
 Template paths resolve relative to `ccode_path`.

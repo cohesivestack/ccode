@@ -1,6 +1,6 @@
 ---
 title: Runtime API
-description: The TypeScript Context API exposed to Cohesive Code processes.
+description: The TypeScript modules and Context API exposed to Cohesive Code processes.
 ---
 
 Import `Context` from the generated workspace support files:
@@ -65,6 +65,64 @@ General OpenAPI types are top-level exports from `@ccode/openapi`, including
 version-specific declarations are ES modules exposed as `V3_0`, `V3_1`,
 and `V3_2`. The module also exports `isReference` and `parseReference` for
 working with preserved `$ref` values.
+
+## Public utility modules
+
+General string transformations are exported from `@ccode/string`, while
+Go-specific naming transformations are exported from `@ccode/go`:
+
+```ts
+import * as Go from "@ccode/go";
+import * as Strings from "@ccode/string";
+
+Strings.camelCase("user name"); // "userName"
+Strings.pascalCase("user name"); // "UserName"
+Strings.snakeCase("User Name"); // "user_name"
+Strings.kebabCase("User Name"); // "user-name"
+Strings.constantCase("User Name"); // "USER_NAME"
+Strings.dotCase("User Name"); // "user.name"
+Strings.pathCase("User Name"); // "user/name"
+Strings.titleCase("user name"); // "User Name"
+Strings.sentenceCase("user name"); // "User name"
+Strings.upperFirst("user name"); // "User name"
+Strings.lowerFirst("User Name"); // "user Name"
+Strings.normalizeSpace(" user   name "); // "user name"
+
+Go.toExportedIdentifier("user_id"); // "UserID"
+Go.toUnexportedIdentifier("user_id"); // "userID"
+Go.toPackageName("HTTP Utils"); // "httputils"
+```
+
+`camelCase`, `pascalCase`, `titleCase`, and `sentenceCase` accept an optional
+read-only initialism array. `toExportedIdentifier` and
+`toUnexportedIdentifier` accept the same option:
+
+```ts
+const initialisms = ["API", "ID"] as const;
+
+Strings.pascalCase("api response id", initialisms); // "APIResponseID"
+Go.toExportedIdentifier("api response id", initialisms); // "APIResponseID"
+```
+
+Generic string functions do not assume any initialisms when the array is
+omitted. Go identifier functions always recognize the conventional Go
+initialisms, including `API`, `HTTP`, `ID`, `JSON`, `SQL`, `URL`, and `UUID`.
+Values supplied to a Go function extend that set and can override the spelling
+of a default:
+
+```ts
+Strings.pascalCase("http server id"); // "HttpServerId"
+Go.toExportedIdentifier("http server id"); // "HTTPServerID"
+Go.toExportedIdentifier("user id", ["Id"]); // "UserId"
+```
+
+Initialism matching is case-insensitive, uses complete words or adjacent word
+sequences, and preserves the spelling provided in the array. Each entry must be
+a non-blank string; invalid inputs produce a runtime `TypeError`.
+
+These transformations are pure from the TypeScript caller's perspective: they
+return a new string and do not mutate their inputs or shared configuration.
+They are imported modules, not members of `Context`.
 
 ## println
 
