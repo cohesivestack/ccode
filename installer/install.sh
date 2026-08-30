@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Installs the ccode wrapper script from this repository into ~/.local/bin/ccode.
-# This installer only copies the wrapper and does not create config version files
-# or release cache directories.
+# Installs the ccode wrapper script into ~/.local/bin/ccode. From a repository
+# checkout it copies the adjacent wrapper; when piped to bash it downloads the
+# wrapper from GitHub. It does not create config version files or release caches.
 
 log_err() {
   printf 'install.sh: %s\n' "$*" >&2
@@ -16,14 +16,41 @@ die() {
 
 : "${HOME:?HOME is not set}"
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
-REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd -P)"
-SOURCE_WRAPPER="${REPO_ROOT}/installer/bin/ccode"
+WRAPPER_URL="https://raw.githubusercontent.com/cohesivestack/ccode/master/installer/bin/ccode"
+SOURCE_WRAPPER=""
+INSTALL_TMP_DIR=""
 
 TARGET_DIR="${HOME}/.local/bin"
 TARGET_WRAPPER="${TARGET_DIR}/ccode"
 
-[[ -f "$SOURCE_WRAPPER" ]] || die "wrapper source not found: ${SOURCE_WRAPPER}"
+cleanup() {
+  if [[ -n "$INSTALL_TMP_DIR" && -d "$INSTALL_TMP_DIR" ]]; then
+    rm -rf -- "$INSTALL_TMP_DIR"
+  fi
+}
+
+trap cleanup EXIT
+
+resolve_source_wrapper() {
+  local script_source="${BASH_SOURCE[0]:-}"
+
+  if [[ -n "$script_source" && -f "$script_source" ]]; then
+    local script_dir repo_root
+    script_dir="$(cd -- "$(dirname -- "$script_source")" && pwd -P)"
+    repo_root="$(cd -- "${script_dir}/.." && pwd -P)"
+    SOURCE_WRAPPER="${repo_root}/installer/bin/ccode"
+    [[ -f "$SOURCE_WRAPPER" ]] || die "wrapper source not found: ${SOURCE_WRAPPER}"
+    return 0
+  fi
+
+  command -v curl >/dev/null 2>&1 || die "curl is required when installing from standard input"
+  INSTALL_TMP_DIR="$(mktemp -d)"
+  SOURCE_WRAPPER="${INSTALL_TMP_DIR}/ccode"
+  curl -fsSL "$WRAPPER_URL" -o "$SOURCE_WRAPPER" || die "failed to download wrapper from ${WRAPPER_URL}"
+  [[ -s "$SOURCE_WRAPPER" ]] || die "downloaded wrapper is empty: ${WRAPPER_URL}"
+}
+
+resolve_source_wrapper
 
 mkdir -p "$TARGET_DIR"
 

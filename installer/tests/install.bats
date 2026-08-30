@@ -5,11 +5,15 @@ TEST_REPO=""
 TEST_HOME=""
 SOURCE_INSTALL=""
 SOURCE_WRAPPER=""
+MOCK_BIN=""
+MOCK_CURL_LOG=""
 
 setup() {
   TEST_ROOT="$(mktemp -d "${BATS_TEST_TMPDIR:-/tmp}/install-bats.XXXXXX")"
   TEST_REPO="${TEST_ROOT}/repo"
   TEST_HOME="${TEST_ROOT}/home"
+  MOCK_BIN="${TEST_ROOT}/mock-bin"
+  MOCK_CURL_LOG="${TEST_ROOT}/mock-curl.log"
   mkdir -p "${TEST_REPO}/installer/bin" "$TEST_HOME"
 
   SOURCE_INSTALL="${BATS_TEST_DIRNAME}/../install.sh"
@@ -32,6 +36,51 @@ run_installer() {
   )
 }
 
+make_mock_curl() {
+  mkdir -p "$MOCK_BIN"
+  cat >"${MOCK_BIN}/curl" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+output=""
+url=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -o)
+      output="$2"
+      shift 2
+      ;;
+    -*)
+      shift
+      ;;
+    *)
+      url="$1"
+      shift
+      ;;
+  esac
+done
+
+[[ -n "$output" ]]
+printf '%s\n' "$url" >"$MOCK_CURL_LOG"
+cp "$MOCK_WRAPPER_SOURCE" "$output"
+EOF
+  chmod +x "${MOCK_BIN}/curl"
+}
+
+run_piped_installer() {
+  local path_value="$1"
+  local unrelated_dir="${TEST_ROOT}/unrelated"
+  mkdir -p "$unrelated_dir"
+  (
+    cd "$unrelated_dir"
+    HOME="$TEST_HOME" \
+      PATH="$path_value" \
+      MOCK_CURL_LOG="$MOCK_CURL_LOG" \
+      MOCK_WRAPPER_SOURCE="$SOURCE_WRAPPER" \
+      bash <"${TEST_REPO}/installer/install.sh"
+  )
+}
+
 @test "basic install places wrapper at ~/.local/bin/ccode with executable permissions and matching content" {
   [ ! -d "${TEST_HOME}/.local/bin" ]
 
@@ -42,6 +91,19 @@ run_installer() {
   [ -f "${TEST_HOME}/.local/bin/ccode" ]
   [ -x "${TEST_HOME}/.local/bin/ccode" ]
   cmp -s "${TEST_REPO}/installer/bin/ccode" "${TEST_HOME}/.local/bin/ccode"
+}
+
+@test "piped install downloads and installs the wrapper from an unrelated working directory" {
+  make_mock_curl
+
+  run run_piped_installer "${MOCK_BIN}:/usr/bin:/bin"
+  [ "$status" -eq 0 ]
+
+  [ -x "${TEST_HOME}/.local/bin/ccode" ]
+  cmp -s "$SOURCE_WRAPPER" "${TEST_HOME}/.local/bin/ccode"
+  [ "$(cat "$MOCK_CURL_LOG")" = "https://raw.githubusercontent.com/cohesivestack/ccode/master/installer/bin/ccode" ]
+  [[ "$output" != *"BASH_SOURCE"* ]]
+  [[ "$output" != *"wrapper source not found"* ]]
 }
 
 @test "reinstall overwrites an existing ~/.local/bin/ccode cleanly" {
