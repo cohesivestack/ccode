@@ -28,6 +28,11 @@ export interface NativeGoUtilities {
   readonly toPackageName: StringTransformation;
 }
 
+export interface NativeTypeScriptUtilities {
+  readonly toTypeIdentifier: InitialismTransformation;
+  readonly toValueIdentifier: InitialismTransformation;
+}
+
 export type OpenAPIPathTransformation = (
   value: string,
   omitLeadingSlash?: boolean,
@@ -47,6 +52,7 @@ export interface NativeOpenAPIUtilities {
 export interface NativeUtilities {
   readonly string: NativeStringUtilities;
   readonly go: NativeGoUtilities;
+  readonly typescript: NativeTypeScriptUtilities;
   readonly openapi: NativeOpenAPIUtilities;
 }
 
