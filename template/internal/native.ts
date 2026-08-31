@@ -28,9 +28,26 @@ export interface NativeGoUtilities {
   readonly toPackageName: StringTransformation;
 }
 
+export type OpenAPIPathTransformation = (
+  value: string,
+  omitLeadingSlash?: boolean,
+) => string;
+
+export interface NativeOpenAPIPathUtilities {
+  readonly toColon: OpenAPIPathTransformation;
+  readonly toSquareBrackets: OpenAPIPathTransformation;
+  readonly toAngleBrackets: OpenAPIPathTransformation;
+  readonly toDollar: OpenAPIPathTransformation;
+}
+
+export interface NativeOpenAPIUtilities {
+  readonly path: NativeOpenAPIPathUtilities;
+}
+
 export interface NativeUtilities {
   readonly string: NativeStringUtilities;
   readonly go: NativeGoUtilities;
+  readonly openapi: NativeOpenAPIUtilities;
 }
 
 type NativeGlobal = typeof globalThis & {

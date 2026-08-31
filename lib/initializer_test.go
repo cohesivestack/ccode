@@ -162,6 +162,7 @@ func assertInstalledSupportFiles(t *testing.T, hiddenLibPath string) {
 		"go/index.ts",
 		"internal/native.ts",
 		"openapi/index.ts",
+		"openapi/path.ts",
 		"openapi/reference.ts",
 		"openapi/types.ts",
 		"openapi/v3_0.ts",

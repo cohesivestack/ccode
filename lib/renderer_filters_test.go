@@ -187,6 +187,65 @@ func TestRendererGoFilters(t *testing.T) {
 	}
 }
 
+func TestRendererOpenAPIPathFilters(t *testing.T) {
+	tests := []struct {
+		name     string
+		filter   string
+		input    string
+		argument string
+		expected string
+	}{
+		{name: "colon default", filter: "openAPIPathToColon", input: "/users/{userId}", expected: "/users/:userId"},
+		{name: "colon omit", filter: "openAPIPathToColon", input: "/users/{userId}", argument: "(omitLeadingSlash=true)", expected: "users/:userId"},
+		{name: "colon preserve explicitly", filter: "openAPIPathToColon", input: "/users/{userId}", argument: "(omitLeadingSlash=false)", expected: "/users/:userId"},
+		{name: "square brackets", filter: "openAPIPathToSquareBrackets", input: "/users/{userId}", expected: "/users/[userId]"},
+		{name: "angle brackets", filter: "openAPIPathToAngleBrackets", input: "/users/{userId}", expected: "/users/<userId>"},
+		{name: "dollar", filter: "openAPIPathToDollar", input: "/users/{userId}", expected: "/users/$userId"},
+		{name: "static path", filter: "openAPIPathToSquareBrackets", input: "/users/current", argument: "(omitLeadingSlash=true)", expected: "users/current"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			source := fmt.Sprintf("{{ data.path | %s%s }}", test.filter, test.argument)
+			rendered, err := renderTemplateSource(t, source, map[string]any{"path": test.input})
+			require.NoError(t, err)
+			assert.Equal(t, test.expected, rendered)
+		})
+	}
+}
+
+func TestRendererOpenAPIPathFilterArgumentValidation(t *testing.T) {
+	filters := []string{
+		"openAPIPathToColon",
+		"openAPIPathToSquareBrackets",
+		"openAPIPathToAngleBrackets",
+		"openAPIPathToDollar",
+	}
+	tests := []struct {
+		name     string
+		source   func(string) string
+		contains string
+	}{
+		{name: "non-string input", source: func(filter string) string { return fmt.Sprintf("{{ 42 | %s }}", filter) }, contains: "input must be a string"},
+		{name: "positional argument", source: func(filter string) string { return fmt.Sprintf(`{{ data.path | %s(true) }}`, filter) }, contains: "positional arguments are not supported"},
+		{name: "unknown keyword", source: func(filter string) string { return fmt.Sprintf(`{{ data.path | %s(strip=true) }}`, filter) }, contains: `unexpected argument "strip"`},
+		{name: "non-boolean option", source: func(filter string) string {
+			return fmt.Sprintf(`{{ data.path | %s(omitLeadingSlash="true") }}`, filter)
+		}, contains: `"omitLeadingSlash" must be a boolean`},
+	}
+
+	for _, filter := range filters {
+		for _, test := range tests {
+			t.Run(filter+" "+test.name, func(t *testing.T) {
+				_, err := renderTemplateSource(t, test.source(filter), map[string]any{"path": "/users/{userId}"})
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), fmt.Sprintf(`filter %q`, filter))
+				assert.Contains(t, err.Error(), test.contains)
+			})
+		}
+	}
+}
+
 func TestRendererFilterArgumentValidation(t *testing.T) {
 	tests := []struct {
 		name      string

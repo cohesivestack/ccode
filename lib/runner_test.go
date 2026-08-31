@@ -239,6 +239,45 @@ export default function main(ctx: Context) {
 	}`, output.String())
 }
 
+func TestRunner_RunTransformsOpenAPIPathsThroughPublicModules(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunTransformsOpenAPIPathsThroughPublicModules")
+	processFile := filepath.Join(projectDir, "x", "openapi-paths.ts")
+
+	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
+	require.NoError(t, os.WriteFile(processFile, []byte(`import type { Context } from "@ccode/context";
+import * as OpenAPI from "@ccode/openapi";
+import * as Path from "@ccode/openapi/path";
+
+const path = "/users/{userId}/orders/{orderId}";
+const results = {
+  colon: OpenAPI.Path.toColon(path),
+  colonWithoutSlash: OpenAPI.Path.toColon(path, { omitLeadingSlash: true }),
+  squareBrackets: OpenAPI.Path.toSquareBrackets(path),
+  angleBrackets: OpenAPI.Path.toAngleBrackets(path, { omitLeadingSlash: false }),
+  dollar: OpenAPI.Path.toDollar(path),
+  directSubmodule: Path.toColon("/teams/{teamId}"),
+};
+
+export default function main(ctx: Context) {
+  ctx.println(JSON.stringify(results));
+}
+`), 0644))
+
+	var output bytes.Buffer
+	ctx.stdout = &output
+
+	require.NoError(t, ctx.Run("x/openapi-paths"))
+	assert.JSONEq(t, `{
+		"colon": "/users/:userId/orders/:orderId",
+		"colonWithoutSlash": "users/:userId/orders/:orderId",
+		"squareBrackets": "/users/[userId]/orders/[orderId]",
+		"angleBrackets": "/users/<userId>/orders/<orderId>",
+		"dollar": "/users/$userId/orders/$orderId",
+		"directSubmodule": "/teams/:teamId"
+	}`, output.String())
+	require.FileExists(t, filepath.Join(ctx.config.HiddenPath, "lib", "openapi", "path.ts"))
+}
+
 func TestRunner_RunRendersTemplates(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunRendersTemplates")
 	processFile := filepath.Join(projectDir, "x", "generate.ts")

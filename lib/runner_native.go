@@ -50,12 +50,33 @@ func installRunnerNativeUtilities(runtime *goja.Runtime) error {
 		}
 	}
 
+	openAPIPathNamespace := runtime.NewObject()
+	openAPIPathFunctions := []runnerNativeFunction{
+		{name: "toColon", transform: nativeOpenAPIPathTransformation(runtime, "openapi.path.toColon", openAPIPathToColon)},
+		{name: "toSquareBrackets", transform: nativeOpenAPIPathTransformation(runtime, "openapi.path.toSquareBrackets", openAPIPathToSquareBrackets)},
+		{name: "toAngleBrackets", transform: nativeOpenAPIPathTransformation(runtime, "openapi.path.toAngleBrackets", openAPIPathToAngleBrackets)},
+		{name: "toDollar", transform: nativeOpenAPIPathTransformation(runtime, "openapi.path.toDollar", openAPIPathToDollar)},
+	}
+	for _, function := range openAPIPathFunctions {
+		if err := openAPIPathNamespace.Set(function.name, function.transform); err != nil {
+			return fmt.Errorf("register native openapi.path.%s: %w", function.name, err)
+		}
+	}
+
+	openAPINamespace := runtime.NewObject()
+	if err := openAPINamespace.Set("path", openAPIPathNamespace); err != nil {
+		return fmt.Errorf("register native openapi.path namespace: %w", err)
+	}
+
 	native := runtime.NewObject()
 	if err := native.Set("string", stringNamespace); err != nil {
 		return fmt.Errorf("register native string namespace: %w", err)
 	}
 	if err := native.Set("go", goNamespace); err != nil {
 		return fmt.Errorf("register native go namespace: %w", err)
+	}
+	if err := native.Set("openapi", openAPINamespace); err != nil {
+		return fmt.Errorf("register native openapi namespace: %w", err)
 	}
 
 	if err := runtime.GlobalObject().DefineDataProperty(
@@ -100,6 +121,27 @@ func nativeInitialismTransformation(
 		}
 
 		return runtime.ToValue(transform(input, initialisms))
+	}
+}
+
+func nativeOpenAPIPathTransformation(
+	runtime *goja.Runtime,
+	name string,
+	transform func(string, bool) string,
+) func(goja.FunctionCall) goja.Value {
+	return func(call goja.FunctionCall) goja.Value {
+		input := nativeStringArgument(runtime, name, call.Argument(0))
+
+		omitLeadingSlash := false
+		if len(call.Arguments) >= 2 {
+			value, ok := call.Arguments[1].Export().(bool)
+			if !ok {
+				panic(runtime.NewTypeError("native %s omitLeadingSlash must be a boolean", name))
+			}
+			omitLeadingSlash = value
+		}
+
+		return runtime.ToValue(transform(input, omitLeadingSlash))
 	}
 }
 

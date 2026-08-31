@@ -31,6 +31,10 @@ var templateFilterSpecs = []templateFilterSpec{
 	{name: "goExported", filter: initialismTemplateFilter("goExported", stringToGoExported)},
 	{name: "goUnexported", filter: initialismTemplateFilter("goUnexported", stringToGoUnexported)},
 	{name: "goPackage", filter: stringTemplateFilter("goPackage", stringToGoPackage)},
+	{name: "openAPIPathToColon", filter: openAPIPathTemplateFilter("openAPIPathToColon", openAPIPathToColon)},
+	{name: "openAPIPathToSquareBrackets", filter: openAPIPathTemplateFilter("openAPIPathToSquareBrackets", openAPIPathToSquareBrackets)},
+	{name: "openAPIPathToAngleBrackets", filter: openAPIPathTemplateFilter("openAPIPathToAngleBrackets", openAPIPathToAngleBrackets)},
+	{name: "openAPIPathToDollar", filter: openAPIPathTemplateFilter("openAPIPathToDollar", openAPIPathToDollar)},
 }
 
 var (
@@ -109,6 +113,22 @@ func initialismTemplateFilter(name string, transform func(string, []string) stri
 	}
 }
 
+func openAPIPathTemplateFilter(name string, transform func(string, bool) string) exec.FilterFunction {
+	return func(_ *exec.Evaluator, in *exec.Value, params *exec.VarArgs) *exec.Value {
+		omitLeadingSlash, err := templateFilterOmitLeadingSlash(params)
+		if err != nil {
+			return templateFilterError(name, err)
+		}
+
+		input, err := templateFilterString(in)
+		if err != nil {
+			return templateFilterError(name, err)
+		}
+
+		return exec.AsValue(transform(input, omitLeadingSlash))
+	}
+}
+
 func validateTemplateFilterArguments(params *exec.VarArgs, allowedKeywords ...string) error {
 	if params == nil {
 		return nil
@@ -171,6 +191,25 @@ func templateFilterInitialisms(params *exec.VarArgs) ([]string, error) {
 	}, func() {})
 
 	return parseInitialisms(values)
+}
+
+func templateFilterOmitLeadingSlash(params *exec.VarArgs) (bool, error) {
+	if err := validateTemplateFilterArguments(params, "omitLeadingSlash"); err != nil {
+		return false, err
+	}
+	if params == nil {
+		return false, nil
+	}
+
+	value, supplied := params.KwArgs["omitLeadingSlash"]
+	if !supplied {
+		return false, nil
+	}
+	if value == nil || !value.IsBool() {
+		return false, fmt.Errorf("%q must be a boolean", "omitLeadingSlash")
+	}
+
+	return value.Bool(), nil
 }
 
 type initialismValue struct {
