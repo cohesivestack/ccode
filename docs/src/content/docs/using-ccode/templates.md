@@ -56,7 +56,7 @@ Then render with simple loops:
 {% endfor %}
 ```
 
-## String and Go naming filters
+## String, Go naming, and OpenAPI path filters
 
 Cohesive Code adds naming filters to Gonja's standard filters. All of these
 filters require a string input:
@@ -78,11 +78,18 @@ filters require a string input:
 | `goExported` | `"user id"` → `"UserID"` |
 | `goUnexported` | `"user id"` → `"userID"` |
 | `goPackage` | `"HTTP Utils"` → `"httputils"` |
+| `openAPIPathToColon` | `"/users/{userId}"` → `"/users/:userId"` |
+| `openAPIPathToSquareBrackets` | `"/users/{userId}"` → `"/users/[userId]"` |
+| `openAPIPathToAngleBrackets` | `"/users/{userId}"` → `"/users/<userId>"` |
+| `openAPIPathToDollar` | `"/users/{userId}"` → `"/users/$userId"` |
 
 Use them with the normal Gonja pipe syntax:
 
 ```jinja
 type {{ data.name | goExported }} struct {}
+
+{{ data.path | openAPIPathToColon }}
+{{ data.path | openAPIPathToColon(omitLeadingSlash=true) }}
 ```
 
 `camelCase`, `pascalCase`, `titleCase`, `sentenceCase`, `goExported`, and
@@ -96,8 +103,14 @@ type {{ data.name | goExported }} struct {}
 Generic case filters have no built-in initialisms. The Go filters include the
 conventional Go initialism set, and a supplied list extends or overrides that
 set. Initialisms match case-insensitively and preserve the supplied spelling.
-The list must contain only non-blank strings. Other filters do not accept
-arguments.
+The list must contain only non-blank strings. The four OpenAPI path filters
+accept the keyword-only boolean `omitLeadingSlash`, which defaults to `false`.
+Other filters do not accept arguments.
+
+OpenAPI path filters replace every well-formed, nonempty `{parameter}`
+expression and leave malformed expressions unchanged. They only convert the
+path syntax: they do not resolve parameter values or validate declarations
+against a Path Item or Operation.
 
 ## Path rules
 

@@ -109,6 +109,10 @@ ctx.inspectDatabase(connectionURL)
 ctx.inspectDatabase(connectionURL, { expectedEngine })
 OpenAPI.isReference(value)
 OpenAPI.parseReference(reference)
+OpenAPI.Path.toColon(path, options?)
+OpenAPI.Path.toSquareBrackets(path, options?)
+OpenAPI.Path.toAngleBrackets(path, options?)
+OpenAPI.Path.toDollar(path, options?)
 Strings.camelCase(value, initialisms?)
 Strings.pascalCase(value, initialisms?)
 Strings.snakeCase(value)
@@ -126,5 +130,6 @@ Go.toUnexportedIdentifier(value, initialisms?)
 Go.toPackageName(value)
 ```
 
-Import `Strings` from `@ccode/string` and `Go` from `@ccode/go`. Templates
-provide equivalent string and Go naming filters; see [Templates](/using-ccode/templates/).
+Import `OpenAPI` from `@ccode/openapi`, `Strings` from `@ccode/string`, and `Go`
+from `@ccode/go`. Templates provide equivalent string, Go naming, and OpenAPI
+path filters; see [Templates](/using-ccode/templates/).

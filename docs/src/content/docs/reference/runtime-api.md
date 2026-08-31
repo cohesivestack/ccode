@@ -69,7 +69,8 @@ working with preserved `$ref` values.
 ## Public utility modules
 
 General string transformations are exported from `@ccode/string`, while
-Go-specific naming transformations are exported from `@ccode/go`:
+Go-specific naming transformations are exported from `@ccode/go`. OpenAPI path
+transformations are available under `OpenAPI.Path`:
 
 ```ts
 import * as Go from "@ccode/go";
@@ -91,7 +92,25 @@ Strings.normalizeSpace(" user   name "); // "user name"
 Go.toExportedIdentifier("user_id"); // "UserID"
 Go.toUnexportedIdentifier("user_id"); // "userID"
 Go.toPackageName("HTTP Utils"); // "httputils"
+
+OpenAPI.Path.toColon("/users/{userId}"); // "/users/:userId"
+OpenAPI.Path.toSquareBrackets("/users/{userId}"); // "/users/[userId]"
 ```
+
+The path helpers convert every nonempty OpenAPI `{parameter}` expression to
+colon, square-bracket, angle-bracket, or dollar syntax. They preserve the
+leading slash unless `omitLeadingSlash` is enabled:
+
+```ts
+OpenAPI.Path.toAngleBrackets("/users/{userId}"); // "/users/<userId>"
+OpenAPI.Path.toDollar("/users/{userId}", {
+  omitLeadingSlash: true,
+}); // "users/$userId"
+```
+
+The same functions can be imported directly from `@ccode/openapi/path`. These
+helpers only convert path syntax. They do not interpolate runtime parameter
+values or validate parameter declarations against a Path Item or Operation.
 
 `camelCase`, `pascalCase`, `titleCase`, and `sentenceCase` accept an optional
 read-only initialism array. `toExportedIdentifier` and

@@ -34,6 +34,12 @@ Use this workflow for processes, templates, OpenAPI or database inputs, generate
 - Export the required default process function and import `Context` from `@ccode/context`.
 - Parse each input once and normalize it into plain template data in TypeScript.
 - Import `* as OpenAPI` from `@ccode/openapi` and use `OpenAPI.parseReference` when a process needs the document and fragment parts of a preserved `$ref`.
+- Use `OpenAPI.Path.toColon`, `OpenAPI.Path.toSquareBrackets`,
+  `OpenAPI.Path.toAngleBrackets`, or `OpenAPI.Path.toDollar` when generated
+  framework paths need OpenAPI `{parameter}` syntax converted. Pass
+  `{ omitLeadingSlash: true }` only when the target syntax omits the initial
+  slash. These helpers do not interpolate values or validate parameter
+  declarations.
 - Import `* as Strings` from `@ccode/string` for general case and whitespace
   transformations. Import `* as Go` from `@ccode/go` for valid exported,
   unexported, or package names; do not recreate these transformations locally.
@@ -48,8 +54,11 @@ Use this workflow for processes, templates, OpenAPI or database inputs, generate
   (`camelCase`, `pascalCase`, `snakeCase`, `kebabCase`, `constantCase`,
   `dotCase`, `pathCase`, `titleCase`, `sentenceCase`, `upperFirst`,
   `lowerFirst`, `normalizeSpace`, `goExported`, `goUnexported`, and
-  `goPackage`). Only the case filters and Go identifier filters documented as
-  initialism-aware accept `initialisms=[...]`, and it is a keyword argument.
+  `goPackage`, plus `openAPIPathToColon`,
+  `openAPIPathToSquareBrackets`, `openAPIPathToAngleBrackets`, and
+  `openAPIPathToDollar`). Only the case filters and Go identifier filters
+  documented as initialism-aware accept `initialisms=[...]`. OpenAPI path
+  filters accept the keyword-only boolean `omitLeadingSlash`.
 - Use `ctx.generate(...)` only for files the generator may overwrite.
 - Use `ctx.accelerate(...)` for proposals that must preserve later human or agent edits.
 - Use stable artifact IDs. Call `ctx.setScope(...)` when the process filename is not a durable state namespace.

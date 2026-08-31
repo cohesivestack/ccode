@@ -80,6 +80,19 @@ Use `OpenAPI.isReference(value)` to narrow an unknown value with a string
 filename, document name, and JSON Pointer fragment. This is a pure string
 helper; it does not load or resolve the referenced document.
 
+Use `OpenAPI.Path` when a generated framework expects a different path
+parameter syntax:
+
+```ts
+OpenAPI.Path.toColon("/users/{userId}"); // "/users/:userId"
+OpenAPI.Path.toSquareBrackets("/users/{userId}"); // "/users/[userId]"
+```
+
+The helpers can also produce angle-bracket and dollar forms, and accept
+`{ omitLeadingSlash: true }`. They only convert well-formed OpenAPI
+`{parameter}` expressions; they do not substitute parameter values or validate
+declarations against a Path Item or Operation.
+
 ## Pitfalls
 
 - Swagger/OpenAPI v2 is rejected.

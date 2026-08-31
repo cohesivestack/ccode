@@ -27,6 +27,7 @@ ccode/
         index.ts
       openapi/
         index.ts
+        path.ts
         reference.ts
         types.ts
         v3_0.ts
