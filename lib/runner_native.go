@@ -50,6 +50,17 @@ func installRunnerNativeUtilities(runtime *goja.Runtime) error {
 		}
 	}
 
+	typeScriptNamespace := runtime.NewObject()
+	typeScriptFunctions := []runnerNativeFunction{
+		{name: "toTypeIdentifier", transform: nativeInitialismTransformation(runtime, "typescript.toTypeIdentifier", stringToTypeScriptTypeIdentifier)},
+		{name: "toValueIdentifier", transform: nativeInitialismTransformation(runtime, "typescript.toValueIdentifier", stringToTypeScriptValueIdentifier)},
+	}
+	for _, function := range typeScriptFunctions {
+		if err := typeScriptNamespace.Set(function.name, function.transform); err != nil {
+			return fmt.Errorf("register native typescript.%s: %w", function.name, err)
+		}
+	}
+
 	openAPIPathNamespace := runtime.NewObject()
 	openAPIPathFunctions := []runnerNativeFunction{
 		{name: "toColon", transform: nativeOpenAPIPathTransformation(runtime, "openapi.path.toColon", openAPIPathToColon)},
@@ -74,6 +85,9 @@ func installRunnerNativeUtilities(runtime *goja.Runtime) error {
 	}
 	if err := native.Set("go", goNamespace); err != nil {
 		return fmt.Errorf("register native go namespace: %w", err)
+	}
+	if err := native.Set("typescript", typeScriptNamespace); err != nil {
+		return fmt.Errorf("register native typescript namespace: %w", err)
 	}
 	if err := native.Set("openapi", openAPINamespace); err != nil {
 		return fmt.Errorf("register native openapi namespace: %w", err)

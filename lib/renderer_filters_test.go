@@ -16,6 +16,8 @@ import (
 
 func TestCohesiveTemplateEnvironment(t *testing.T) {
 	require.False(t, gonja.DefaultEnvironment.Filters.Exists("camelCase"))
+	require.False(t, gonja.DefaultEnvironment.Filters.Exists("typeScriptType"))
+	require.False(t, gonja.DefaultEnvironment.Filters.Exists("typeScriptValue"))
 
 	environment, err := newCohesiveTemplateEnvironment()
 	require.NoError(t, err)
@@ -30,6 +32,67 @@ func TestCohesiveTemplateEnvironment(t *testing.T) {
 	assert.Same(t, gonja.DefaultEnvironment.ControlStructures, environment.ControlStructures)
 	assert.Same(t, gonja.DefaultEnvironment.Tests, environment.Tests)
 	assert.Same(t, gonja.DefaultEnvironment.Context, environment.Context)
+}
+
+func TestRendererTypeScriptFilters(t *testing.T) {
+	tests := []struct {
+		name     string
+		filter   string
+		input    string
+		argument string
+		data     map[string]any
+		expected string
+	}{
+		{name: "type default", filter: "typeScriptType", input: "HTTP response ID", expected: "HttpResponseId"},
+		{name: "value default", filter: "typeScriptValue", input: "HTTP response ID", expected: "httpResponseId"},
+		{name: "type custom", filter: "typeScriptType", input: "api response id", argument: `(initialisms=["API", "ID"])`, expected: "APIResponseID"},
+		{name: "value custom", filter: "typeScriptValue", input: "api response id", argument: `(initialisms=["API", "ID"])`, expected: "apiResponseID"},
+		{name: "empty initialisms", filter: "typeScriptType", input: "HTTP response ID", argument: `(initialisms=[])`, expected: "HttpResponseId"},
+		{name: "initialisms from data", filter: "typeScriptValue", input: "graph ql client id", argument: `(initialisms=data.initialisms)`, data: map[string]any{"initialisms": []any{"GraphQL", "ID"}}, expected: "graphQLClientID"},
+		{name: "reserved value", filter: "typeScriptValue", input: "class", expected: "class_"},
+		{name: "digit type", filter: "typeScriptType", input: "123 users", expected: "T123Users"},
+		{name: "digit value", filter: "typeScriptValue", input: "123 users", expected: "_123Users"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			data := map[string]any{"name": test.input}
+			for key, value := range test.data {
+				data[key] = value
+			}
+			source := fmt.Sprintf("{{ data.name | %s%s }}", test.filter, test.argument)
+			rendered, err := renderTemplateSource(t, source, data)
+			require.NoError(t, err)
+			assert.Equal(t, test.expected, rendered)
+		})
+	}
+}
+
+func TestRendererTypeScriptFilterArgumentValidation(t *testing.T) {
+	filters := []string{"typeScriptType", "typeScriptValue"}
+	tests := []struct {
+		name     string
+		source   func(string) string
+		contains string
+	}{
+		{name: "non-string input", source: func(filter string) string { return fmt.Sprintf("{{ 42 | %s }}", filter) }, contains: "input must be a string"},
+		{name: "positional argument", source: func(filter string) string { return fmt.Sprintf(`{{ data.name | %s(["ID"]) }}`, filter) }, contains: "positional arguments are not supported"},
+		{name: "unknown keyword", source: func(filter string) string { return fmt.Sprintf(`{{ data.name | %s(acronyms=["ID"]) }}`, filter) }, contains: `unexpected argument "acronyms"`},
+		{name: "non-list initialisms", source: func(filter string) string { return fmt.Sprintf(`{{ data.name | %s(initialisms="ID") }}`, filter) }, contains: `"initialisms" must be a list of strings`},
+		{name: "non-string initialism", source: func(filter string) string { return fmt.Sprintf(`{{ data.name | %s(initialisms=[42]) }}`, filter) }, contains: "initialisms[0] must be a string"},
+		{name: "blank initialism", source: func(filter string) string { return fmt.Sprintf(`{{ data.name | %s(initialisms=[" "]) }}`, filter) }, contains: "initialisms[0] must not be blank"},
+	}
+
+	for _, filter := range filters {
+		for _, test := range tests {
+			t.Run(filter+" "+test.name, func(t *testing.T) {
+				_, err := renderTemplateSource(t, test.source(filter), map[string]any{"name": "user id"})
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), fmt.Sprintf(`filter %q`, filter))
+				assert.Contains(t, err.Error(), test.contains)
+			})
+		}
+	}
 }
 
 func TestRegisterTemplateFiltersRejectsExistingFilter(t *testing.T) {

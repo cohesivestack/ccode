@@ -194,6 +194,53 @@ export default function main(ctx: Context) {
 	}`, output.String())
 }
 
+func TestRunner_RunTransformsTypeScriptIdentifiersThroughPublicModule(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunTransformsTypeScriptIdentifiersThroughPublicModule")
+	processFile := filepath.Join(projectDir, "x", "typescript-identifiers.ts")
+
+	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
+	require.NoError(t, os.WriteFile(processFile, []byte(`import type { Context } from "@ccode/context";
+import * as TypeScript from "@ccode/typescript";
+
+const result = {
+  typeName: TypeScript.toTypeIdentifier("user id"),
+  valueName: TypeScript.toValueIdentifier("user id"),
+  customType: TypeScript.toTypeIdentifier(
+    "api response id",
+    ["API", "ID"],
+  ),
+  customValue: TypeScript.toValueIdentifier(
+    "api response id",
+    ["API", "ID"],
+  ),
+  reserved: TypeScript.toValueIdentifier("class"),
+  digitType: TypeScript.toTypeIdentifier("123 users"),
+  digitValue: TypeScript.toValueIdentifier("123 users"),
+};
+
+export default function main(ctx: Context) {
+  if ("typescript" in (ctx as any)) {
+    throw new Error("TypeScript utilities must not be installed on Context");
+  }
+  ctx.println(JSON.stringify(result));
+}
+`), 0644))
+
+	var output bytes.Buffer
+	ctx.stdout = &output
+
+	require.NoError(t, ctx.Run("x/typescript-identifiers"))
+	assert.JSONEq(t, `{
+		"typeName": "UserId",
+		"valueName": "userId",
+		"customType": "APIResponseID",
+		"customValue": "apiResponseID",
+		"reserved": "class_",
+		"digitType": "T123Users",
+		"digitValue": "_123Users"
+	}`, output.String())
+}
+
 func TestRunner_RunBundlesPublicSupportModules(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunBundlesPublicSupportModules")
 	processFile := filepath.Join(projectDir, "x", "support-modules.ts")

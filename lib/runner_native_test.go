@@ -24,7 +24,7 @@ func TestInstallRunnerNativeUtilitiesCreatesCompleteInternalAPI(t *testing.T) {
 	native := nativeValue.ToObject(runtime)
 	rootKeys := native.Keys()
 	sort.Strings(rootKeys)
-	assert.Equal(t, []string{"go", "openapi", "string"}, rootKeys)
+	assert.Equal(t, []string{"go", "openapi", "string", "typescript"}, rootKeys)
 
 	tests := []struct {
 		name      string
@@ -56,6 +56,14 @@ func TestInstallRunnerNativeUtilitiesCreatesCompleteInternalAPI(t *testing.T) {
 				"toExportedIdentifier",
 				"toUnexportedIdentifier",
 				"toPackageName",
+			},
+		},
+		{
+			name:      "TypeScript namespace",
+			namespace: "typescript",
+			expected: []string{
+				"toTypeIdentifier",
+				"toValueIdentifier",
 			},
 		},
 	}
@@ -97,7 +105,7 @@ func TestInstallRunnerNativeUtilitiesCreatesCompleteInternalAPI(t *testing.T) {
 		assert.True(t, callable, "openapi.path.%s", name)
 	}
 
-	for _, name := range []string{"Go", "Strings", "OpenAPI", "Path", "go", "string", "openapi"} {
+	for _, name := range []string{"Go", "Strings", "TypeScript", "OpenAPI", "Path", "go", "string", "typescript", "openapi"} {
 		value := runtime.Get(name)
 		assert.True(t, value == nil || goja.IsUndefined(value), "global %s", name)
 	}
@@ -176,6 +184,8 @@ func TestRunnerNativeUtilitiesDelegateToExistingTransformations(t *testing.T) {
 		{name: "Go exported identifier", namespace: "go", function: "toExportedIdentifier", input: "user id", initialisms: []string{"ID"}, expected: stringToGoExported("user id", []string{"ID"})},
 		{name: "Go unexported identifier", namespace: "go", function: "toUnexportedIdentifier", input: "user id", initialisms: []string{"ID"}, expected: stringToGoUnexported("user id", []string{"ID"})},
 		{name: "Go package", namespace: "go", function: "toPackageName", input: "HTTP Utils", expected: stringToGoPackage("HTTP Utils")},
+		{name: "TypeScript type identifier", namespace: "typescript", function: "toTypeIdentifier", input: "api response id", initialisms: []string{"API", "ID"}, expected: stringToTypeScriptTypeIdentifier("api response id", []string{"API", "ID"})},
+		{name: "TypeScript value identifier", namespace: "typescript", function: "toValueIdentifier", input: "api response id", initialisms: []string{"API", "ID"}, expected: stringToTypeScriptValueIdentifier("api response id", []string{"API", "ID"})},
 	}
 
 	native := runtime.Get("__ccodeNative").ToObject(runtime)
@@ -211,6 +221,8 @@ func TestRunnerNativeInitialismTransformationsPreserveOmittedDefaults(t *testing
 		{name: "sentence case", expression: `__ccodeNative.string.sentenceCase("HTTP server ID")`, expected: stringToSentenceCase("HTTP server ID", nil)},
 		{name: "Go exported identifier", expression: `__ccodeNative.go.toExportedIdentifier("HTTP server ID")`, expected: stringToGoExported("HTTP server ID", nil)},
 		{name: "Go unexported identifier", expression: `__ccodeNative.go.toUnexportedIdentifier("HTTP server ID")`, expected: stringToGoUnexported("HTTP server ID", nil)},
+		{name: "TypeScript type identifier", expression: `__ccodeNative.typescript.toTypeIdentifier("HTTP server ID")`, expected: stringToTypeScriptTypeIdentifier("HTTP server ID", nil)},
+		{name: "TypeScript value identifier", expression: `__ccodeNative.typescript.toValueIdentifier("HTTP server ID")`, expected: stringToTypeScriptValueIdentifier("HTTP server ID", nil)},
 	}
 
 	for _, test := range tests {
@@ -236,6 +248,10 @@ func TestRunnerNativeUtilitiesThrowCatchableJavaScriptErrors(t *testing.T) {
 		{name: "initialisms are not an array", expression: `__ccodeNative.string.camelCase("value", "API")`, expected: "native string.camelCase initialisms must be an array of strings"},
 		{name: "initialism is not a string", expression: `__ccodeNative.string.pascalCase("value", ["API", 42])`, expected: "native string.pascalCase initialisms[1] must be a string"},
 		{name: "initialism is blank", expression: `__ccodeNative.go.toUnexportedIdentifier("value", [" "])`, expected: "native go.toUnexportedIdentifier initialisms[0] must not be blank"},
+		{name: "invalid TypeScript type input", expression: `__ccodeNative.typescript.toTypeIdentifier(42)`, expected: "native typescript.toTypeIdentifier requires a string value"},
+		{name: "TypeScript initialisms are not an array", expression: `__ccodeNative.typescript.toValueIdentifier("value", "ID")`, expected: "native typescript.toValueIdentifier initialisms must be an array of strings"},
+		{name: "TypeScript initialism is not a string", expression: `__ccodeNative.typescript.toValueIdentifier("value", [42])`, expected: "native typescript.toValueIdentifier initialisms[0] must be a string"},
+		{name: "TypeScript initialism is blank", expression: `__ccodeNative.typescript.toTypeIdentifier("value", [" "])`, expected: "native typescript.toTypeIdentifier initialisms[0] must not be blank"},
 		{name: "OpenAPI path input missing", expression: `__ccodeNative.openapi.path.toColon()`, expected: "native openapi.path.toColon requires a string value"},
 		{name: "OpenAPI path input invalid", expression: `__ccodeNative.openapi.path.toSquareBrackets(42)`, expected: "native openapi.path.toSquareBrackets requires a string value"},
 		{name: "OpenAPI path option string", expression: `__ccodeNative.openapi.path.toAngleBrackets("/users/{id}", "true")`, expected: "native openapi.path.toAngleBrackets omitLeadingSlash must be a boolean"},

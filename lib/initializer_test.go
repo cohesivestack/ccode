@@ -36,6 +36,7 @@ func TestInitializer_InitCreatesProjectStructure(t *testing.T) {
 	require.DirExists(t, filepath.Join(hiddenPath, "lib"))
 	require.DirExists(t, filepath.Join(hiddenPath, "lib", "openapi"))
 	require.DirExists(t, filepath.Join(hiddenPath, "lib", "database"))
+	require.DirExists(t, filepath.Join(hiddenPath, "lib", "typescript"))
 	require.DirExists(t, buildPath)
 	require.FileExists(t, configPath)
 	require.FileExists(t, hiddenGitIgnorePath)
@@ -169,6 +170,7 @@ func assertInstalledSupportFiles(t *testing.T, hiddenLibPath string) {
 		"openapi/v3_1.ts",
 		"openapi/v3_2.ts",
 		"string/index.ts",
+		"typescript/index.ts",
 	}, paths)
 
 	for _, path := range paths {

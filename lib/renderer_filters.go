@@ -31,6 +31,8 @@ var templateFilterSpecs = []templateFilterSpec{
 	{name: "goExported", filter: initialismTemplateFilter("goExported", stringToGoExported)},
 	{name: "goUnexported", filter: initialismTemplateFilter("goUnexported", stringToGoUnexported)},
 	{name: "goPackage", filter: stringTemplateFilter("goPackage", stringToGoPackage)},
+	{name: "typeScriptType", filter: initialismTemplateFilter("typeScriptType", stringToTypeScriptTypeIdentifier)},
+	{name: "typeScriptValue", filter: initialismTemplateFilter("typeScriptValue", stringToTypeScriptValueIdentifier)},
 	{name: "openAPIPathToColon", filter: openAPIPathTemplateFilter("openAPIPathToColon", openAPIPathToColon)},
 	{name: "openAPIPathToSquareBrackets", filter: openAPIPathTemplateFilter("openAPIPathToSquareBrackets", openAPIPathToSquareBrackets)},
 	{name: "openAPIPathToAngleBrackets", filter: openAPIPathTemplateFilter("openAPIPathToAngleBrackets", openAPIPathToAngleBrackets)},
