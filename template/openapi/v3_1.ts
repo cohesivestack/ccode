@@ -1,111 +1,149 @@
-import type * as V3_0 from "./v3_0";
-
-type Modify<T, R> = Omit<T, keyof R> & R;
-
 type PathsWebhooksComponents<T extends {} = {}> = {
   paths: PathsObject<T>;
   webhooks: Record<string, PathItemObject | ReferenceObject>;
   components: ComponentsObject;
 };
 
-export type Document<T extends {} = {}> = Modify<
-  Omit<V3_0.Document<T>, 'openapi' | 'paths' | 'components'>,
-  {
-    openapi: `3.1.${number}`;
-    info: InfoObject;
-    jsonSchemaDialect?: string;
-    servers?: ServerObject[];
-  } & (
+interface DocumentBase {
+  openapi: `3.1.${number}`;
+  info: InfoObject;
+  jsonSchemaDialect?: string;
+  servers?: ServerObject[];
+  security?: SecurityRequirementObject[];
+  tags?: TagObject[];
+  externalDocs?: ExternalDocumentationObject;
+  'x-express-openapi-additional-middleware'?: (
+    | ((request: any, response: any, next: any) => Promise<void>)
+    | ((request: any, response: any, next: any) => void)
+  )[];
+  'x-express-openapi-validation-strict'?: boolean;
+}
+
+export type Document<T extends {} = {}> = DocumentBase &
+  (
     | (Pick<PathsWebhooksComponents<T>, 'paths'> &
         Omit<Partial<PathsWebhooksComponents<T>>, 'paths'>)
     | (Pick<PathsWebhooksComponents<T>, 'webhooks'> &
         Omit<Partial<PathsWebhooksComponents<T>>, 'webhooks'>)
     | (Pick<PathsWebhooksComponents<T>, 'components'> &
         Omit<Partial<PathsWebhooksComponents<T>>, 'components'>)
-  )
->;
+  );
 
-export type InfoObject = Modify<
-  V3_0.InfoObject,
-  {
-    summary?: string;
-    license?: LicenseObject;
-  }
->;
+export interface InfoObject {
+  title: string;
+  summary?: string;
+  description?: string;
+  termsOfService?: string;
+  contact?: ContactObject;
+  license?: LicenseObject;
+  version: string;
+}
 
-export type ContactObject = V3_0.ContactObject;
+export interface ContactObject {
+  name?: string;
+  url?: string;
+  email?: string;
+}
 
-export type LicenseObject = Modify<
-  V3_0.LicenseObject,
-  {
-    identifier?: string;
-  }
->;
+export interface LicenseObject {
+  name: string;
+  identifier?: string;
+  url?: string;
+}
 
-export type ServerObject = Modify<
-  V3_0.ServerObject,
-  {
-    url: string;
-    description?: string;
-    variables?: Record<string, ServerVariableObject>;
-  }
->;
+export interface ServerObject {
+  url: string;
+  description?: string;
+  variables?: Record<string, ServerVariableObject>;
+}
 
-export type ServerVariableObject = Modify<
-  V3_0.ServerVariableObject,
-  {
-    enum?: [string, ...string[]];
-  }
->;
+export interface ServerVariableObject {
+  enum?: [string, ...string[]];
+  default: string | number;
+  description?: string;
+}
 
 export type PathsObject<T extends {} = {}, P extends {} = {}> = Record<
   string,
   (PathItemObject<T> & P) | undefined
 >;
 
-export type HttpMethods = V3_0.HttpMethods;
+export enum HttpMethods {
+  GET = 'get',
+  PUT = 'put',
+  POST = 'post',
+  DELETE = 'delete',
+  OPTIONS = 'options',
+  HEAD = 'head',
+  PATCH = 'patch',
+  TRACE = 'trace',
+}
 
-export type PathItemObject<T extends {} = {}> = Modify<
-  V3_0.PathItemObject<T>,
-  {
-    servers?: ServerObject[];
-    parameters?: (ReferenceObject | ParameterObject)[];
-  }
-> &
-  {
-    [method in HttpMethods]?: OperationObject<T>;
-  };
+export type PathItemObject<T extends {} = {}> = {
+  $ref?: string;
+  summary?: string;
+  description?: string;
+  servers?: ServerObject[];
+  parameters?: (ReferenceObject | ParameterObject)[];
+} & {
+  [method in HttpMethods]?: OperationObject<T>;
+};
 
-export type OperationObject<T extends {} = {}> = Modify<
-  V3_0.OperationObject<T>,
-  {
-    parameters?: (ReferenceObject | ParameterObject)[];
-    requestBody?: ReferenceObject | RequestBodyObject;
-    responses?: ResponsesObject;
-    callbacks?: Record<string, ReferenceObject | CallbackObject>;
-    servers?: ServerObject[];
-  }
-> &
-  T;
+export type OperationObject<T extends {} = {}> = {
+  tags?: string[];
+  summary?: string;
+  description?: string;
+  externalDocs?: ExternalDocumentationObject;
+  operationId?: string;
+  parameters?: (ReferenceObject | ParameterObject)[];
+  requestBody?: ReferenceObject | RequestBodyObject;
+  responses?: ResponsesObject;
+  callbacks?: Record<string, ReferenceObject | CallbackObject>;
+  deprecated?: boolean;
+  security?: SecurityRequirementObject[];
+  servers?: ServerObject[];
+} & T;
 
-export type ExternalDocumentationObject = V3_0.ExternalDocumentationObject;
+export interface ExternalDocumentationObject {
+  description?: string;
+  url: string;
+}
 
-export type ParameterObject = V3_0.ParameterObject;
+export interface ParameterObject extends ParameterBaseObject {
+  name: string;
+  in: string;
+}
 
-export type HeaderObject = V3_0.HeaderObject;
+export interface HeaderObject extends ParameterBaseObject {}
 
-export type ParameterBaseObject = V3_0.ParameterBaseObject;
+export interface ParameterBaseObject {
+  description?: string;
+  required?: boolean;
+  deprecated?: boolean;
+  allowEmptyValue?: boolean;
+  style?: string;
+  explode?: boolean;
+  allowReserved?: boolean;
+  schema?: ReferenceObject | SchemaObject;
+  example?: any;
+  examples?: Record<string, ReferenceObject | ExampleObject>;
+  content?: Record<string, MediaTypeObject>;
+}
 
 export type NonArraySchemaObjectType =
-  | V3_0.NonArraySchemaObjectType
+  | 'boolean'
+  | 'object'
+  | 'number'
+  | 'string'
+  | 'integer'
   | 'null';
 
-export type ArraySchemaObjectType = V3_0.ArraySchemaObjectType;
+export type ArraySchemaObjectType = 'array';
 
 /**
- * There is no way to tell typescript to require items when type is either 'array' or array containing 'array' type
- * 'items' will be always visible as optional
- * Casting schema object to ArraySchemaObject or NonArraySchemaObject will work fine
+ * There is no way to tell TypeScript to require items when type is either
+ * 'array' or an array containing 'array'. Casting a schema object to
+ * ArraySchemaObject or NonArraySchemaObject will expose the precise shape.
  */
 export type SchemaObject =
   | ArraySchemaObject
@@ -127,110 +165,186 @@ interface MixedSchemaObject extends BaseSchemaObject {
   items?: ReferenceObject | SchemaObject;
 }
 
-export type BaseSchemaObject = Modify<
-  Omit<V3_0.BaseSchemaObject, 'nullable'>,
-  {
-    examples?: V3_0.BaseSchemaObject['example'][];
-    exclusiveMinimum?: boolean | number;
-    exclusiveMaximum?: boolean | number;
-    contentMediaType?: string;
-    $schema?: string;
-    additionalProperties?: boolean | ReferenceObject | SchemaObject;
-    properties?: {
-      [name: string]: ReferenceObject | SchemaObject;
-    };
-    allOf?: (ReferenceObject | SchemaObject)[];
-    oneOf?: (ReferenceObject | SchemaObject)[];
-    anyOf?: (ReferenceObject | SchemaObject)[];
-    not?: ReferenceObject | SchemaObject;
-    discriminator?: DiscriminatorObject;
-    externalDocs?: ExternalDocumentationObject;
-    xml?: XMLObject;
-    const?: any;
-  }
->;
+export interface BaseSchemaObject {
+  title?: string;
+  description?: string;
+  format?: string;
+  default?: any;
+  multipleOf?: number;
+  maximum?: number;
+  exclusiveMaximum?: boolean | number;
+  minimum?: number;
+  exclusiveMinimum?: boolean | number;
+  maxLength?: number;
+  minLength?: number;
+  pattern?: string;
+  additionalProperties?: boolean | ReferenceObject | SchemaObject;
+  maxItems?: number;
+  minItems?: number;
+  uniqueItems?: boolean;
+  maxProperties?: number;
+  minProperties?: number;
+  required?: string[];
+  enum?: any[];
+  properties?: Record<string, ReferenceObject | SchemaObject>;
+  allOf?: (ReferenceObject | SchemaObject)[];
+  oneOf?: (ReferenceObject | SchemaObject)[];
+  anyOf?: (ReferenceObject | SchemaObject)[];
+  not?: ReferenceObject | SchemaObject;
+  discriminator?: DiscriminatorObject;
+  readOnly?: boolean;
+  writeOnly?: boolean;
+  xml?: XMLObject;
+  externalDocs?: ExternalDocumentationObject;
+  example?: any;
+  examples?: any[];
+  deprecated?: boolean;
+  contentMediaType?: string;
+  $schema?: string;
+  const?: any;
+}
 
-export type DiscriminatorObject = V3_0.DiscriminatorObject;
+export interface DiscriminatorObject {
+  propertyName: string;
+  mapping?: Record<string, string>;
+}
 
-export type XMLObject = V3_0.XMLObject;
+export interface XMLObject {
+  name?: string;
+  namespace?: string;
+  prefix?: string;
+  attribute?: boolean;
+  wrapped?: boolean;
+}
 
-export type ReferenceObject = Modify<
-  V3_0.ReferenceObject,
-  {
-    summary?: string;
-    description?: string;
-  }
->;
+export interface ReferenceObject {
+  $ref: string;
+  summary?: string;
+  description?: string;
+}
 
-export type ExampleObject = V3_0.ExampleObject;
+export interface ExampleObject {
+  summary?: string;
+  description?: string;
+  value?: any;
+  externalValue?: string;
+}
 
-export type MediaTypeObject = Modify<
-  V3_0.MediaTypeObject,
-  {
-    schema?: SchemaObject | ReferenceObject;
-    examples?: Record<string, ReferenceObject | ExampleObject>;
-  }
->;
+export interface MediaTypeObject {
+  schema?: SchemaObject | ReferenceObject;
+  example?: any;
+  examples?: Record<string, ReferenceObject | ExampleObject>;
+  encoding?: Record<string, EncodingObject>;
+}
 
-export type EncodingObject = V3_0.EncodingObject;
+export interface EncodingObject {
+  contentType?: string;
+  headers?: Record<string, ReferenceObject | HeaderObject>;
+  style?: string;
+  explode?: boolean;
+  allowReserved?: boolean;
+}
 
-export type RequestBodyObject = Modify<
-  V3_0.RequestBodyObject,
-  {
-    content: { [media: string]: MediaTypeObject };
-  }
->;
+export interface RequestBodyObject {
+  description?: string;
+  content: Record<string, MediaTypeObject>;
+  required?: boolean;
+}
 
 export type ResponsesObject = Record<
   string,
   ReferenceObject | ResponseObject
 >;
 
-export type ResponseObject = Modify<
-  V3_0.ResponseObject,
-  {
-    headers?: { [header: string]: ReferenceObject | HeaderObject };
-    content?: { [media: string]: MediaTypeObject };
-    links?: { [link: string]: ReferenceObject | LinkObject };
-  }
->;
+export interface ResponseObject {
+  description: string;
+  headers?: Record<string, ReferenceObject | HeaderObject>;
+  content?: Record<string, MediaTypeObject>;
+  links?: Record<string, ReferenceObject | LinkObject>;
+}
 
-export type LinkObject = Modify<
-  V3_0.LinkObject,
-  {
-    server?: ServerObject;
-  }
->;
+export interface LinkObject {
+  operationRef?: string;
+  operationId?: string;
+  parameters?: Record<string, any>;
+  requestBody?: any;
+  description?: string;
+  server?: ServerObject;
+}
 
 export type CallbackObject = Record<string, PathItemObject | ReferenceObject>;
 
-export type SecurityRequirementObject = V3_0.SecurityRequirementObject;
+export type SecurityRequirementObject = Record<string, string[]>;
 
-export type ComponentsObject = Modify<
-  V3_0.ComponentsObject,
-  {
-    schemas?: Record<string, SchemaObject>;
-    responses?: Record<string, ReferenceObject | ResponseObject>;
-    parameters?: Record<string, ReferenceObject | ParameterObject>;
-    examples?: Record<string, ReferenceObject | ExampleObject>;
-    requestBodies?: Record<string, ReferenceObject | RequestBodyObject>;
-    headers?: Record<string, ReferenceObject | HeaderObject>;
-    securitySchemes?: Record<string, ReferenceObject | SecuritySchemeObject>;
-    links?: Record<string, ReferenceObject | LinkObject>;
-    callbacks?: Record<string, ReferenceObject | CallbackObject>;
-    pathItems?: Record<string, ReferenceObject | PathItemObject>;
-  }
->;
+export interface ComponentsObject {
+  schemas?: Record<string, SchemaObject>;
+  responses?: Record<string, ReferenceObject | ResponseObject>;
+  parameters?: Record<string, ReferenceObject | ParameterObject>;
+  examples?: Record<string, ReferenceObject | ExampleObject>;
+  requestBodies?: Record<string, ReferenceObject | RequestBodyObject>;
+  headers?: Record<string, ReferenceObject | HeaderObject>;
+  securitySchemes?: Record<string, ReferenceObject | SecuritySchemeObject>;
+  links?: Record<string, ReferenceObject | LinkObject>;
+  callbacks?: Record<string, ReferenceObject | CallbackObject>;
+  pathItems?: Record<string, ReferenceObject | PathItemObject>;
+}
 
-export type SecuritySchemeObject = V3_0.SecuritySchemeObject;
+export type SecuritySchemeObject =
+  | HttpSecurityScheme
+  | ApiKeySecurityScheme
+  | OAuth2SecurityScheme
+  | OpenIdSecurityScheme;
 
-export type HttpSecurityScheme = V3_0.HttpSecurityScheme;
+export interface HttpSecurityScheme {
+  type: 'http';
+  description?: string;
+  scheme: string;
+  bearerFormat?: string;
+}
 
-export type ApiKeySecurityScheme = V3_0.ApiKeySecurityScheme;
+export interface ApiKeySecurityScheme {
+  type: 'apiKey';
+  description?: string;
+  name: string;
+  in: string;
+}
 
-export type OAuth2SecurityScheme = V3_0.OAuth2SecurityScheme;
+export interface OAuth2SecurityScheme {
+  type: 'oauth2';
+  description?: string;
+  flows: {
+    implicit?: {
+      authorizationUrl: string;
+      refreshUrl?: string;
+      scopes: Record<string, string>;
+    };
+    password?: {
+      tokenUrl: string;
+      refreshUrl?: string;
+      scopes: Record<string, string>;
+    };
+    clientCredentials?: {
+      tokenUrl: string;
+      refreshUrl?: string;
+      scopes: Record<string, string>;
+    };
+    authorizationCode?: {
+      authorizationUrl: string;
+      tokenUrl: string;
+      refreshUrl?: string;
+      scopes: Record<string, string>;
+    };
+  };
+}
 
-export type OpenIdSecurityScheme = V3_0.OpenIdSecurityScheme;
+export interface OpenIdSecurityScheme {
+  type: 'openIdConnect';
+  description?: string;
+  openIdConnectUrl: string;
+}
 
-export type TagObject = V3_0.TagObject;
-
+export interface TagObject {
+  name: string;
+  description?: string;
+  externalDocs?: ExternalDocumentationObject;
+}
