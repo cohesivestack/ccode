@@ -68,13 +68,15 @@ working with preserved `$ref` values.
 
 ## Public utility modules
 
-General string transformations are exported from `@ccode/string`, while
-Go-specific naming transformations are exported from `@ccode/go`. OpenAPI path
+General string transformations are exported from `@ccode/string`, Go-specific
+naming transformations are exported from `@ccode/go`, and TypeScript
+declaration identifiers are exported from `@ccode/typescript`. OpenAPI path
 transformations are available under `OpenAPI.Path`:
 
 ```ts
 import * as Go from "@ccode/go";
 import * as Strings from "@ccode/string";
+import * as TypeScript from "@ccode/typescript";
 
 Strings.camelCase("user name"); // "userName"
 Strings.pascalCase("user name"); // "UserName"
@@ -92,6 +94,10 @@ Strings.normalizeSpace(" user   name "); // "user name"
 Go.toExportedIdentifier("user_id"); // "UserID"
 Go.toUnexportedIdentifier("user_id"); // "userID"
 Go.toPackageName("HTTP Utils"); // "httputils"
+
+TypeScript.toTypeIdentifier("user id"); // "UserId"
+TypeScript.toValueIdentifier("user id"); // "userId"
+TypeScript.toValueIdentifier("class"); // "class_"
 
 OpenAPI.Path.toColon("/users/{userId}"); // "/users/:userId"
 OpenAPI.Path.toSquareBrackets("/users/{userId}"); // "/users/[userId]"
@@ -113,27 +119,38 @@ helpers only convert path syntax. They do not interpolate runtime parameter
 values or validate parameter declarations against a Path Item or Operation.
 
 `camelCase`, `pascalCase`, `titleCase`, and `sentenceCase` accept an optional
-read-only initialism array. `toExportedIdentifier` and
-`toUnexportedIdentifier` accept the same option:
+read-only initialism array. The Go and TypeScript identifier helpers accept the
+same option:
 
 ```ts
 const initialisms = ["API", "ID"] as const;
 
 Strings.pascalCase("api response id", initialisms); // "APIResponseID"
 Go.toExportedIdentifier("api response id", initialisms); // "APIResponseID"
+TypeScript.toTypeIdentifier("api response id", initialisms); // "APIResponseID"
+TypeScript.toValueIdentifier("api response id", initialisms); // "apiResponseID"
 ```
 
-Generic string functions do not assume any initialisms when the array is
-omitted. Go identifier functions always recognize the conventional Go
-initialisms, including `API`, `HTTP`, `ID`, `JSON`, `SQL`, `URL`, and `UUID`.
-Values supplied to a Go function extend that set and can override the spelling
-of a default:
+Generic string and TypeScript identifier functions do not assume any
+initialisms when the array is omitted. Go identifier functions always recognize
+the conventional Go initialisms, including `API`, `HTTP`, `ID`, `JSON`, `SQL`,
+`URL`, and `UUID`. Values supplied to a Go function extend that set and can
+override the spelling of a default:
 
 ```ts
 Strings.pascalCase("http server id"); // "HttpServerId"
 Go.toExportedIdentifier("http server id"); // "HTTPServerID"
 Go.toExportedIdentifier("user id", ["Id"]); // "UserId"
+TypeScript.toTypeIdentifier("graph ql client", ["GraphQL"]); // "GraphQLClient"
 ```
+
+Use TypeScript type identifiers for types, interfaces, classes, enums,
+namespaces, and type aliases. Use value identifiers for variables, functions,
+methods, parameters, local constants, and intentionally normalized properties.
+TypeScript visibility is expressed with syntax such as `export`, `private`, and
+`protected`, not identifier capitalization. Value identifiers that would be
+reserved ECMAScript or strict-mode binding names receive a trailing underscore.
+Use `@ccode/string` for generic casing and file-name formatting.
 
 Initialism matching is case-insensitive, uses complete words or adjacent word
 sequences, and preserves the spelling provided in the array. Each entry must be

@@ -25,6 +25,8 @@ ccode/
         native.ts
       string/
         index.ts
+      typescript/
+        index.ts
       openapi/
         index.ts
         path.ts
@@ -51,9 +53,10 @@ ccode/
 
 `<hidden_path>/lib/` contains generated TypeScript support files. Do not edit these in application workspaces.
 
-The public `go/` and `string/` modules provide typed naming utilities to
-processes through `@ccode/go` and `@ccode/string`. The `internal/` module is a
-runtime implementation detail and should not be imported directly.
+The public `go/`, `string/`, and `typescript/` modules provide typed naming
+utilities to processes through `@ccode/go`, `@ccode/string`, and
+`@ccode/typescript`. The `internal/` module is a runtime implementation detail
+and should not be imported directly.
 
 `<hidden_path>/build/` is compiler cache and can be recreated.
 

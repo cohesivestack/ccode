@@ -128,8 +128,11 @@ Strings.normalizeSpace(value)
 Go.toExportedIdentifier(value, initialisms?)
 Go.toUnexportedIdentifier(value, initialisms?)
 Go.toPackageName(value)
+TypeScript.toTypeIdentifier(value, initialisms?)
+TypeScript.toValueIdentifier(value, initialisms?)
 ```
 
-Import `OpenAPI` from `@ccode/openapi`, `Strings` from `@ccode/string`, and `Go`
-from `@ccode/go`. Templates provide equivalent string, Go naming, and OpenAPI
-path filters; see [Templates](/using-ccode/templates/).
+Import `OpenAPI` from `@ccode/openapi`, `Strings` from `@ccode/string`, `Go`
+from `@ccode/go`, and `TypeScript` from `@ccode/typescript`. Templates provide
+equivalent string, Go naming, TypeScript naming, and OpenAPI path filters; see
+[Templates](/using-ccode/templates/).
