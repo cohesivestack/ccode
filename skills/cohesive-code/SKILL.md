@@ -13,7 +13,8 @@ description: Work with Cohesive Code (`ccode`) workspaces end to end, including 
 4. Inspect the generated modules under `<ccode_path>/.ccode/lib/` when runtime
    API details matter. Use `context.ts` for `Context`; use the public module
    declarations for imports such as `@ccode/openapi`, `@ccode/database`,
-   `@ccode/string`, and `@ccode/go`. Do not import `internal/` modules.
+   `@ccode/string`, `@ccode/go`, and `@ccode/typescript`. Do not import
+   `internal/` modules.
 5. Read `docs/src/content/docs/ai-skill-index.md`, then load only the pages it identifies for the task.
 
 If local docs are unavailable, retrieve the matching Markdown from `https://raw.githubusercontent.com/cohesivestack/ccode/master/docs/src/content/docs/`. Prefer sources in this order: generated local types, checked-out implementation and CLI output, local docs, then older examples. Use the official `https://github.com/OAI/OpenAPI-Specification` reference only when local types and docs do not answer an OpenAPI schema question.
@@ -43,22 +44,33 @@ Use this workflow for processes, templates, OpenAPI or database inputs, generate
 - Import `* as Strings` from `@ccode/string` for general case and whitespace
   transformations. Import `* as Go` from `@ccode/go` for valid exported,
   unexported, or package names; do not recreate these transformations locally.
+- Import `* as TypeScript` from `@ccode/typescript` and use
+  `TypeScript.toTypeIdentifier` for PascalCase type, interface, class, enum,
+  namespace, and type-alias names. Use `TypeScript.toValueIdentifier` for
+  camelCase variable, function, method, parameter, local-constant, and
+  intentionally normalized property names. These helpers sanitize declaration
+  identifiers and protect reserved bindings; do not recreate that logic in a
+  process or template. Control exports and visibility with TypeScript syntax,
+  not identifier capitalization.
 - Pass an initialism list to `Strings.camelCase`, `Strings.pascalCase`,
   `Strings.titleCase`, or `Strings.sentenceCase` when exact spellings such as
   `OpenAPI` or `GraphQL` must be preserved. Generic string helpers have no
   built-in initialisms. Go identifier helpers include the conventional Go
   initialisms; custom values extend that set and can override a default
-  spelling.
+  spelling. TypeScript identifier helpers have no built-in initialisms; pass
+  custom values to preserve spellings such as `API`, `ID`, or `GraphQL`.
 - Keep templates focused on presentation; move schema traversal, fallback naming, and branching decisions into TypeScript.
 - For presentation-level naming in Gonja, use the built-in Cohesive Code filters
   (`camelCase`, `pascalCase`, `snakeCase`, `kebabCase`, `constantCase`,
   `dotCase`, `pathCase`, `titleCase`, `sentenceCase`, `upperFirst`,
   `lowerFirst`, `normalizeSpace`, `goExported`, `goUnexported`, and
-  `goPackage`, plus `openAPIPathToColon`,
+  `goPackage`, `typeScriptType`, and `typeScriptValue`, plus `openAPIPathToColon`,
   `openAPIPathToSquareBrackets`, `openAPIPathToAngleBrackets`, and
-  `openAPIPathToDollar`). Only the case filters and Go identifier filters
-  documented as initialism-aware accept `initialisms=[...]`. OpenAPI path
-  filters accept the keyword-only boolean `omitLeadingSlash`.
+  `openAPIPathToDollar`). Only the case filters and Go or TypeScript identifier
+  filters documented as initialism-aware accept `initialisms=[...]`. Use the
+  TypeScript-specific filters for declaration identifiers instead of rebuilding
+  sanitization in templates. OpenAPI path filters accept the keyword-only
+  boolean `omitLeadingSlash`.
 - Use `ctx.generate(...)` only for files the generator may overwrite.
 - Use `ctx.accelerate(...)` for proposals that must preserve later human or agent edits.
 - Use stable artifact IDs. Call `ctx.setScope(...)` when the process filename is not a durable state namespace.
