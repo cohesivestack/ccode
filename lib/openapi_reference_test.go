@@ -84,7 +84,7 @@ func TestOpenAPIReference_RunnerParsesAndValidatesReferences(t *testing.T) {
 import * as OpenAPI from "@ccode/openapi";
 
 function assertParsed(
-  input: string | OpenAPI.ReferenceLike,
+  input: string,
   expected: OpenAPI.ReferenceParts,
 ): void {
   const actual = OpenAPI.parseReference(input);
@@ -115,7 +115,7 @@ function expectFailure(input: unknown, expectedMessage: string): void {
 
 export default function main(ctx: Context) {
   const cases: Array<{
-    input: string | OpenAPI.ReferenceLike;
+    input: string;
     expected: OpenAPI.ReferenceParts;
   }> = [
     {
@@ -217,29 +217,8 @@ export default function main(ctx: Context) {
     },
   ];
 
-  const referenceObject = {
-    $ref: "./objects/country.yaml#/Country",
-    marker: "unchanged",
-  } as const;
-  const referenceObjectBefore = JSON.stringify(referenceObject);
-  cases.push({
-    input: referenceObject,
-    expected: {
-      raw: "./objects/country.yaml#/Country",
-      document: "./objects/country.yaml",
-      directory: "objects",
-      directorySegments: ["objects"],
-      filename: "country.yaml",
-      documentName: "country",
-      fragment: "/Country",
-    },
-  });
-
   for (const testCase of cases) {
     assertParsed(testCase.input, testCase.expected);
-  }
-  if (JSON.stringify(referenceObject) !== referenceObjectBefore) {
-    throw new Error("parseReference mutated its reference object");
   }
 
   const failures: Array<[unknown, string]> = [
@@ -250,12 +229,16 @@ export default function main(ctx: Context) {
     ["//example.com/countries.yaml#/Country", "local file path"],
     ["file:///tmp/countries.yaml#/Country", "local file path"],
     ["./countries.yaml#Country", "JSON Pointer"],
-    [{ $ref: 42 }, 'string "$ref"'],
+    [{ $ref: "./objects/country.yaml#/Country" }, "must be a string"],
+    [{ $ref: 42 }, "must be a string"],
   ];
   for (const [input, message] of failures) {
     expectFailure(input, message);
   }
 
+  const referenceObject = {
+    $ref: "./objects/country.yaml#/Country",
+  } as const;
   const positiveGuards = [
     OpenAPI.isReference(referenceObject),
     OpenAPI.isReference({ $ref: "#/components/schemas/Country" }),
@@ -281,8 +264,8 @@ export default function main(ctx: Context) {
 
 	require.NoError(t, ctx.Run("openapi/references"))
 	assert.JSONEq(t, `{
-		"parsedCases": 9,
-		"rejectedCases": 8,
+		"parsedCases": 8,
+		"rejectedCases": 9,
 		"positiveGuards": [true, true],
 		"negativeGuards": [false, false, false, false]
 	}`, output.String())

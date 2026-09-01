@@ -76,9 +76,9 @@ function fallbackOperationId(method: string, path: string): string {
 Referenced Path Items are materialized without losing their source reference. For example, a Path Item declared as `$ref: ./paths/countries.yaml#/countries` exposes both `item.$ref` and resolved operations such as `item.get`. Generators can therefore infer the source file directly from `$ref`; no separate manifest or second parse is needed. Nested references, including schemas referenced from Path Item files, resolve automatically as well.
 
 Use `OpenAPI.isReference(value)` to narrow an unknown value with a string
-`$ref`, and `OpenAPI.parseReference(value)` to derive its decoded directory,
-filename, document name, and JSON Pointer fragment. This is a pure string
-helper; it does not load or resolve the referenced document.
+`$ref`, and `OpenAPI.parseReference(value.$ref)` to derive its decoded
+directory, filename, document name, and JSON Pointer fragment. This is a pure
+string helper; it does not load or resolve the referenced document.
 
 Use `OpenAPI.Path` when a generated framework expects a different path
 parameter syntax:

@@ -249,9 +249,7 @@ export interface ReferenceParts {
 }
 
 export function isReference(value: unknown): value is ReferenceLike;
-export function parseReference(
-  input: string | ReferenceLike,
-): ReferenceParts;
+export function parseReference(input: string): ReferenceParts;
 ```
 
 ```ts
@@ -270,7 +268,7 @@ Calculated path and fragment fields are percent-decoded, while `raw` and
 reference subset as file parsing: no URI scheme or host, protocol-relative
 remote reference, query string, malformed percent-encoding, or non-pointer
 fragment. It validates and describes the reference but does not resolve files
-or JSON Pointers.
+or JSON Pointers. Pass a reference object's `$ref` field to parse it.
 
 ## inspectDatabase
 

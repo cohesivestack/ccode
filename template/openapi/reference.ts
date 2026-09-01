@@ -22,10 +22,12 @@ export function isReference(value: unknown): value is ReferenceLike {
   );
 }
 
-export function parseReference(
-  input: string | ReferenceLike,
-): ReferenceParts {
-  const raw = referenceValue(input);
+export function parseReference(input: string): ReferenceParts {
+  if (typeof input !== "string") {
+    throw new Error("OpenAPI reference must be a string");
+  }
+
+  const raw = input;
   if (raw.trim() === "") {
     throw new Error("OpenAPI reference must not be empty or blank");
   }
@@ -66,18 +68,6 @@ export function parseReference(
     documentName: removeFinalExtension(filename),
     fragment,
   };
-}
-
-function referenceValue(input: string | ReferenceLike): string {
-  if (typeof input === "string") {
-    return input;
-  }
-  if (isReference(input)) {
-    return input.$ref;
-  }
-  throw new Error(
-    'OpenAPI reference must be a string or an object with a string "$ref"',
-  );
 }
 
 function validateLocalDocument(document: string): void {
