@@ -148,6 +148,45 @@ func TestNewRootCmd_ListAcceleratedIncludeResolved(t *testing.T) {
 	assert.Contains(t, output, `"state": "adjusted"`)
 }
 
+func TestNewRootCmd_AdjustMarksAcceleratorAsAdjusted(t *testing.T) {
+	configPath, _ := setupAcceleratorCLIProject(t)
+
+	adjustCmd := newRootCmd(nil, nil)
+	adjustCmd.SetArgs([]string{"--config", configPath, "adjust", "generate-api:handlers.go"})
+	require.NoError(t, adjustCmd.Execute())
+
+	listCmd := newRootCmd(nil, nil)
+	var stdout bytes.Buffer
+	listCmd.SetOut(&stdout)
+	listCmd.SetArgs([]string{"--config", configPath, "list", "accelerated", "--include-resolved"})
+	require.NoError(t, listCmd.Execute())
+
+	var items []ccode.AcceleratorArtifactMetadata
+	require.NoError(t, json.Unmarshal(stdout.Bytes(), &items))
+
+	var adjusted *ccode.AcceleratorArtifactMetadata
+	for index := range items {
+		if items[index].ArtifactID == "handlers.go" {
+			adjusted = &items[index]
+			break
+		}
+	}
+	require.NotNil(t, adjusted)
+	assert.False(t, adjusted.Pending)
+	assert.Equal(t, "adjusted", adjusted.State)
+}
+
+func TestNewRootCmd_AdjustReturnsErrorWhenAcceleratorDoesNotExist(t *testing.T) {
+	configPath, _ := setupAcceleratorCLIProject(t)
+
+	cmd := newRootCmd(nil, nil)
+	cmd.SetArgs([]string{"--config", configPath, "adjust", "generate-api:missing.go"})
+
+	err := cmd.Execute()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), `accelerator artifact "missing.go" not found`)
+}
+
 func TestNewRootCmd_GetAcceleratedExcludesContent(t *testing.T) {
 	configPath, _ := setupAcceleratorCLIProject(t)
 
