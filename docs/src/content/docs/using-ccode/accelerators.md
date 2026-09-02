@@ -67,6 +67,14 @@ ccode get accelerated generate-api:handlers.go --instructions
 
 Use `--for-agent` for JSON output.
 
+If the generated proposal is already acceptable and needs no edits, mark it adjusted explicitly:
+
+```bash
+ccode adjust generate-api:handlers.go
+```
+
+This updates only accelerator state. A later change to the generated content or instructions makes the artifact pending again.
+
 ## Cleanup behavior
 
 After a successful `ccode run`, the runner removes accelerator state files in scopes used by that run when those states were not produced during the run. This prevents old unresolved state from lingering after a process stops emitting an artifact.

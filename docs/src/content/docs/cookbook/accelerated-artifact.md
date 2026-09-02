@@ -57,6 +57,7 @@ Review the generated handler file, keep package naming stable, and add endpoint-
 ccode run api/generate
 ccode list accelerated --for-agent
 ccode get accelerated generate-api:handlers.go --instructions --for-agent
+ccode adjust generate-api:handlers.go
 ```
 
-The target file is `output_path/handlers.go`. If it is edited after generation, the next run will not overwrite it unless the file still matches the stored generated snapshot.
+The target file is `output_path/handlers.go`. If it is edited after generation, the next run will not overwrite it unless the file still matches the stored generated snapshot. Use `ccode adjust` when the proposal requires no edits and should be accepted as-is.

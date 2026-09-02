@@ -29,6 +29,14 @@ ccode run <process>
 
 Runs a TypeScript process under `ccode_path`. The process path is relative and may omit `.ts`.
 
+## Mark an accelerated artifact as adjusted
+
+```bash
+ccode adjust <scopeId>:<artifactId>
+```
+
+Marks a pending accelerated artifact as adjusted without changing its output file. Use this when the generated proposal requires no edits and can be accepted as-is. A later run marks it pending again if the generated content or attached instructions change.
+
 ## List accelerated artifacts
 
 ```bash

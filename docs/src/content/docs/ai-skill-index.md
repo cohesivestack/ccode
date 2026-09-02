@@ -79,6 +79,7 @@ For accelerated artifacts:
 ```bash
 ccode init [path] --version <version>
 ccode run <process>
+ccode adjust <scopeId>:<artifactId>
 ccode list accelerated [scopeId]
 ccode list accelerated [scopeId] --include-resolved
 ccode list instructions

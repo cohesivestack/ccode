@@ -103,9 +103,15 @@ After changing generation inputs, run the exact process when safe, inspect every
    ```
 
 6. Treat `composed_markdown` as the primary bundle when present. Apply it to `output_path/<artifactId>` while preserving compatible human edits and repository conventions.
-7. Run checks named by the bundle and target project, then rerun both list commands and report remaining state.
+7. If the generated proposal requires no edits, accept it explicitly:
 
-Do not hand-edit accelerator state during normal generation work or force `pending: false`; the current CLI has no command for that transition. Use `--include-resolved` only for a requested complete inventory. Stop before guessing when instructions are missing, state is ambiguous, or proposed content conflicts with intentional local edits.
+   ```bash
+   ccode adjust <scopeId>:<artifactId>
+   ```
+
+8. Run checks named by the bundle and target project, then rerun both list commands and report remaining state.
+
+Do not hand-edit accelerator state during normal generation work or force `pending: false`; use `ccode adjust` for that transition. Use `--include-resolved` only for a requested complete inventory. Stop before guessing when instructions are missing, state is ambiguous, or proposed content conflicts with intentional local edits.
 
 ## Resolve accelerator-state Git conflicts
 
