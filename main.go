@@ -171,9 +171,9 @@ Syntax:
 	}
 	initCmd.Flags().String("version", "", "ccode version to write to ccode.yaml")
 
-	adjustCmd := &cobra.Command{
-		Use:   "adjust <scopeId>:<artifactId>",
-		Short: "Mark an accelerated artifact as adjusted",
+	resolveCmd := &cobra.Command{
+		Use:   "resolve <scopeId>:<artifactId>",
+		Short: "Mark an accelerated artifact as resolved",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := loadConfig(cmd)
@@ -187,7 +187,7 @@ Syntax:
 			}
 
 			context := ccode.NewContext(cfg)
-			return context.MarkAcceleratorAsAdjusted(&scopeID, &artifactID)
+			return context.MarkAcceleratorAsResolved(&scopeID, &artifactID)
 		},
 	}
 
@@ -372,7 +372,7 @@ Syntax:
 
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(initCmd)
-	rootCmd.AddCommand(adjustCmd)
+	rootCmd.AddCommand(resolveCmd)
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(getCmd)
 	listCmd.AddCommand(listAcceleratedCmd)

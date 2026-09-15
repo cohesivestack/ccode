@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAcceleratorState_MarkSingleArtifactAsAdjusted(t *testing.T) {
+func TestAcceleratorState_MarkSingleArtifactAsResolved(t *testing.T) {
 	ctx := newAcceleratorStateContext(t)
 	writeAcceleratorStateForTest(t, ctx, &acceleratorState{
 		Version: 1,
@@ -28,7 +28,7 @@ func TestAcceleratorState_MarkSingleArtifactAsAdjusted(t *testing.T) {
 
 	scopeID := "generate-api"
 	artifactID := "handlers"
-	require.NoError(t, ctx.MarkAcceleratorAsAdjusted(&scopeID, &artifactID))
+	require.NoError(t, ctx.MarkAcceleratorAsResolved(&scopeID, &artifactID))
 
 	state := readAcceleratorStateForTest(t, ctx)
 	require.Len(t, state.Scopes, 1)
@@ -37,7 +37,7 @@ func TestAcceleratorState_MarkSingleArtifactAsAdjusted(t *testing.T) {
 	assert.True(t, state.Scopes[0].Artifacts[1].Pending)
 }
 
-func TestAcceleratorState_MarkAllArtifactsInScopeAsAdjusted(t *testing.T) {
+func TestAcceleratorState_MarkAllArtifactsInScopeAsResolved(t *testing.T) {
 	ctx := newAcceleratorStateContext(t)
 	writeAcceleratorStateForTest(t, ctx, &acceleratorState{
 		Version: 1,
@@ -59,7 +59,7 @@ func TestAcceleratorState_MarkAllArtifactsInScopeAsAdjusted(t *testing.T) {
 	})
 
 	scopeID := "generate-api"
-	require.NoError(t, ctx.MarkAcceleratorAsAdjusted(&scopeID, nil))
+	require.NoError(t, ctx.MarkAcceleratorAsResolved(&scopeID, nil))
 
 	state := readAcceleratorStateForTest(t, ctx)
 	assert.False(t, state.Scopes[0].Artifacts[0].Pending)
@@ -67,7 +67,7 @@ func TestAcceleratorState_MarkAllArtifactsInScopeAsAdjusted(t *testing.T) {
 	assert.True(t, state.Scopes[1].Artifacts[0].Pending)
 }
 
-func TestAcceleratorState_MarkAllArtifactsGloballyAsAdjusted(t *testing.T) {
+func TestAcceleratorState_MarkAllArtifactsGloballyAsResolved(t *testing.T) {
 	ctx := newAcceleratorStateContext(t)
 	writeAcceleratorStateForTest(t, ctx, &acceleratorState{
 		Version: 1,
@@ -87,14 +87,14 @@ func TestAcceleratorState_MarkAllArtifactsGloballyAsAdjusted(t *testing.T) {
 		},
 	})
 
-	require.NoError(t, ctx.MarkAcceleratorAsAdjusted(nil, nil))
+	require.NoError(t, ctx.MarkAcceleratorAsResolved(nil, nil))
 
 	state := readAcceleratorStateForTest(t, ctx)
 	assert.False(t, state.Scopes[0].Artifacts[0].Pending)
 	assert.False(t, state.Scopes[1].Artifacts[0].Pending)
 }
 
-func TestAcceleratorState_ListNotAdjustedAccelerators(t *testing.T) {
+func TestAcceleratorState_ListNotResolvedAccelerators(t *testing.T) {
 	ctx := newAcceleratorStateContext(t)
 	writeAcceleratorStateForTest(t, ctx, &acceleratorState{
 		Version: 1,
@@ -109,7 +109,7 @@ func TestAcceleratorState_ListNotAdjustedAccelerators(t *testing.T) {
 		},
 	})
 
-	items, err := ctx.ListNotAdjustedAccelerators(nil)
+	items, err := ctx.ListNotResolvedAccelerators(nil)
 	require.NoError(t, err)
 	require.Len(t, items, 1)
 	assert.Equal(t, "generate-api", items[0].ScopeID)
@@ -138,10 +138,10 @@ func TestAcceleratorState_ListAcceleratorsIncludesResolvedWhenRequested(t *testi
 	assert.Equal(t, "handlers", items[0].ArtifactID)
 	assert.Equal(t, acceleratorReportStatePending, items[0].State)
 	assert.Equal(t, "service", items[1].ArtifactID)
-	assert.Equal(t, acceleratorReportStateAdjusted, items[1].State)
+	assert.Equal(t, acceleratorReportStateResolved, items[1].State)
 }
 
-func TestAcceleratorState_ListNotAdjustedAcceleratorsByScope(t *testing.T) {
+func TestAcceleratorState_ListNotResolvedAcceleratorsByScope(t *testing.T) {
 	ctx := newAcceleratorStateContext(t)
 	writeAcceleratorStateForTest(t, ctx, &acceleratorState{
 		Version: 1,
@@ -162,7 +162,7 @@ func TestAcceleratorState_ListNotAdjustedAcceleratorsByScope(t *testing.T) {
 	})
 
 	scopeID := "generate-web"
-	items, err := ctx.ListNotAdjustedAccelerators(&scopeID)
+	items, err := ctx.ListNotResolvedAccelerators(&scopeID)
 	require.NoError(t, err)
 	require.Len(t, items, 1)
 	assert.Equal(t, "generate-web", items[0].ScopeID)
@@ -220,7 +220,7 @@ func TestAcceleratorState_GetAcceleratorStateReturnsResolvedArtifact(t *testing.
 	require.NoError(t, err)
 	assert.Equal(t, "service.go", item.ArtifactID)
 	assert.False(t, item.Pending)
-	assert.Equal(t, acceleratorReportStateAdjusted, item.State)
+	assert.Equal(t, acceleratorReportStateResolved, item.State)
 }
 
 func TestAcceleratorState_ListAcceleratorInstructionsExcludesResolvedByDefault(t *testing.T) {
@@ -292,7 +292,7 @@ func TestAcceleratorState_ListAcceleratorInstructionsIncludesResolvedWhenRequest
 	require.NoError(t, err)
 	require.Len(t, items, 1)
 	assert.Equal(t, "service.go", items[0].ArtifactID)
-	assert.Equal(t, acceleratorReportStateAdjusted, items[0].State)
+	assert.Equal(t, acceleratorReportStateResolved, items[0].State)
 }
 
 func TestAcceleratorState_ListReportsCorruptStateWithoutDeletingFile(t *testing.T) {
@@ -301,7 +301,7 @@ func TestAcceleratorState_ListReportsCorruptStateWithoutDeletingFile(t *testing.
 	require.NoError(t, os.MkdirAll(filepath.Dir(stateFilePath), 0755))
 	require.NoError(t, os.WriteFile(stateFilePath, []byte("{not json}\n"), 0644))
 
-	items, err := ctx.ListNotAdjustedAccelerators(nil)
+	items, err := ctx.ListNotResolvedAccelerators(nil)
 	require.NoError(t, err)
 	require.Len(t, items, 1)
 	assert.Equal(t, "generate-api", items[0].ScopeID)
@@ -323,7 +323,7 @@ func TestAcceleratorState_ListReportsAmbiguousStateWithoutDeletingFile(t *testin
 			`{"pending":false,"code":"`+encodeAcceleratorContentSnapshot("handlers", time.Now().UTC())+`"}`+"\n",
 	), 0644))
 
-	items, err := ctx.ListNotAdjustedAccelerators(nil)
+	items, err := ctx.ListNotResolvedAccelerators(nil)
 	require.NoError(t, err)
 	require.Len(t, items, 1)
 	assert.Equal(t, acceleratorReportStateAmbiguous, items[0].State)
@@ -349,7 +349,7 @@ func TestAcceleratorState_ListDeduplicatesRepeatedStateLines(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(stateFilePath, append(payload, payload...), 0644))
 
-	items, err := ctx.ListNotAdjustedAccelerators(nil)
+	items, err := ctx.ListNotResolvedAccelerators(nil)
 	require.NoError(t, err)
 	require.Len(t, items, 1)
 	assert.Equal(t, acceleratorReportStatePending, items[0].State)
@@ -372,7 +372,7 @@ func TestAcceleratorState_ListReportsMissingInstructions(t *testing.T) {
 	}
 	require.NoError(t, saveAcceleratorArtifactStateFile(stateFilePath, artifact))
 
-	items, err := ctx.ListNotAdjustedAccelerators(nil)
+	items, err := ctx.ListNotResolvedAccelerators(nil)
 	require.NoError(t, err)
 	require.Len(t, items, 1)
 	assert.False(t, items[0].Pending)
@@ -397,7 +397,7 @@ func TestAcceleratorState_ListReportsMissingArtifactBeforeMissingInstructions(t 
 	}
 	require.NoError(t, saveAcceleratorArtifactStateFile(stateFilePath, artifact))
 
-	items, err := ctx.ListNotAdjustedAccelerators(nil)
+	items, err := ctx.ListNotResolvedAccelerators(nil)
 	require.NoError(t, err)
 	require.Len(t, items, 1)
 	assert.False(t, items[0].Pending)
@@ -450,7 +450,7 @@ func TestAcceleratorState_GetAcceleratorInstructionReturnsErrorWhenMissing(t *te
 	assert.Contains(t, err.Error(), "instruction file not found")
 }
 
-func TestAcceleratorState_MarkAdjustedReturnsErrorWhenScopeOrArtifactNotFound(t *testing.T) {
+func TestAcceleratorState_MarkResolvedReturnsErrorWhenScopeOrArtifactNotFound(t *testing.T) {
 	ctx := newAcceleratorStateContext(t)
 	writeAcceleratorStateForTest(t, ctx, &acceleratorState{
 		Version: 1,
@@ -465,13 +465,13 @@ func TestAcceleratorState_MarkAdjustedReturnsErrorWhenScopeOrArtifactNotFound(t 
 	})
 
 	scopeID := "missing-scope"
-	err := ctx.MarkAcceleratorAsAdjusted(&scopeID, nil)
+	err := ctx.MarkAcceleratorAsResolved(&scopeID, nil)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "scope")
 
 	scopeID = "generate-api"
 	artifactID := "missing-artifact"
-	err = ctx.MarkAcceleratorAsAdjusted(&scopeID, &artifactID)
+	err = ctx.MarkAcceleratorAsResolved(&scopeID, &artifactID)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "artifact")
 }

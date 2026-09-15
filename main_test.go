@@ -145,15 +145,15 @@ func TestNewRootCmd_ListAcceleratedIncludeResolved(t *testing.T) {
 	output := stdout.String()
 	assert.Contains(t, output, `"artifact_id": "handlers.go"`)
 	assert.Contains(t, output, `"artifact_id": "service.go"`)
-	assert.Contains(t, output, `"state": "adjusted"`)
+	assert.Contains(t, output, `"state": "resolved"`)
 }
 
-func TestNewRootCmd_AdjustMarksAcceleratorAsAdjusted(t *testing.T) {
+func TestNewRootCmd_ResolveMarksAcceleratorAsResolved(t *testing.T) {
 	configPath, _ := setupAcceleratorCLIProject(t)
 
-	adjustCmd := newRootCmd(nil, nil)
-	adjustCmd.SetArgs([]string{"--config", configPath, "adjust", "generate-api:handlers.go"})
-	require.NoError(t, adjustCmd.Execute())
+	resolveCmd := newRootCmd(nil, nil)
+	resolveCmd.SetArgs([]string{"--config", configPath, "resolve", "generate-api:handlers.go"})
+	require.NoError(t, resolveCmd.Execute())
 
 	listCmd := newRootCmd(nil, nil)
 	var stdout bytes.Buffer
@@ -164,23 +164,23 @@ func TestNewRootCmd_AdjustMarksAcceleratorAsAdjusted(t *testing.T) {
 	var items []ccode.AcceleratorArtifactMetadata
 	require.NoError(t, json.Unmarshal(stdout.Bytes(), &items))
 
-	var adjusted *ccode.AcceleratorArtifactMetadata
+	var resolved *ccode.AcceleratorArtifactMetadata
 	for index := range items {
 		if items[index].ArtifactID == "handlers.go" {
-			adjusted = &items[index]
+			resolved = &items[index]
 			break
 		}
 	}
-	require.NotNil(t, adjusted)
-	assert.False(t, adjusted.Pending)
-	assert.Equal(t, "adjusted", adjusted.State)
+	require.NotNil(t, resolved)
+	assert.False(t, resolved.Pending)
+	assert.Equal(t, "resolved", resolved.State)
 }
 
-func TestNewRootCmd_AdjustReturnsErrorWhenAcceleratorDoesNotExist(t *testing.T) {
+func TestNewRootCmd_ResolveReturnsErrorWhenAcceleratorDoesNotExist(t *testing.T) {
 	configPath, _ := setupAcceleratorCLIProject(t)
 
 	cmd := newRootCmd(nil, nil)
-	cmd.SetArgs([]string{"--config", configPath, "adjust", "generate-api:missing.go"})
+	cmd.SetArgs([]string{"--config", configPath, "resolve", "generate-api:missing.go"})
 
 	err := cmd.Execute()
 	require.Error(t, err)

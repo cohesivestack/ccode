@@ -214,7 +214,7 @@ func TestAccelerator_AcceleratePreservesStateWhenGeneratedMetadataMatches(t *tes
 
 	scopeID := "generate-api"
 	artifactID := "handlers"
-	require.NoError(t, ctx.MarkAcceleratorAsAdjusted(&scopeID, &artifactID))
+	require.NoError(t, ctx.MarkAcceleratorAsResolved(&scopeID, &artifactID))
 
 	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value))
 
@@ -240,7 +240,7 @@ func TestAccelerator_AccelerateResetsStateWhenInstructionsChecksumChanges(t *tes
 
 	scopeID := "generate-api"
 	artifactID := "handlers"
-	require.NoError(t, ctx.MarkAcceleratorAsAdjusted(&scopeID, &artifactID))
+	require.NoError(t, ctx.MarkAcceleratorAsResolved(&scopeID, &artifactID))
 
 	require.NoError(t, os.WriteFile(instructionsFilePath, []byte("Second instructions"), 0644))
 	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value, "instructions/handlers.md"))
@@ -264,7 +264,7 @@ func TestAccelerator_AccelerateCleansDuplicatedIdenticalStateLines(t *testing.T)
 
 	scopeID := "generate-api"
 	artifactID := "handlers"
-	require.NoError(t, ctx.MarkAcceleratorAsAdjusted(&scopeID, &artifactID))
+	require.NoError(t, ctx.MarkAcceleratorAsResolved(&scopeID, &artifactID))
 
 	stateFilePath := filepath.Join(ctx.acceleratorStateFilePath(), "generate-api", "handlers.accelerated.json")
 	stateFileContent, err := os.ReadFile(stateFilePath)

@@ -34,7 +34,7 @@ type acceleratorStateArtifact struct {
 
 const (
 	acceleratorReportStatePending             = "pending"
-	acceleratorReportStateAdjusted            = "adjusted"
+	acceleratorReportStateResolved            = "resolved"
 	acceleratorReportStateCorrupt             = "corrupt"
 	acceleratorReportStateAmbiguous           = "ambiguous"
 	acceleratorReportStateMissingArtifact     = "missing_artifact"
@@ -518,7 +518,7 @@ func acceleratorArtifactReportState(artifact acceleratorStateArtifact) string {
 	if artifact.Pending {
 		return acceleratorReportStatePending
 	}
-	return acceleratorReportStateAdjusted
+	return acceleratorReportStateResolved
 }
 
 func acceleratorStateMessage(state string) string {
@@ -933,7 +933,7 @@ func checksumAcceleratorBytes(content []byte) string {
 	return fmt.Sprintf("sha256:%x", checksum)
 }
 
-func (ctx *Context) MarkAcceleratorAsAdjusted(scopeID *string, artifactID *string) error {
+func (ctx *Context) MarkAcceleratorAsResolved(scopeID *string, artifactID *string) error {
 	if ctx == nil || ctx.config == nil {
 		return fmt.Errorf("context config is required")
 	}
@@ -992,7 +992,7 @@ func (ctx *Context) MarkAcceleratorAsAdjusted(scopeID *string, artifactID *strin
 	return saveAcceleratorState(statePath, state)
 }
 
-func (ctx *Context) ListNotAdjustedAccelerators(scopeID *string) ([]AcceleratorArtifactMetadata, error) {
+func (ctx *Context) ListNotResolvedAccelerators(scopeID *string) ([]AcceleratorArtifactMetadata, error) {
 	return ctx.ListAccelerators(scopeID, false)
 }
 
@@ -1111,15 +1111,15 @@ func (ctx *Context) GetAcceleratorInstruction(markdownPath string) (string, erro
 	return string(content), nil
 }
 
-func (ctx *RunnerContext) MarkAcceleratorAsAdjusted(scopeID *string, artifactID *string) error {
+func (ctx *RunnerContext) MarkAcceleratorAsResolved(scopeID *string, artifactID *string) error {
 	if ctx == nil || ctx.ccodeContext == nil {
 		return fmt.Errorf("runner context is not initialized")
 	}
 
-	return ctx.ccodeContext.MarkAcceleratorAsAdjusted(scopeID, artifactID)
+	return ctx.ccodeContext.MarkAcceleratorAsResolved(scopeID, artifactID)
 }
 
-func (ctx *RunnerContext) ListNotAdjustedAccelerators(scopeID *string) ([]AcceleratorArtifactMetadata, error) {
+func (ctx *RunnerContext) ListNotResolvedAccelerators(scopeID *string) ([]AcceleratorArtifactMetadata, error) {
 	return ctx.ListAccelerators(scopeID, false)
 }
 
