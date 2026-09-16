@@ -74,7 +74,7 @@ Use this workflow for processes, templates, OpenAPI or database inputs, generate
 - Use `ctx.generate(...)` only for files the generator may overwrite.
 - Use `ctx.accelerate(...)` for proposals that must preserve later human or agent edits.
 - Use stable artifact IDs. Call `ctx.setScope(...)` when the process filename is not a durable state namespace.
-- Attach instructions only when downstream adjustment is required. State the target edits, constraints, preserved behavior, and verification steps.
+- Attach instructions only when downstream resolvement is required. State the target edits, constraints, preserved behavior, and verification steps.
 - Keep instruction paths inside `ccode_path` and split large processes into focused helpers instead of growing template logic.
 
 After changing generation inputs, run the exact process when safe, inspect every changed target, inspect unresolved accelerator state, and run the workspace's relevant checks.
@@ -95,7 +95,7 @@ After changing generation inputs, run the exact process when safe, inspect every
    ccode list instructions --for-agent
    ```
 
-4. Handle `pending` items; skip `adjusted` unless the request includes resolved items. Diagnose `corrupt`, `ambiguous`, `missing_artifact`, or `missing_instructions` before editing.
+4. Handle `pending` items; skip `resolved` unless the request includes resolved items. Diagnose `corrupt`, `ambiguous`, `missing_artifact`, or `missing_instructions` before editing.
 5. Fetch each required bundle:
 
    ```bash
@@ -106,12 +106,12 @@ After changing generation inputs, run the exact process when safe, inspect every
 7. If the generated proposal requires no edits, accept it explicitly:
 
    ```bash
-   ccode adjust <scopeId>:<artifactId>
+   ccode resolve <scopeId>:<artifactId>
    ```
 
 8. Run checks named by the bundle and target project, then rerun both list commands and report remaining state.
 
-Do not hand-edit accelerator state during normal generation work or force `pending: false`; use `ccode adjust` for that transition. Use `--include-resolved` only for a requested complete inventory. Stop before guessing when instructions are missing, state is ambiguous, or proposed content conflicts with intentional local edits.
+Do not hand-edit accelerator state during normal generation work or force `pending: false`; use `ccode resolve` for that transition. Use `--include-resolved` only for a requested complete inventory. Stop before guessing when instructions are missing, state is ambiguous, or proposed content conflicts with intentional local edits.
 
 ## Resolve accelerator-state Git conflicts
 

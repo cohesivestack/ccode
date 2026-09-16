@@ -1,8 +1,8 @@
 # Cohesive Code
 
-Cohesive Code is an AI-enabled code generation CLI built around TypeScript processes, Gonja templates, OpenAPI parsing, and accelerators for human or agent adjustment.
+Cohesive Code is an AI-enabled code generation CLI built around TypeScript processes, Gonja templates, OpenAPI parsing, and accelerators for human or agent resolvement.
 
-It is designed for deterministic generation where generator authors control the process code and templates, while downstream developers or agents can safely inspect and adjust generated proposals.
+It is designed for deterministic generation where generator authors control the process code and templates, while downstream developers or agents can safely inspect and resolve generated proposals.
 
 > **Experimental stage:** Cohesive Code is not recommended for use yet. The project is unstable, changing constantly, and may introduce breaking changes to interfaces, generated support files, accelerator state behavior, and CLI commands without notice.
 
