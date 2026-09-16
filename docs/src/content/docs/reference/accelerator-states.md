@@ -13,7 +13,7 @@ Accelerator state records are stored per scope and artifact.
 
 `pending` means the artifact has unresolved generated content or changed instructions.
 
-`adjusted` means the output has been changed from the stored generated snapshot or the generated proposal was explicitly accepted with `ccode adjust`.
+`resolved` means the output has been changed from the stored generated snapshot or the generated proposal was explicitly accepted with `ccode resolve`.
 
 `corrupt` means the state file cannot be parsed or sanitized.
 
@@ -47,7 +47,7 @@ ccode list accelerated
 ccode list instructions
 ```
 
-Add `--include-resolved` to include adjusted resources:
+Add `--include-resolved` to include resolved resources:
 
 ```bash
 ccode list accelerated --include-resolved
@@ -57,15 +57,15 @@ Repeated identical state lines are collapsed. Missing artifacts are reported bef
 
 ## Accepting an unchanged proposal
 
-When a pending generated proposal requires no edits, mark it adjusted explicitly:
+When a pending generated proposal requires no edits, mark it resolved explicitly:
 
 ```bash
-ccode adjust <scopeId>:<artifactId>
+ccode resolve <scopeId>:<artifactId>
 ```
 
 This changes only the accelerator state; it does not modify the output artifact. If a later run changes the generated content or instructions, the artifact becomes pending again.
 
-## Adjustment bundle
+## Resolution bundle
 
 Use:
 

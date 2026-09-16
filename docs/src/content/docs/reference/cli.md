@@ -29,13 +29,13 @@ ccode run <process>
 
 Runs a TypeScript process under `ccode_path`. The process path is relative and may omit `.ts`.
 
-## Mark an accelerated artifact as adjusted
+## Resolve an accelerated artifact
 
 ```bash
-ccode adjust <scopeId>:<artifactId>
+ccode resolve <scopeId>:<artifactId>
 ```
 
-Marks a pending accelerated artifact as adjusted without changing its output file. Use this when the generated proposal requires no edits and can be accepted as-is. A later run marks it pending again if the generated content or attached instructions change.
+Resolves a pending accelerated artifact without changing its output file. Use this when the generated proposal requires no edits and can be accepted as-is. A later run marks it pending again if the generated content or attached instructions change.
 
 ## List accelerated artifacts
 
@@ -45,7 +45,7 @@ ccode list accelerated [scopeId] --include-resolved
 ccode list accelerated [scopeId] --for-agent
 ```
 
-Lists unresolved accelerated artifacts by default. Use `--include-resolved` to include adjusted artifacts.
+Lists unresolved accelerated artifacts by default. Use `--include-resolved` to include resolved artifacts.
 
 ## List instruction references
 
@@ -65,7 +65,7 @@ ccode get accelerated <scopeId>:<artifactId> --instructions
 ccode get accelerated <scopeId>:<artifactId> --instructions --for-agent
 ```
 
-Without `--instructions`, the command returns metadata. With `--instructions`, it returns a composed adjustment bundle containing instruction markdown and decoded accelerated content.
+Without `--instructions`, the command returns metadata. With `--instructions`, it returns a composed resolvement bundle containing instruction markdown and decoded accelerated content.
 
 ## Get an instruction file
 

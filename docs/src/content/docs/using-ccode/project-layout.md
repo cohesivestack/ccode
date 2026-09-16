@@ -60,7 +60,7 @@ and should not be imported directly.
 
 `<hidden_path>/build/` is compiler cache and can be recreated.
 
-`<hidden_path>/accelerators/` stores accelerator state. It is generated state, but it is meaningful and may be committed when a workflow needs persistent adjustment metadata.
+`<hidden_path>/accelerators/` stores accelerator state. It is generated state, but it is meaningful and may be committed when a workflow needs persistent resolvement metadata.
 
 ## Recommended organization
 
@@ -83,7 +83,7 @@ ccode/
       client.tpl
 ```
 
-Use stable folders for process entrypoints, templates, input specs, and adjustment instructions. Keep files inside `ccode_path` unless there is a clear reason to use external inputs.
+Use stable folders for process entrypoints, templates, input specs, and resolvement instructions. Keep files inside `ccode_path` unless there is a clear reason to use external inputs.
 
 ## Process paths
 

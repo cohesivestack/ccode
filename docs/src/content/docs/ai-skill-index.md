@@ -70,16 +70,16 @@ For accelerated artifacts:
 - Do not edit `.ccode/lib/` in an application workspace; rerun `ccode init` to refresh it.
 - Run the exact process you changed when validation is possible.
 - Use `ctx.generate(...)` only for files that should be regenerated.
-- Use `ctx.accelerate(...)` for files that may need human or agent adjustment.
+- Use `ctx.accelerate(...)` for files that may need human or agent resolvement.
 - Inspect unresolved accelerator work with `ccode list accelerated --for-agent`.
-- Fetch one adjustment bundle with `ccode get accelerated <scopeId>:<artifactId> --instructions --for-agent`.
+- Fetch one resolvement bundle with `ccode get accelerated <scopeId>:<artifactId> --instructions --for-agent`.
 
 ## Command index
 
 ```bash
 ccode init [path] --version <version>
 ccode run <process>
-ccode adjust <scopeId>:<artifactId>
+ccode resolve <scopeId>:<artifactId>
 ccode list accelerated [scopeId]
 ccode list accelerated [scopeId] --include-resolved
 ccode list instructions

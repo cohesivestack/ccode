@@ -1,9 +1,9 @@
 ---
 title: Accelerators
-description: Safe generation for artifacts that need human or agent adjustment.
+description: Safe generation for artifacts that need human or agent resolvement.
 ---
 
-Accelerators are Cohesive Code's adjustment workflow. They let a process propose an artifact, attach instructions, and avoid overwriting a file once it has been changed.
+Accelerators are Cohesive Code's resolvement workflow. They let a process propose an artifact, attach instructions, and avoid overwriting a file once it has been changed.
 
 ## API
 
@@ -25,7 +25,7 @@ If the target file does not exist, Cohesive Code writes it.
 
 If the target file exists and still matches the last generated snapshot, Cohesive Code may overwrite it with the new rendered content.
 
-If the target file exists and differs from the last generated snapshot, Cohesive Code leaves it alone. This is what protects human and agent adjustments.
+If the target file exists and differs from the last generated snapshot, Cohesive Code leaves it alone. This is what protects human and agent resolvements.
 
 ## State path
 
@@ -67,10 +67,10 @@ ccode get accelerated generate-api:handlers.go --instructions
 
 Use `--for-agent` for JSON output.
 
-If the generated proposal is already acceptable and needs no edits, mark it adjusted explicitly:
+If the generated proposal is already acceptable and needs no edits, mark it resolved explicitly:
 
 ```bash
-ccode adjust generate-api:handlers.go
+ccode resolve generate-api:handlers.go
 ```
 
 This updates only accelerator state. A later change to the generated content or instructions makes the artifact pending again.

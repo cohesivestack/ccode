@@ -100,7 +100,7 @@ declarations against a Path Item or Operation.
 - `parseOpenAPIFromFile` resolves internal and external file references automatically. A missing file or fragment fails parsing with reference context rather than returning a partial document.
 - Optional fields such as `paths`, `components`, and `schemas` need guards.
 - Some OpenAPI values can be references or booleans depending on location.
-- Large templates that walk raw specs become hard to test and adjust.
+- Large templates that walk raw specs become hard to test and resolve.
 - Validate the generated output, not only the process source.
 
 ## Generate or accelerate

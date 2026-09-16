@@ -44,12 +44,12 @@ List commands intentionally do not dump generated content or instruction bodies.
 
 ## Cohesion over automation
 
-Cohesive Code is not trying to make one prompt produce a finished codebase. It is designed to make generation processes legible, rerunnable, inspectable, and adjustable.
+Cohesive Code is not trying to make one prompt produce a finished codebase. It is designed to make generation processes legible, rerunnable, inspectable, and resolveable.
 
 The philosophy is:
 
 - keep transformation logic explicit
 - keep rendering shallow
 - keep paths predictable
-- preserve adjusted work
+- preserve resolved work
 - expose enough state for reliable AI workflows

@@ -3,7 +3,7 @@ title: Getting Started
 description: Install Cohesive Code, initialize a workspace, and run a first TypeScript process.
 ---
 
-Cohesive Code is an AI-enabled code generation CLI. It runs TypeScript processes from a workspace, renders Gonja templates, parses JSON and OpenAPI documents, and tracks generated artifacts that need human or agent adjustment.
+Cohesive Code is an AI-enabled code generation CLI. It runs TypeScript processes from a workspace, renders Gonja templates, parses JSON and OpenAPI documents, and tracks generated artifacts that need human or agent resolvement.
 
 > **Experimental stage:** Cohesive Code is not recommended for use yet. The project is unstable, changing constantly, and may introduce breaking changes to interfaces, generated support files, accelerator state behavior, and CLI commands without notice.
 
@@ -106,5 +106,5 @@ The runtime compiles the TypeScript process, executes it inside the Go runner, p
 
 - Read [Project Layout](/using-ccode/project-layout/) before building a real workspace.
 - Read [Processes](/using-ccode/processes/) for the TypeScript process contract.
-- Read [Accelerators](/using-ccode/accelerators/) before generating files that should be adjusted by a person or agent.
+- Read [Accelerators](/using-ccode/accelerators/) before generating files that should be resolved by a person or agent.
 - Read [AI Skill Index](/ai-skill-index/) if you are preparing a skill or agent workflow.
