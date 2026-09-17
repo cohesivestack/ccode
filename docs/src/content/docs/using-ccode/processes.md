@@ -71,6 +71,22 @@ ctx.setScope("openapi-handlers");
 
 Use a custom scope when one process emits artifacts that should be grouped under a durable workflow name instead of the file name.
 
+## Running another process
+
+Call `runProcess` to run another process synchronously with the same resolved
+configuration:
+
+```ts
+export default function main(ctx: Context) {
+  ctx.runProcess("api/generate");
+}
+```
+
+The child process gets its own JavaScript runtime, runner context, and default
+scope. If it fails, the error stops the calling process unless it is caught.
+Circular executions, such as `a` running `b` and `b` running `a`, return an
+error.
+
 ## Error handling
 
 Runtime errors from Go functions surface inside JavaScript execution. Let failures stop the process unless the process has a meaningful recovery path.
