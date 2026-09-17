@@ -78,6 +78,54 @@ func TestRunner_RunExecutesDefaultExport(t *testing.T) {
 	assert.Equal(t, "runner executed\n", output.String())
 }
 
+func TestRunner_RunProcessUsesCurrentConfigAndAnIndependentRunnerContext(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunProcessUsesCurrentConfigAndAnIndependentRunnerContext")
+	parentFile := filepath.Join(projectDir, "x", "parent.ts")
+	childFile := filepath.Join(projectDir, "x", "child.ts")
+
+	require.NoError(t, os.MkdirAll(filepath.Dir(parentFile), 0755))
+	require.NoError(t, os.WriteFile(parentFile, []byte(`import type { Context } from "@ccode/context";
+
+export default function parent(ctx: Context) {
+  (globalThis as any).marker = "parent";
+  ctx.setScope("parent-scope");
+  ctx.runProcess("x/child");
+  ctx.runProcess("x/child");
+  ctx.println(ctx.scope() + ":" + (globalThis as any).marker);
+}
+`), 0644))
+	require.NoError(t, os.WriteFile(childFile, []byte(`import type { Context } from "@ccode/context";
+
+export default function child(ctx: Context) {
+  ctx.println(ctx.scope() + ":" + String((globalThis as any).marker));
+}
+`), 0644))
+
+	var output bytes.Buffer
+	ctx.stdout = &output
+
+	require.NoError(t, ctx.Run("x/parent"))
+	assert.Equal(t, "child:undefined\nchild:undefined\nparent-scope:parent\n", output.String())
+}
+
+func TestRunner_RunProcessRejectsCircularExecution(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunProcessRejectsCircularExecution")
+	aFile := filepath.Join(projectDir, "a.ts")
+	bFile := filepath.Join(projectDir, "b.ts")
+
+	require.NoError(t, os.WriteFile(aFile, []byte(`import type { Context } from "@ccode/context";
+export default function a(ctx: Context) { ctx.runProcess("b"); }
+`), 0644))
+	require.NoError(t, os.WriteFile(bFile, []byte(`import type { Context } from "@ccode/context";
+export default function b(ctx: Context) { ctx.runProcess("a.ts"); }
+`), 0644))
+
+	err := ctx.Run("a")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "circular process execution detected: a.ts is already running")
+	assert.Empty(t, ctx.activeProcesses)
+}
+
 func TestRunner_RunBundlesPublicUtilityModulesAtModuleInitialization(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunBundlesPublicUtilityModulesAtModuleInitialization")
 	processFile := filepath.Join(projectDir, "x", "utility-modules.ts")

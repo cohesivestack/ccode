@@ -8,9 +8,10 @@ import (
 )
 
 type Context struct {
-	config *Config
-	logger *log.Logger
-	stdout io.Writer
+	config          *Config
+	logger          *log.Logger
+	stdout          io.Writer
+	activeProcesses map[string]struct{}
 }
 
 func NewContext(config *Config) *Context {
@@ -32,7 +33,8 @@ func NewContext(config *Config) *Context {
 	}
 
 	return &Context{
-		config: resolvedConfig,
-		stdout: os.Stdout,
+		config:          resolvedConfig,
+		stdout:          os.Stdout,
+		activeProcesses: map[string]struct{}{},
 	}
 }

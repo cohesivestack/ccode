@@ -39,6 +39,15 @@ func (ctx *Context) Run(process string) error {
 	if err != nil {
 		return err
 	}
+	if ctx.activeProcesses == nil {
+		ctx.activeProcesses = map[string]struct{}{}
+	}
+	processKey := filepath.Clean(sourcePath)
+	if _, running := ctx.activeProcesses[processKey]; running {
+		return fmt.Errorf("circular process execution detected: %s is already running", entryPointPath)
+	}
+	ctx.activeProcesses[processKey] = struct{}{}
+	defer delete(ctx.activeProcesses, processKey)
 
 	if err := validateRunnerSource(sourcePath); err != nil {
 		return err
@@ -51,6 +60,10 @@ func (ctx *Context) Run(process string) error {
 
 	defaultScope := runnerScopeFromEntryPoint(entryPointPath)
 	return ctx.executeRunnerBundle(result.OutputFiles, defaultScope)
+}
+
+func (ctx *Context) RunProcess(process string) error {
+	return ctx.Run(process)
 }
 
 func (ctx *Context) validateWorkspaceSupportFiles() error {
@@ -199,6 +212,9 @@ func (ctx *RunnerContext) initializeJSONParser() error {
 func (ctx *RunnerContext) toValue(runtime *goja.Runtime) (goja.Value, error) {
 	object := runtime.NewObject()
 	if err := object.Set("println", ctx.Println); err != nil {
+		return nil, fmt.Errorf("set runner context functions: %w", err)
+	}
+	if err := object.Set("runProcess", ctx.ccodeContext.RunProcess); err != nil {
 		return nil, fmt.Errorf("set runner context functions: %w", err)
 	}
 	if err := object.Set("renderTemplate", ctx.RenderTemplate); err != nil {
