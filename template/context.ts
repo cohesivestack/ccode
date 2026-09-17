@@ -3,6 +3,7 @@ import type * as OpenAPI from "./openapi";
 
 export interface Context {
   println: (message: string) => void;
+  runProcess: (process: string) => void;
   setScope: (scopeName: string) => void;
   scope: () => string;
   renderTemplate: (templatePath: string, data: any) => string;
