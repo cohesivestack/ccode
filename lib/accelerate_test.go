@@ -336,7 +336,7 @@ func TestAccelerator_AccelerateResetsStateWhenStateFileIsCorrupt(t *testing.T) {
 
 func TestAccelerator_RunUsesDefaultScopeFromProcessFileAndAllowsSetScope(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestAccelerator_RunUsesDefaultScopeFromProcessFileAndAllowsSetScope")
-	processFile := filepath.Join(projectDir, "x", "generate-api.ts")
+	processFile := filepath.Join(projectDir, "x", "generate-api.process.ts")
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
 	require.NoError(t, os.MkdirAll(filepath.Join(projectDir, "templates"), 0755))

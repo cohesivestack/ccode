@@ -45,7 +45,7 @@ func TestOpenAPIReference_ValidationBoundaryMatchesGoLoader(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx, projectDir := setupRunnerTestProject(t, "TestOpenAPIReference_ValidationBoundaryMatchesGoLoader")
-	processFile := filepath.Join(projectDir, "openapi", "reference-boundary.ts")
+	processFile := filepath.Join(projectDir, "openapi", "reference-boundary.process.ts")
 	process := fmt.Sprintf(`import type { Context } from "@ccode/context";
 import * as OpenAPI from "@ccode/openapi";
 
@@ -77,7 +77,7 @@ export default function main(ctx: Context) {
 
 func TestOpenAPIReference_RunnerParsesAndValidatesReferences(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestOpenAPIReference_RunnerParsesAndValidatesReferences")
-	processFile := filepath.Join(projectDir, "openapi", "references.ts")
+	processFile := filepath.Join(projectDir, "openapi", "references.process.ts")
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
 	require.NoError(t, os.WriteFile(processFile, []byte(`import type { Context } from "@ccode/context";

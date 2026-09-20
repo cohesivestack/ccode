@@ -5,15 +5,12 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	templateassets "github.com/cohesivestack/ccode/template"
 	"github.com/dop251/goja"
 	"github.com/evanw/esbuild/pkg/api"
 )
-
-var runnerEntryPointPattern = regexp.MustCompile(`(?s)export\s+default\s+function(?:\s+\w+)?\s*\(\s*\w+\s*:\s*Context\s*\)`)
 
 type RunnerContext struct {
 	ccodeContext             *Context
@@ -48,10 +45,6 @@ func (ctx *Context) Run(process string) error {
 	}
 	ctx.activeProcesses[processKey] = struct{}{}
 	defer delete(ctx.activeProcesses, processKey)
-
-	if err := validateRunnerSource(sourcePath); err != nil {
-		return err
-	}
 
 	result, err := ctx.compileTypescriptForRunner(entryPointPath)
 	if err != nil {
@@ -110,8 +103,11 @@ func (ctx *Context) resolveProcessEntryPoint(process string) (string, string, er
 	}
 
 	entryPointPath := cleaned
-	if filepath.Ext(entryPointPath) != ".ts" {
-		entryPointPath += ".ts"
+	if strings.HasSuffix(entryPointPath, ".ts") && !strings.HasSuffix(entryPointPath, ProcessFileSuffix) {
+		return "", "", fmt.Errorf("invalid process path %q: process files must end in %s or omit the suffix", process, ProcessFileSuffix)
+	}
+	if !strings.HasSuffix(entryPointPath, ProcessFileSuffix) {
+		entryPointPath += ProcessFileSuffix
 	}
 
 	sourcePath := filepath.Join(ctx.config.CCodePath, entryPointPath)
@@ -120,19 +116,6 @@ func (ctx *Context) resolveProcessEntryPoint(process string) (string, string, er
 	}
 
 	return entryPointPath, sourcePath, nil
-}
-
-func validateRunnerSource(sourcePath string) error {
-	source, err := os.ReadFile(sourcePath)
-	if err != nil {
-		return fmt.Errorf("read process source %s: %w", sourcePath, err)
-	}
-
-	if !runnerEntryPointPattern.Match(source) {
-		return fmt.Errorf("process %s must export a default function with a single Context-typed parameter", sourcePath)
-	}
-
-	return nil
 }
 
 func (ctx *Context) executeRunnerBundle(outputFiles []api.OutputFile, defaultScope string) error {
@@ -279,8 +262,7 @@ func (ctx *RunnerContext) RenderTemplate(templatePath string, data goja.Value) (
 
 func runnerScopeFromEntryPoint(entryPointPath string) string {
 	fileName := filepath.Base(filepath.Clean(entryPointPath))
-	extension := filepath.Ext(fileName)
-	scopeName := strings.TrimSuffix(fileName, extension)
+	scopeName := strings.TrimSuffix(fileName, ProcessFileSuffix)
 	if isStringBlank(scopeName) {
 		return "default"
 	}

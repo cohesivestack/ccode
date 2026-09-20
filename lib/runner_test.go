@@ -10,16 +10,32 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRunner_RunValidatesDefaultExportContextSignature(t *testing.T) {
-	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunValidatesDefaultExportContextSignature")
-	processFile := filepath.Join(projectDir, "x", "generate.ts")
+func TestRunner_RunRejectsNonFunctionDefaultExport(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunRejectsNonFunctionDefaultExport")
+	processFile := filepath.Join(projectDir, "x", "generate.process.ts")
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
-	require.NoError(t, os.WriteFile(processFile, []byte("export default function main() {}\n"), 0644))
+	require.NoError(t, os.WriteFile(processFile, []byte("export default 42;\n"), 0644))
 
 	err := ctx.Run("x/generate")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "must export a default function with a single Context-typed parameter")
+	assert.Contains(t, err.Error(), "runner bundle must export a default function")
+}
+
+func TestRunner_RunRequiresProcessFileSuffix(t *testing.T) {
+	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunRequiresProcessFileSuffix")
+	helperFile := filepath.Join(projectDir, "x", "helper.ts")
+
+	require.NoError(t, os.MkdirAll(filepath.Dir(helperFile), 0755))
+	require.NoError(t, os.WriteFile(helperFile, []byte("export default function () {}\n"), 0644))
+
+	err := ctx.Run("x/helper")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), filepath.Join("x", "helper.process.ts"))
+
+	err = ctx.Run("x/helper.ts")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "process files must end in .process.ts or omit the suffix")
 }
 
 func TestRunner_RunFailsWhenWorkspaceSupportFilesAreMissing(t *testing.T) {
@@ -47,7 +63,7 @@ func TestRunner_RunRequiresNestedWorkspaceSupportFiles(t *testing.T) {
 
 func TestRunner_RunRecreatesMissingBuildCache(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunRecreatesMissingBuildCache")
-	processFile := filepath.Join(projectDir, "x", "generate.ts")
+	processFile := filepath.Join(projectDir, "x", "generate.process.ts")
 	buildPath := filepath.Join(ctx.config.HiddenPath, "build")
 
 	require.NoError(t, os.RemoveAll(buildPath))
@@ -64,24 +80,24 @@ func TestRunner_RunRecreatesMissingBuildCache(t *testing.T) {
 
 func TestRunner_RunExecutesDefaultExport(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunExecutesDefaultExport")
-	processFile := filepath.Join(projectDir, "x", "generate.ts")
+	processFile := filepath.Join(projectDir, "x", "generate.process.ts")
 	helperFile := filepath.Join(projectDir, "x", "helper.ts")
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
 	require.NoError(t, os.WriteFile(helperFile, []byte(`export const message = "runner executed";`), 0644))
-	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/context\";\nimport { message } from \"./helper\";\n\nexport default function main(ctx: Context) {\n\tctx.println(message);\n}\n"), 0644))
+	require.NoError(t, os.WriteFile(processFile, []byte("import { message } from \"./helper\";\n\nexport default function (ctx) {\n\tctx.println(message);\n}\n"), 0644))
 
 	var output bytes.Buffer
 	ctx.stdout = &output
 
-	require.NoError(t, ctx.Run("x/generate"))
+	require.NoError(t, ctx.Run("x/generate.process.ts"))
 	assert.Equal(t, "runner executed\n", output.String())
 }
 
 func TestRunner_RunProcessUsesCurrentConfigAndAnIndependentRunnerContext(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunProcessUsesCurrentConfigAndAnIndependentRunnerContext")
-	parentFile := filepath.Join(projectDir, "x", "parent.ts")
-	childFile := filepath.Join(projectDir, "x", "child.ts")
+	parentFile := filepath.Join(projectDir, "x", "parent.process.ts")
+	childFile := filepath.Join(projectDir, "x", "child.process.ts")
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(parentFile), 0755))
 	require.NoError(t, os.WriteFile(parentFile, []byte(`import type { Context } from "@ccode/context";
@@ -110,25 +126,25 @@ export default function child(ctx: Context) {
 
 func TestRunner_RunProcessRejectsCircularExecution(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunProcessRejectsCircularExecution")
-	aFile := filepath.Join(projectDir, "a.ts")
-	bFile := filepath.Join(projectDir, "b.ts")
+	aFile := filepath.Join(projectDir, "a.process.ts")
+	bFile := filepath.Join(projectDir, "b.process.ts")
 
 	require.NoError(t, os.WriteFile(aFile, []byte(`import type { Context } from "@ccode/context";
 export default function a(ctx: Context) { ctx.runProcess("b"); }
 `), 0644))
 	require.NoError(t, os.WriteFile(bFile, []byte(`import type { Context } from "@ccode/context";
-export default function b(ctx: Context) { ctx.runProcess("a.ts"); }
+export default function b(ctx: Context) { ctx.runProcess("a.process.ts"); }
 `), 0644))
 
 	err := ctx.Run("a")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "circular process execution detected: a.ts is already running")
+	assert.Contains(t, err.Error(), "circular process execution detected: a.process.ts is already running")
 	assert.Empty(t, ctx.activeProcesses)
 }
 
 func TestRunner_RunBundlesPublicUtilityModulesAtModuleInitialization(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunBundlesPublicUtilityModulesAtModuleInitialization")
-	processFile := filepath.Join(projectDir, "x", "utility-modules.ts")
+	processFile := filepath.Join(projectDir, "x", "utility-modules.process.ts")
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
 	require.NoError(t, os.WriteFile(processFile, []byte(`import type { Context } from "@ccode/context";
@@ -186,7 +202,7 @@ export default function main(ctx: Context) {
 
 func TestRunner_PublicUtilityModulesForwardInitialismsAndPreserveDefaults(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_PublicUtilityModulesForwardInitialismsAndPreserveDefaults")
-	processFile := filepath.Join(projectDir, "x", "utility-initialisms.ts")
+	processFile := filepath.Join(projectDir, "x", "utility-initialisms.process.ts")
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
 	require.NoError(t, os.WriteFile(processFile, []byte(`import type { Context } from "@ccode/context";
@@ -244,7 +260,7 @@ export default function main(ctx: Context) {
 
 func TestRunner_RunTransformsTypeScriptIdentifiersThroughPublicModule(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunTransformsTypeScriptIdentifiersThroughPublicModule")
-	processFile := filepath.Join(projectDir, "x", "typescript-identifiers.ts")
+	processFile := filepath.Join(projectDir, "x", "typescript-identifiers.process.ts")
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
 	require.NoError(t, os.WriteFile(processFile, []byte(`import type { Context } from "@ccode/context";
@@ -291,7 +307,7 @@ export default function main(ctx: Context) {
 
 func TestRunner_RunBundlesPublicSupportModules(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunBundlesPublicSupportModules")
-	processFile := filepath.Join(projectDir, "x", "support-modules.ts")
+	processFile := filepath.Join(projectDir, "x", "support-modules.process.ts")
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
 	require.NoError(t, os.WriteFile(processFile, []byte(`import type { Context } from "@ccode/context";
@@ -336,7 +352,7 @@ export default function main(ctx: Context) {
 
 func TestRunner_RunTransformsOpenAPIPathsThroughPublicModules(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunTransformsOpenAPIPathsThroughPublicModules")
-	processFile := filepath.Join(projectDir, "x", "openapi-paths.ts")
+	processFile := filepath.Join(projectDir, "x", "openapi-paths.process.ts")
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
 	require.NoError(t, os.WriteFile(processFile, []byte(`import type { Context } from "@ccode/context";
@@ -375,7 +391,7 @@ export default function main(ctx: Context) {
 
 func TestRunner_RunRendersTemplates(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunRendersTemplates")
-	processFile := filepath.Join(projectDir, "x", "generate.ts")
+	processFile := filepath.Join(projectDir, "x", "generate.process.ts")
 	templateFile := filepath.Join(projectDir, "templates", "greeting.tpl")
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
@@ -397,7 +413,7 @@ func TestRunner_RunRendersTemplates(t *testing.T) {
 
 func TestRunner_RunRendersTemplatesWithDeterministicObjectOrder(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunRendersTemplatesWithDeterministicObjectOrder")
-	processFile := filepath.Join(projectDir, "x", "generate.ts")
+	processFile := filepath.Join(projectDir, "x", "generate.process.ts")
 	templateFile := filepath.Join(projectDir, "templates", "ordered.tpl")
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
@@ -419,7 +435,7 @@ func TestRunner_RunRendersTemplatesWithDeterministicObjectOrder(t *testing.T) {
 
 func TestRunner_RunTemplateErrorsCanBeCaughtInTypescript(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunTemplateErrorsCanBeCaughtInTypescript")
-	processFile := filepath.Join(projectDir, "x", "generate.ts")
+	processFile := filepath.Join(projectDir, "x", "generate.process.ts")
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
 	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/context\";\n\nexport default function main(ctx: Context) {\n\ttry {\n\t\tctx.renderTemplate(\"templates/missing.tpl\", { name: \"Carlos\" });\n\t} catch (e: any) {\n\t\tif (!(e instanceof GoError)) {\n\t\t\tthrow e;\n\t\t}\n\t\tctx.println(e.value.Error());\n\t}\n}\n"), 0644))
@@ -433,7 +449,7 @@ func TestRunner_RunTemplateErrorsCanBeCaughtInTypescript(t *testing.T) {
 
 func TestRunner_RunParsesJSONThroughRunnerContext(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunParsesJSONThroughRunnerContext")
-	processFile := filepath.Join(projectDir, "x", "generate.ts")
+	processFile := filepath.Join(projectDir, "x", "generate.process.ts")
 
 	originalWD, err := os.Getwd()
 	require.NoError(t, err)
@@ -460,7 +476,7 @@ func TestRunner_RunParsesJSONThroughRunnerContext(t *testing.T) {
 
 func TestRunner_RunParseJSONPreservesDeterministicObjectKeyOrder(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunParseJSONPreservesDeterministicObjectKeyOrder")
-	processFile := filepath.Join(projectDir, "x", "generate.ts")
+	processFile := filepath.Join(projectDir, "x", "generate.process.ts")
 	dataFile := filepath.Join(projectDir, "data", "input.json")
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
@@ -477,7 +493,7 @@ func TestRunner_RunParseJSONPreservesDeterministicObjectKeyOrder(t *testing.T) {
 
 func TestRunner_RunParseJSONErrorsCanBeCaughtInTypescript(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunParseJSONErrorsCanBeCaughtInTypescript")
-	processFile := filepath.Join(projectDir, "x", "generate.ts")
+	processFile := filepath.Join(projectDir, "x", "generate.process.ts")
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
 	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/context\";\n\nexport default function main(ctx: Context) {\n\tfor (const run of [\n\t\t() => ctx.parseJSONFromBytes([123]),\n\t\t() => ctx.parseJSONFromString('{'),\n\t\t() => ctx.parseJSONFromFile('missing.json'),\n\t]) {\n\t\ttry {\n\t\t\trun();\n\t\t} catch (e: any) {\n\t\t\tif (!(e instanceof GoError)) {\n\t\t\t\tthrow e;\n\t\t\t}\n\t\t\tctx.println(e.value.Error());\n\t\t}\n\t}\n}\n"), 0644))
@@ -492,7 +508,7 @@ func TestRunner_RunParseJSONErrorsCanBeCaughtInTypescript(t *testing.T) {
 
 func TestRunner_RunParsesOpenAPIThroughRunnerContextWithDeterministicOrder(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunParsesOpenAPIThroughRunnerContextWithDeterministicOrder")
-	processFile := filepath.Join(projectDir, "x", "generate.ts")
+	processFile := filepath.Join(projectDir, "x", "generate.process.ts")
 	specFile := filepath.Join(projectDir, "specs", "api.yaml")
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
@@ -509,7 +525,7 @@ func TestRunner_RunParsesOpenAPIThroughRunnerContextWithDeterministicOrder(t *te
 
 func TestRunner_RunParsesOpenAPIWithExpectedVersion(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunParsesOpenAPIWithExpectedVersion")
-	processFile := filepath.Join(projectDir, "x", "generate.ts")
+	processFile := filepath.Join(projectDir, "x", "generate.process.ts")
 	specFile := filepath.Join(projectDir, "specs", "api.yaml")
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
@@ -526,7 +542,7 @@ func TestRunner_RunParsesOpenAPIWithExpectedVersion(t *testing.T) {
 
 func TestRunner_RunParsesResolvedExternalOpenAPIPathItemWithProvenance(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunParsesResolvedExternalOpenAPIPathItemWithProvenance")
-	processFile := filepath.Join(projectDir, "x", "generate.ts")
+	processFile := filepath.Join(projectDir, "x", "generate.process.ts")
 	specFile := filepath.Join(projectDir, "app", "server.yaml")
 	pathFile := filepath.Join(projectDir, "app", "paths", "countries.yaml")
 
@@ -558,7 +574,7 @@ export default function main(ctx: Context) {
 
 func TestRunner_RunOpenAPIErrorsCanBeCaughtInTypescript(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestRunner_RunOpenAPIErrorsCanBeCaughtInTypescript")
-	processFile := filepath.Join(projectDir, "x", "generate.ts")
+	processFile := filepath.Join(projectDir, "x", "generate.process.ts")
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
 	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/context\";\n\nexport default function main(ctx: Context) {\n\tfor (const run of [\n\t\t() => ctx.parseOpenAPIFromString(\"swagger: '2.0'\\ninfo:\\n  title: Legacy\\n  version: 1.0.0\\npaths: {}\\n\"),\n\t\t() => ctx.parseOpenAPIFromFile(\"missing.yaml\"),\n\t]) {\n\t\ttry {\n\t\t\trun();\n\t\t} catch (e: any) {\n\t\t\tif (!(e instanceof GoError)) {\n\t\t\t\tthrow e;\n\t\t\t}\n\t\t\tctx.println(e.value.Error());\n\t\t}\n\t}\n}\n"), 0644))

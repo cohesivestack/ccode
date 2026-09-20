@@ -180,7 +180,7 @@ func TestDatabaseTypeScript_RunnerInspectsDatabaseAndUsesTypeGuards(t *testing.T
 	ctx, projectDir := setupRunnerTestProject(t, "TestDatabaseTypeScript_RunnerInspectsDatabaseAndUsesTypeGuards")
 	databasePath := filepath.Join(t.TempDir(), "application.db")
 	createTypeScriptTestDatabase(t, databasePath)
-	processFile := filepath.Join(projectDir, "database", "inspect.ts")
+	processFile := filepath.Join(projectDir, "database", "inspect.process.ts")
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
 	process := fmt.Sprintf(`import type { Context } from "@ccode/context";
