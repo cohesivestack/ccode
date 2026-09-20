@@ -62,7 +62,7 @@ ccode/
 
 ## Create a process
 
-Create a TypeScript process under `ccode_path`. The process must export a default function with one `Context` parameter.
+Create a `*.process.ts` file under `ccode_path`. A process must default-export a function; the runtime passes its `Context` as the first argument.
 
 ```ts
 import type { Context } from "@ccode/context";
@@ -87,14 +87,14 @@ Recommended layout:
 ```text
 ccode/
   hello/
-    generate.ts
+    generate.process.ts
   templates/
     greeting.tpl
 ```
 
 ## Run it
 
-Invoke the process without the `.ts` extension:
+Invoke the process without the `.process.ts` suffix:
 
 ```bash
 ccode run hello/generate

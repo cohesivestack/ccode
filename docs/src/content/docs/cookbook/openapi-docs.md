@@ -9,7 +9,7 @@ description: Generate a Markdown operation index from an OpenAPI document.
 ccode.yaml
 ccode/
   openapi/
-    generate.ts
+    generate.process.ts
   specs/
     api.yaml
   templates/

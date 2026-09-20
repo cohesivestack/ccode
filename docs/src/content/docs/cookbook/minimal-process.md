@@ -9,7 +9,7 @@ description: Render and write a simple generated text file.
 ccode.yaml
 ccode/
   hello/
-    generate.ts
+    generate.process.ts
   templates/
     greeting.tpl
 ```

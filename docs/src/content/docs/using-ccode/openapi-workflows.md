@@ -14,7 +14,7 @@ OpenAPI describes HTTP APIs with a language-agnostic YAML or JSON document that 
 ```text
 ccode/
   openapi/
-    generate.ts
+    generate.process.ts
   specs/
     api.yaml
   templates/

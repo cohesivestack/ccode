@@ -27,7 +27,7 @@ Initializes a workspace, writes or updates `ccode.yaml`, refreshes generated sup
 ccode run <process>
 ```
 
-Runs a TypeScript process under `ccode_path`. The process path is relative and may omit `.ts`.
+Runs a `*.process.ts` TypeScript process under `ccode_path`. The process path is relative and may omit `.process.ts`.
 
 ## Resolve an accelerated artifact
 

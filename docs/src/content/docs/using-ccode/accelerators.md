@@ -35,7 +35,7 @@ Accelerator state is stored at:
 <hidden_path>/accelerators/<scope>/<artifact-id>.accelerated.json
 ```
 
-The default scope is the process file name without `.ts`. Override it with:
+The default scope is the process file name without `.process.ts`. Override it with:
 
 ```ts
 ctx.setScope("generate-api");
