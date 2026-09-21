@@ -8,6 +8,8 @@ It is designed for deterministic generation where generator authors control the 
 
 ## Quick example
 
+Create `ccode/api/generate.process.ts`:
+
 ```ts
 import type { Context } from "@ccode/context";
 
