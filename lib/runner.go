@@ -13,14 +13,11 @@ import (
 )
 
 type RunnerContext struct {
-	ccodeContext             *Context
-	runtime                  *goja.Runtime
-	jsonObject               *goja.Object
-	jsonParse                goja.Callable
-	stdout                   io.Writer
-	scopeName                string
-	trackedAcceleratorStates map[string]struct{}
-	trackedAcceleratorScopes map[string]struct{}
+	ccodeContext *Context
+	runtime      *goja.Runtime
+	jsonObject   *goja.Object
+	jsonParse    goja.Callable
+	stdout       io.Writer
 }
 
 func Run(config *Config, process string) error {
@@ -51,8 +48,7 @@ func (ctx *Context) Run(process string) error {
 		return err
 	}
 
-	defaultScope := runnerScopeFromEntryPoint(entryPointPath)
-	return ctx.executeRunnerBundle(result.OutputFiles, defaultScope)
+	return ctx.executeRunnerBundle(result.OutputFiles)
 }
 
 func (ctx *Context) RunProcess(process string) error {
@@ -118,7 +114,7 @@ func (ctx *Context) resolveProcessEntryPoint(process string) (string, string, er
 	return entryPointPath, sourcePath, nil
 }
 
-func (ctx *Context) executeRunnerBundle(outputFiles []api.OutputFile, defaultScope string) error {
+func (ctx *Context) executeRunnerBundle(outputFiles []api.OutputFile) error {
 	if len(outputFiles) == 0 {
 		return fmt.Errorf("runner build produced no output files")
 	}
@@ -154,12 +150,9 @@ func (ctx *Context) executeRunnerBundle(outputFiles []api.OutputFile, defaultSco
 	}
 
 	runnerContext := &RunnerContext{
-		ccodeContext:             ctx,
-		runtime:                  runtime,
-		stdout:                   ctx.stdout,
-		scopeName:                defaultScope,
-		trackedAcceleratorStates: map[string]struct{}{},
-		trackedAcceleratorScopes: map[string]struct{}{},
+		ccodeContext: ctx,
+		runtime:      runtime,
+		stdout:       ctx.stdout,
 	}
 	if err := runnerContext.initializeJSONParser(); err != nil {
 		return err
@@ -173,7 +166,7 @@ func (ctx *Context) executeRunnerBundle(outputFiles []api.OutputFile, defaultSco
 		return fmt.Errorf("run default export: %w", err)
 	}
 
-	return runnerContext.cleanupUntrackedAcceleratorStates()
+	return nil
 }
 
 func (ctx *RunnerContext) initializeJSONParser() error {
@@ -207,12 +200,6 @@ func (ctx *RunnerContext) toValue(runtime *goja.Runtime) (goja.Value, error) {
 		return nil, fmt.Errorf("set runner context functions: %w", err)
 	}
 	if err := object.Set("accelerate", ctx.Accelerate); err != nil {
-		return nil, fmt.Errorf("set runner context functions: %w", err)
-	}
-	if err := object.Set("setScope", ctx.SetScope); err != nil {
-		return nil, fmt.Errorf("set runner context functions: %w", err)
-	}
-	if err := object.Set("scope", ctx.Scope); err != nil {
 		return nil, fmt.Errorf("set runner context functions: %w", err)
 	}
 	if err := object.Set("parseJSONFromBytes", ctx.ParseJSONFromBytes); err != nil {
@@ -258,33 +245,4 @@ func (ctx *RunnerContext) RenderTemplate(templatePath string, data goja.Value) (
 	}
 
 	return ctx.renderTemplate(templatePath, templateData)
-}
-
-func runnerScopeFromEntryPoint(entryPointPath string) string {
-	fileName := filepath.Base(filepath.Clean(entryPointPath))
-	scopeName := strings.TrimSuffix(fileName, ProcessFileSuffix)
-	if isStringBlank(scopeName) {
-		return "default"
-	}
-	return scopeName
-}
-
-func (ctx *RunnerContext) SetScope(scopeName string) error {
-	if ctx == nil || ctx.ccodeContext == nil {
-		return fmt.Errorf("runner context is not initialized")
-	}
-	normalizedScopeName, err := normalizeAcceleratorPathPart(scopeName, "scope")
-	if err != nil {
-		return err
-	}
-
-	ctx.scopeName = normalizedScopeName
-	return nil
-}
-
-func (ctx *RunnerContext) Scope() string {
-	if ctx == nil || isStringBlank(ctx.scopeName) {
-		return "default"
-	}
-	return ctx.scopeName
 }

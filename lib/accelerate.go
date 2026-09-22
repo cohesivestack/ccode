@@ -13,16 +13,6 @@ import (
 	"github.com/dop251/goja"
 )
 
-type acceleratorState struct {
-	Version int                     `json:"version"`
-	Scopes  []acceleratorStateScope `json:"scopes"`
-}
-
-type acceleratorStateScope struct {
-	ID        string                     `json:"id"`
-	Artifacts []acceleratorStateArtifact `json:"artifacts"`
-}
-
 type acceleratorStateArtifact struct {
 	ID                   string  `json:"id"`
 	Content              string  `json:"content"`
@@ -42,7 +32,6 @@ const (
 )
 
 type AcceleratorArtifactMetadata struct {
-	ScopeID          string  `json:"scope_id"`
 	ArtifactID       string  `json:"artifact_id"`
 	InstructionsPath *string `json:"instructions_path"`
 	Pending          bool    `json:"pending"`
@@ -51,7 +40,6 @@ type AcceleratorArtifactMetadata struct {
 }
 
 type AcceleratorArtifactState struct {
-	ScopeID          string  `json:"scope_id"`
 	ArtifactID       string  `json:"artifact_id"`
 	Content          string  `json:"content"`
 	InstructionsPath *string `json:"instructions_path"`
@@ -61,7 +49,6 @@ type AcceleratorArtifactState struct {
 }
 
 type AcceleratorInstructionReference struct {
-	ScopeID          string  `json:"scope_id"`
 	ArtifactID       string  `json:"artifact_id"`
 	InstructionsPath *string `json:"instructions_path"`
 	State            string  `json:"state"`
@@ -69,7 +56,6 @@ type AcceleratorInstructionReference struct {
 }
 
 type inspectedAcceleratorArtifact struct {
-	ScopeID    string
 	ArtifactID string
 	Artifact   *acceleratorStateArtifact
 	State      string
@@ -79,11 +65,6 @@ type inspectedAcceleratorArtifact struct {
 func (ctx *RunnerContext) Accelerate(id string, templatePath string, data goja.Value, instructionsPath ...string) error {
 	if ctx == nil || ctx.ccodeContext == nil {
 		return fmt.Errorf("runner context is not initialized")
-	}
-
-	scopeName, err := normalizeAcceleratorPathPart(ctx.Scope(), "scope")
-	if err != nil {
-		return err
 	}
 
 	artifactID, err := normalizeAcceleratorPathPart(id, "artifact id")
@@ -117,7 +98,7 @@ func (ctx *RunnerContext) Accelerate(id string, templatePath string, data goja.V
 	}
 
 	stateRootPath := ctx.acceleratorStateFilePath()
-	stateFilePath := acceleratorArtifactStateFilePath(stateRootPath, scopeName, artifactID)
+	stateFilePath := acceleratorArtifactStateFilePath(stateRootPath, artifactID)
 	storedArtifact, stateExists, err := sanitizeAcceleratorArtifactStateFile(stateFilePath)
 	if err != nil {
 		return err
@@ -130,14 +111,12 @@ func (ctx *RunnerContext) Accelerate(id string, templatePath string, data goja.V
 			return err
 		}
 	}
-	ctx.trackAcceleratorState(scopeName, artifactID)
-
 	var previousArtifact *acceleratorStateArtifact
 	if stateExists {
 		previousArtifact = &storedArtifact
 	}
 	outputFilePath := filepath.Clean(filepath.Join(ctx.ccodeContext.config.OutputPath, filepath.FromSlash(artifactID)))
-	shouldWrite, err := ctx.shouldWriteAcceleratedArtifact(outputFilePath, scopeName, artifactID, rendered, previousArtifact)
+	shouldWrite, err := ctx.shouldWriteAcceleratedArtifact(outputFilePath, artifactID, rendered, previousArtifact)
 	if err != nil {
 		return err
 	}
@@ -155,7 +134,7 @@ func (ctx *RunnerContext) Accelerate(id string, templatePath string, data goja.V
 	return nil
 }
 
-func (ctx *RunnerContext) shouldWriteAcceleratedArtifact(outputFilePath string, scopeName string, artifactID string, rendered string, artifact *acceleratorStateArtifact) (bool, error) {
+func (ctx *RunnerContext) shouldWriteAcceleratedArtifact(outputFilePath string, artifactID string, rendered string, artifact *acceleratorStateArtifact) (bool, error) {
 	if !fileExists(outputFilePath) {
 		return true, nil
 	}
@@ -171,7 +150,7 @@ func (ctx *RunnerContext) shouldWriteAcceleratedArtifact(outputFilePath string, 
 
 	lastGeneratedContent, err := decodeAcceleratorContentSnapshot(artifact.Content)
 	if err != nil {
-		return false, fmt.Errorf("decode stored content for artifact %q in scope %q: %w", artifactID, scopeName, err)
+		return false, fmt.Errorf("decode stored content for artifact %q: %w", artifactID, err)
 	}
 
 	if string(currentContent) != lastGeneratedContent {
@@ -187,86 +166,6 @@ func (ctx *RunnerContext) shouldWriteAcceleratedArtifact(outputFilePath string, 
 
 func (ctx *RunnerContext) acceleratorStateFilePath() string {
 	return ctx.ccodeContext.acceleratorStateFilePath()
-}
-
-func (ctx *RunnerContext) trackAcceleratorState(scopeID string, artifactID string) {
-	if ctx == nil {
-		return
-	}
-	if ctx.trackedAcceleratorStates == nil {
-		ctx.trackedAcceleratorStates = map[string]struct{}{}
-	}
-	if ctx.trackedAcceleratorScopes == nil {
-		ctx.trackedAcceleratorScopes = map[string]struct{}{}
-	}
-	ctx.trackedAcceleratorStates[acceleratorStateTrackingKey(scopeID, artifactID)] = struct{}{}
-	ctx.trackedAcceleratorScopes[scopeID] = struct{}{}
-}
-
-func (ctx *RunnerContext) cleanupUntrackedAcceleratorStates() error {
-	if ctx == nil || ctx.ccodeContext == nil {
-		return fmt.Errorf("runner context is not initialized")
-	}
-
-	stateRootPath := ctx.acceleratorStateFilePath()
-	if !fileExists(stateRootPath) {
-		return nil
-	}
-
-	info, err := os.Stat(stateRootPath)
-	if err != nil {
-		return fmt.Errorf("stat accelerator state %q: %w", stateRootPath, err)
-	}
-	if !info.IsDir() {
-		return fmt.Errorf("accelerator state %q is not a directory", stateRootPath)
-	}
-
-	trackedStates := ctx.trackedAcceleratorStates
-	if trackedStates == nil {
-		trackedStates = map[string]struct{}{}
-	}
-	trackedScopes := ctx.trackedAcceleratorScopes
-	if trackedScopes == nil || len(trackedScopes) == 0 {
-		return nil
-	}
-
-	return filepath.WalkDir(stateRootPath, func(itemPath string, entry os.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		if entry.IsDir() {
-			return nil
-		}
-		if !strings.HasSuffix(entry.Name(), ".accelerated.json") {
-			return nil
-		}
-
-		relativePath, err := filepath.Rel(stateRootPath, itemPath)
-		if err != nil {
-			return fmt.Errorf("resolve accelerator state file %q: %w", itemPath, err)
-		}
-
-		scopeID, artifactID, err := acceleratorStateIDsFromRelativePath(relativePath)
-		if err != nil {
-			return err
-		}
-
-		if _, ok := trackedScopes[scopeID]; !ok {
-			return nil
-		}
-		if _, ok := trackedStates[acceleratorStateTrackingKey(scopeID, artifactID)]; ok {
-			return nil
-		}
-
-		if err := removeAcceleratorArtifactStateFile(itemPath); err != nil {
-			return err
-		}
-		return nil
-	})
-}
-
-func acceleratorStateTrackingKey(scopeID string, artifactID string) string {
-	return scopeID + "\x00" + artifactID
 }
 
 func (ctx *RunnerContext) normalizeInstructionsPath(instructionsPath string) (string, error) {
@@ -288,65 +187,6 @@ func normalizeAcceleratorPathPart(value string, label string) (string, error) {
 	}
 
 	return filepath.ToSlash(normalizedValue), nil
-}
-
-func loadAcceleratorState(path string) (*acceleratorState, error) {
-	if !fileExists(path) {
-		return &acceleratorState{
-			Version: 1,
-			Scopes:  []acceleratorStateScope{},
-		}, nil
-	}
-
-	info, err := os.Stat(path)
-	if err != nil {
-		return nil, fmt.Errorf("stat accelerator state %q: %w", path, err)
-	}
-	if !info.IsDir() {
-		return nil, fmt.Errorf("accelerator state %q is not a directory", path)
-	}
-
-	state := &acceleratorState{
-		Version: 1,
-		Scopes:  []acceleratorStateScope{},
-	}
-
-	err = filepath.WalkDir(path, func(itemPath string, entry os.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		if entry.IsDir() {
-			return nil
-		}
-		if !strings.HasSuffix(entry.Name(), ".accelerated.json") {
-			return nil
-		}
-
-		relativePath, err := filepath.Rel(path, itemPath)
-		if err != nil {
-			return fmt.Errorf("resolve accelerator state file %q: %w", itemPath, err)
-		}
-
-		scopeID, artifactID, err := acceleratorStateIDsFromRelativePath(relativePath)
-		if err != nil {
-			return err
-		}
-
-		artifact, err := loadAcceleratorArtifactStateFile(itemPath)
-		if err != nil {
-			return err
-		}
-		artifact.ID = artifactID
-
-		scope := state.findOrCreateScope(scopeID)
-		scope.Artifacts = append(scope.Artifacts, artifact)
-		return nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("read accelerator state %q: %w", path, err)
-	}
-
-	return state, nil
 }
 
 func (ctx *Context) inspectAcceleratorState() ([]inspectedAcceleratorArtifact, error) {
@@ -384,12 +224,12 @@ func (ctx *Context) inspectAcceleratorState() ([]inspectedAcceleratorArtifact, e
 			return fmt.Errorf("resolve accelerator state file %q: %w", itemPath, err)
 		}
 
-		scopeID, artifactID, err := acceleratorStateIDsFromRelativePath(relativePath)
+		artifactID, err := acceleratorStateIDFromRelativePath(relativePath)
 		if err != nil {
 			return err
 		}
 
-		item, err := ctx.inspectAcceleratorArtifactStateFile(itemPath, scopeID, artifactID)
+		item, err := ctx.inspectAcceleratorArtifactStateFile(itemPath, artifactID)
 		if err != nil {
 			return err
 		}
@@ -403,9 +243,8 @@ func (ctx *Context) inspectAcceleratorState() ([]inspectedAcceleratorArtifact, e
 	return items, nil
 }
 
-func (ctx *Context) inspectAcceleratorArtifactStateFile(path string, scopeID string, artifactID string) (inspectedAcceleratorArtifact, error) {
+func (ctx *Context) inspectAcceleratorArtifactStateFile(path string, artifactID string) (inspectedAcceleratorArtifact, error) {
 	item := inspectedAcceleratorArtifact{
-		ScopeID:    scopeID,
 		ArtifactID: artifactID,
 		State:      acceleratorReportStateCorrupt,
 		Message:    acceleratorStateMessage(acceleratorReportStateCorrupt),
@@ -444,12 +283,11 @@ func (ctx *Context) inspectAcceleratorArtifactStateFile(path string, scopeID str
 	}
 	artifact.ID = artifactID
 
-	return ctx.inspectParsedAcceleratorArtifact(path, scopeID, artifactID, artifact)
+	return ctx.inspectParsedAcceleratorArtifact(path, artifactID, artifact)
 }
 
-func (ctx *Context) inspectParsedAcceleratorArtifact(path string, scopeID string, artifactID string, artifact acceleratorStateArtifact) (inspectedAcceleratorArtifact, error) {
+func (ctx *Context) inspectParsedAcceleratorArtifact(path string, artifactID string, artifact acceleratorStateArtifact) (inspectedAcceleratorArtifact, error) {
 	item := inspectedAcceleratorArtifact{
-		ScopeID:    scopeID,
 		ArtifactID: artifactID,
 		Artifact:   &artifact,
 		State:      acceleratorArtifactReportState(artifact),
@@ -553,7 +391,6 @@ func acceleratorReportStateIsProblem(state string) bool {
 
 func acceleratorMetadataFromInspected(item inspectedAcceleratorArtifact) AcceleratorArtifactMetadata {
 	metadata := AcceleratorArtifactMetadata{
-		ScopeID:    item.ScopeID,
 		ArtifactID: item.ArtifactID,
 		State:      item.State,
 		Message:    item.Message,
@@ -567,7 +404,6 @@ func acceleratorMetadataFromInspected(item inspectedAcceleratorArtifact) Acceler
 
 func acceleratorStateFromInspected(item inspectedAcceleratorArtifact) *AcceleratorArtifactState {
 	state := &AcceleratorArtifactState{
-		ScopeID:    item.ScopeID,
 		ArtifactID: item.ArtifactID,
 		State:      item.State,
 		Message:    item.Message,
@@ -582,7 +418,6 @@ func acceleratorStateFromInspected(item inspectedAcceleratorArtifact) *Accelerat
 
 func acceleratorInstructionReferenceFromInspected(item inspectedAcceleratorArtifact) AcceleratorInstructionReference {
 	reference := AcceleratorInstructionReference{
-		ScopeID:    item.ScopeID,
 		ArtifactID: item.ArtifactID,
 		State:      item.State,
 		Message:    item.Message,
@@ -591,40 +426,6 @@ func acceleratorInstructionReferenceFromInspected(item inspectedAcceleratorArtif
 		reference.InstructionsPath = item.Artifact.InstructionsPath
 	}
 	return reference
-}
-
-func saveAcceleratorState(path string, state *acceleratorState) error {
-	if state == nil {
-		return fmt.Errorf("accelerator state is required")
-	}
-
-	state.Version = 1
-	if state.Scopes == nil {
-		state.Scopes = []acceleratorStateScope{}
-	}
-
-	if err := os.MkdirAll(path, 0755); err != nil {
-		return fmt.Errorf("create accelerator state directory for %q: %w", path, err)
-	}
-
-	for _, scope := range state.Scopes {
-		scopeID, err := normalizeAcceleratorPathPart(scope.ID, "scope id")
-		if err != nil {
-			return err
-		}
-		for _, artifact := range scope.Artifacts {
-			artifactID, err := normalizeAcceleratorPathPart(artifact.ID, "artifact id")
-			if err != nil {
-				return err
-			}
-			stateFilePath := acceleratorArtifactStateFilePath(path, scopeID, artifactID)
-			if err := saveAcceleratorArtifactStateFile(stateFilePath, artifact); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
 }
 
 type acceleratorArtifactStateFile struct {
@@ -784,72 +585,18 @@ func saveAcceleratorArtifactStateFile(path string, artifact acceleratorStateArti
 	return nil
 }
 
-func acceleratorArtifactStateFilePath(rootPath string, scopeID string, artifactID string) string {
-	return filepath.Join(rootPath, filepath.FromSlash(scopeID), filepath.FromSlash(artifactID)+".accelerated.json")
+func acceleratorArtifactStateFilePath(rootPath string, artifactID string) string {
+	return filepath.Join(rootPath, filepath.FromSlash(artifactID)+".accelerated.json")
 }
 
-func acceleratorStateIDsFromRelativePath(relativePath string) (string, string, error) {
-	parts := strings.Split(filepath.ToSlash(relativePath), "/")
-	if len(parts) < 2 {
-		return "", "", fmt.Errorf("invalid accelerator state file path %q", relativePath)
-	}
-
-	scopeID := parts[0]
-	artifactPath := strings.Join(parts[1:], "/")
+func acceleratorStateIDFromRelativePath(relativePath string) (string, error) {
+	artifactPath := filepath.ToSlash(relativePath)
 	artifactID := strings.TrimSuffix(artifactPath, ".accelerated.json")
 	if artifactID == artifactPath || isStringBlank(artifactID) {
-		return "", "", fmt.Errorf("invalid accelerator state file path %q", relativePath)
+		return "", fmt.Errorf("invalid accelerator state file path %q", relativePath)
 	}
 
-	return scopeID, artifactID, nil
-}
-
-func (state *acceleratorState) findArtifact(scopeName string, artifactID string) (*acceleratorStateScope, *acceleratorStateArtifact) {
-	scope := state.findOrCreateScope(scopeName)
-	for index := range scope.Artifacts {
-		if scope.Artifacts[index].ID == artifactID {
-			return scope, &scope.Artifacts[index]
-		}
-	}
-
-	scope.Artifacts = append(scope.Artifacts, acceleratorStateArtifact{
-		ID: artifactID,
-	})
-
-	return scope, &scope.Artifacts[len(scope.Artifacts)-1]
-}
-
-func (state *acceleratorState) findOrCreateScope(scopeName string) *acceleratorStateScope {
-	for index := range state.Scopes {
-		if state.Scopes[index].ID == scopeName {
-			return &state.Scopes[index]
-		}
-	}
-
-	state.Scopes = append(state.Scopes, acceleratorStateScope{
-		ID:        scopeName,
-		Artifacts: []acceleratorStateArtifact{},
-	})
-
-	return &state.Scopes[len(state.Scopes)-1]
-}
-
-func (state *acceleratorState) findScopeByID(scopeID string) *acceleratorStateScope {
-	for index := range state.Scopes {
-		if state.Scopes[index].ID == scopeID {
-			return &state.Scopes[index]
-		}
-	}
-	return nil
-}
-
-func (scope *acceleratorStateScope) findArtifactByID(artifactID string) *acceleratorStateArtifact {
-	for index := range scope.Artifacts {
-		if scope.Artifacts[index].ID == artifactID {
-			return &scope.Artifacts[index]
-		}
-	}
-	return nil
+	return artifactID, nil
 }
 
 func encodeAcceleratorContentSnapshot(content string, _ time.Time) string {
@@ -933,81 +680,54 @@ func checksumAcceleratorBytes(content []byte) string {
 	return fmt.Sprintf("sha256:%x", checksum)
 }
 
-func (ctx *Context) MarkAcceleratorAsResolved(scopeID *string, artifactID *string) error {
+func (ctx *Context) MarkAcceleratorAsResolved(artifactID *string) error {
 	if ctx == nil || ctx.config == nil {
 		return fmt.Errorf("context config is required")
 	}
 
-	if scopeID == nil && artifactID != nil {
-		return fmt.Errorf("scope id is required when artifact id is provided")
-	}
-
-	statePath := ctx.acceleratorStateFilePath()
-	state, err := loadAcceleratorState(statePath)
-	if err != nil {
-		return err
-	}
-
-	switch {
-	case scopeID == nil && artifactID == nil:
-		for scopeIndex := range state.Scopes {
-			for artifactIndex := range state.Scopes[scopeIndex].Artifacts {
-				state.Scopes[scopeIndex].Artifacts[artifactIndex].Pending = false
-			}
-		}
-	case scopeID != nil && artifactID == nil:
-		normalizedScopeID, err := normalizeAcceleratorPathPart(*scopeID, "scope id")
-		if err != nil {
-			return err
-		}
-
-		scope := state.findScopeByID(normalizedScopeID)
-		if scope == nil {
-			return fmt.Errorf("accelerator scope %q not found", normalizedScopeID)
-		}
-		for artifactIndex := range scope.Artifacts {
-			scope.Artifacts[artifactIndex].Pending = false
-		}
-	case scopeID != nil && artifactID != nil:
-		normalizedScopeID, err := normalizeAcceleratorPathPart(*scopeID, "scope id")
-		if err != nil {
-			return err
-		}
+	stateRootPath := ctx.acceleratorStateFilePath()
+	if artifactID != nil {
 		normalizedArtifactID, err := normalizeAcceleratorPathPart(*artifactID, "artifact id")
 		if err != nil {
 			return err
 		}
-
-		scope := state.findScopeByID(normalizedScopeID)
-		if scope == nil {
-			return fmt.Errorf("accelerator scope %q not found", normalizedScopeID)
+		stateFilePath := acceleratorArtifactStateFilePath(stateRootPath, normalizedArtifactID)
+		if !fileExists(stateFilePath) {
+			return fmt.Errorf("accelerator artifact %q not found", normalizedArtifactID)
 		}
-		artifact := scope.findArtifactByID(normalizedArtifactID)
-		if artifact == nil {
-			return fmt.Errorf("accelerator artifact %q not found in scope %q", normalizedArtifactID, normalizedScopeID)
-		}
-		artifact.Pending = false
+		return markAcceleratorStateFileAsResolved(stateFilePath)
 	}
 
-	return saveAcceleratorState(statePath, state)
+	if !fileExists(stateRootPath) {
+		return nil
+	}
+	return filepath.WalkDir(stateRootPath, func(path string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".accelerated.json") {
+			return nil
+		}
+		return markAcceleratorStateFileAsResolved(path)
+	})
 }
 
-func (ctx *Context) ListNotResolvedAccelerators(scopeID *string) ([]AcceleratorArtifactMetadata, error) {
-	return ctx.ListAccelerators(scopeID, false)
+func markAcceleratorStateFileAsResolved(path string) error {
+	artifact, err := loadAcceleratorArtifactStateFile(path)
+	if err != nil {
+		return err
+	}
+	artifact.Pending = false
+	return saveAcceleratorArtifactStateFile(path, artifact)
 }
 
-func (ctx *Context) ListAccelerators(scopeID *string, includeResolved bool) ([]AcceleratorArtifactMetadata, error) {
+func (ctx *Context) ListNotResolvedAccelerators() ([]AcceleratorArtifactMetadata, error) {
+	return ctx.ListAccelerators(false)
+}
+
+func (ctx *Context) ListAccelerators(includeResolved bool) ([]AcceleratorArtifactMetadata, error) {
 	if ctx == nil || ctx.config == nil {
 		return nil, fmt.Errorf("context config is required")
-	}
-
-	var filterScopeID *string
-	if scopeID != nil {
-		normalizedScopeID, err := normalizeAcceleratorPathPart(*scopeID, "scope id")
-		if err != nil {
-			return nil, err
-		}
-		filterScopeID = &normalizedScopeID
 	}
 
 	items, err := ctx.inspectAcceleratorState()
@@ -1017,9 +737,6 @@ func (ctx *Context) ListAccelerators(scopeID *string, includeResolved bool) ([]A
 
 	metadataItems := []AcceleratorArtifactMetadata{}
 	for _, item := range items {
-		if filterScopeID != nil && item.ScopeID != *filterScopeID {
-			continue
-		}
 		if !acceleratorReportStateMatchesListFilter(item.State, includeResolved) {
 			continue
 		}
@@ -1029,15 +746,11 @@ func (ctx *Context) ListAccelerators(scopeID *string, includeResolved bool) ([]A
 	return metadataItems, nil
 }
 
-func (ctx *Context) GetAcceleratorState(scopeID string, artifactID string) (*AcceleratorArtifactState, error) {
+func (ctx *Context) GetAcceleratorState(artifactID string) (*AcceleratorArtifactState, error) {
 	if ctx == nil || ctx.config == nil {
 		return nil, fmt.Errorf("context config is required")
 	}
 
-	normalizedScopeID, err := normalizeAcceleratorPathPart(scopeID, "scope id")
-	if err != nil {
-		return nil, err
-	}
 	normalizedArtifactID, err := normalizeAcceleratorPathPart(artifactID, "artifact id")
 	if err != nil {
 		return nil, err
@@ -1049,13 +762,13 @@ func (ctx *Context) GetAcceleratorState(scopeID string, artifactID string) (*Acc
 	}
 
 	for _, item := range items {
-		if item.ScopeID != normalizedScopeID || item.ArtifactID != normalizedArtifactID {
+		if item.ArtifactID != normalizedArtifactID {
 			continue
 		}
 		return acceleratorStateFromInspected(item), nil
 	}
 
-	return nil, fmt.Errorf("accelerator artifact %q not found in scope %q", normalizedArtifactID, normalizedScopeID)
+	return nil, fmt.Errorf("accelerator artifact %q not found", normalizedArtifactID)
 }
 
 func (ctx *Context) ListAcceleratorInstructions() ([]AcceleratorInstructionReference, error) {
@@ -1111,32 +824,32 @@ func (ctx *Context) GetAcceleratorInstruction(markdownPath string) (string, erro
 	return string(content), nil
 }
 
-func (ctx *RunnerContext) MarkAcceleratorAsResolved(scopeID *string, artifactID *string) error {
+func (ctx *RunnerContext) MarkAcceleratorAsResolved(artifactID *string) error {
 	if ctx == nil || ctx.ccodeContext == nil {
 		return fmt.Errorf("runner context is not initialized")
 	}
 
-	return ctx.ccodeContext.MarkAcceleratorAsResolved(scopeID, artifactID)
+	return ctx.ccodeContext.MarkAcceleratorAsResolved(artifactID)
 }
 
-func (ctx *RunnerContext) ListNotResolvedAccelerators(scopeID *string) ([]AcceleratorArtifactMetadata, error) {
-	return ctx.ListAccelerators(scopeID, false)
+func (ctx *RunnerContext) ListNotResolvedAccelerators() ([]AcceleratorArtifactMetadata, error) {
+	return ctx.ListAccelerators(false)
 }
 
-func (ctx *RunnerContext) ListAccelerators(scopeID *string, includeResolved bool) ([]AcceleratorArtifactMetadata, error) {
+func (ctx *RunnerContext) ListAccelerators(includeResolved bool) ([]AcceleratorArtifactMetadata, error) {
 	if ctx == nil || ctx.ccodeContext == nil {
 		return nil, fmt.Errorf("runner context is not initialized")
 	}
 
-	return ctx.ccodeContext.ListAccelerators(scopeID, includeResolved)
+	return ctx.ccodeContext.ListAccelerators(includeResolved)
 }
 
-func (ctx *RunnerContext) GetAcceleratorState(scopeID string, artifactID string) (*AcceleratorArtifactState, error) {
+func (ctx *RunnerContext) GetAcceleratorState(artifactID string) (*AcceleratorArtifactState, error) {
 	if ctx == nil || ctx.ccodeContext == nil {
 		return nil, fmt.Errorf("runner context is not initialized")
 	}
 
-	return ctx.ccodeContext.GetAcceleratorState(scopeID, artifactID)
+	return ctx.ccodeContext.GetAcceleratorState(artifactID)
 }
 
 func (ctx *RunnerContext) ListAcceleratorInstructions() ([]AcceleratorInstructionReference, error) {

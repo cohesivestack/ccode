@@ -104,16 +104,15 @@ func TestRunner_RunProcessUsesCurrentConfigAndAnIndependentRunnerContext(t *test
 
 export default function parent(ctx: Context) {
   (globalThis as any).marker = "parent";
-  ctx.setScope("parent-scope");
   ctx.runProcess("x/child");
   ctx.runProcess("x/child");
-  ctx.println(ctx.scope() + ":" + (globalThis as any).marker);
+  ctx.println((globalThis as any).marker);
 }
 `), 0644))
 	require.NoError(t, os.WriteFile(childFile, []byte(`import type { Context } from "@ccode/context";
 
 export default function child(ctx: Context) {
-  ctx.println(ctx.scope() + ":" + String((globalThis as any).marker));
+  ctx.println(String((globalThis as any).marker));
 }
 `), 0644))
 
@@ -121,7 +120,7 @@ export default function child(ctx: Context) {
 	ctx.stdout = &output
 
 	require.NoError(t, ctx.Run("x/parent"))
-	assert.Equal(t, "child:undefined\nchild:undefined\nparent-scope:parent\n", output.String())
+	assert.Equal(t, "undefined\nundefined\nparent\n", output.String())
 }
 
 func TestRunner_RunProcessRejectsCircularExecution(t *testing.T) {

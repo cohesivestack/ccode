@@ -74,7 +74,7 @@ func TestInitializer_InitRefreshesGeneratedSupportFilesAndPreservesUserFiles(t *
 	hiddenGitIgnorePath := filepath.Join(hiddenPath, ".gitignore")
 	buildPath := filepath.Join(hiddenPath, "build")
 	buildCachePath := filepath.Join(buildPath, "process.old.js")
-	statePath := filepath.Join(hiddenPath, "accelerators", "generate-api", "handlers.go.accelerated.json")
+	statePath := filepath.Join(hiddenPath, "accelerators", "handlers.go.accelerated.json")
 	userSupportPath := filepath.Join(hiddenLibPath, "custom.ts")
 	tsconfigPath := filepath.Join(projectPath, "tsconfig.json")
 

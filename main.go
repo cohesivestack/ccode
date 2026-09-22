@@ -14,7 +14,6 @@ import (
 )
 
 type acceleratorInstructionsAgentResult struct {
-	ScopeID              string  `json:"scope_id"`
 	ArtifactID           string  `json:"artifact_id"`
 	InstructionsPath     *string `json:"instructions_path"`
 	State                string  `json:"state"`
@@ -172,7 +171,7 @@ Syntax:
 	initCmd.Flags().String("version", "", "ccode version to write to ccode.yaml")
 
 	resolveCmd := &cobra.Command{
-		Use:   "resolve <scopeId>:<artifactId>",
+		Use:   "resolve <artifactId>",
 		Short: "Mark an accelerated artifact as resolved",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -181,13 +180,8 @@ Syntax:
 				return err
 			}
 
-			scopeID, artifactID, err := parseAcceleratorSelector(args[0])
-			if err != nil {
-				return err
-			}
-
 			context := ccode.NewContext(cfg)
-			return context.MarkAcceleratorAsResolved(&scopeID, &artifactID)
+			return context.MarkAcceleratorAsResolved(&args[0])
 		},
 	}
 
@@ -216,19 +210,13 @@ Syntax:
 	}
 
 	listAcceleratedCmd := &cobra.Command{
-		Use:   "accelerated [scopeId]",
+		Use:   "accelerated",
 		Short: "List pending accelerated artifacts",
-		Args:  cobra.MaximumNArgs(1),
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := loadConfig(cmd)
 			if err != nil {
 				return err
-			}
-
-			context := ccode.NewContext(cfg)
-			var scopeID *string
-			if len(args) == 1 {
-				scopeID = &args[0]
 			}
 
 			includeResolved, err := cmd.Flags().GetBool("include-resolved")
@@ -236,7 +224,7 @@ Syntax:
 				return err
 			}
 
-			items, err := context.ListAccelerators(scopeID, includeResolved)
+			items, err := ccode.NewContext(cfg).ListAccelerators(includeResolved)
 			if err != nil {
 				return err
 			}
@@ -279,7 +267,7 @@ Syntax:
 	}
 
 	getAcceleratedCmd := &cobra.Command{
-		Use:   "accelerated <scopeId>:<artifactId>",
+		Use:   "accelerated <artifactId>",
 		Short: "Get accelerated artifact metadata",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -288,13 +276,8 @@ Syntax:
 				return err
 			}
 
-			scopeID, artifactID, err := parseAcceleratorSelector(args[0])
-			if err != nil {
-				return err
-			}
-
 			context := ccode.NewContext(cfg)
-			state, err := context.GetAcceleratorState(scopeID, artifactID)
+			state, err := context.GetAcceleratorState(args[0])
 			if err != nil {
 				return err
 			}
@@ -310,7 +293,6 @@ Syntax:
 
 			if !emitInstructions {
 				return writeJSON(cmd, ccode.AcceleratorArtifactMetadata{
-					ScopeID:          state.ScopeID,
 					ArtifactID:       state.ArtifactID,
 					InstructionsPath: state.InstructionsPath,
 					Pending:          state.Pending,
@@ -338,7 +320,6 @@ Syntax:
 			composedMarkdown := composeAcceleratedInstructionsMarkdown(instructionsMarkdown, acceleratedContent, state.ArtifactID, state.Message)
 			if forAgent {
 				return writeJSON(cmd, acceleratorInstructionsAgentResult{
-					ScopeID:              state.ScopeID,
 					ArtifactID:           state.ArtifactID,
 					InstructionsPath:     state.InstructionsPath,
 					State:                state.State,
@@ -407,23 +388,6 @@ func writeJSON(cmd *cobra.Command, payload any) error {
 	encoder := json.NewEncoder(cmd.OutOrStdout())
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(payload)
-}
-
-func parseAcceleratorSelector(value string) (string, string, error) {
-	trimmedValue := strings.TrimSpace(value)
-	if trimmedValue == "" {
-		return "", "", fmt.Errorf("accelerator selector is required")
-	}
-	if strings.Count(trimmedValue, ":") != 1 {
-		return "", "", fmt.Errorf("invalid accelerator selector %q: expected <scopeId>:<artifactId>", value)
-	}
-
-	parts := strings.SplitN(trimmedValue, ":", 2)
-	if len(parts) != 2 || isStringBlank(parts[0]) || isStringBlank(parts[1]) {
-		return "", "", fmt.Errorf("invalid accelerator selector %q: expected <scopeId>:<artifactId>", value)
-	}
-
-	return parts[0], parts[1], nil
 }
 
 func composeAcceleratedInstructionsMarkdown(instructionsMarkdown string, acceleratedContent string, artifactID string, stateMessage string) string {

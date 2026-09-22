@@ -13,126 +13,57 @@ import (
 
 func TestAcceleratorState_MarkSingleArtifactAsResolved(t *testing.T) {
 	ctx := newAcceleratorStateContext(t)
-	writeAcceleratorStateForTest(t, ctx, &acceleratorState{
-		Version: 1,
-		Scopes: []acceleratorStateScope{
-			{
-				ID: "generate-api",
-				Artifacts: []acceleratorStateArtifact{
-					{ID: "handlers", Content: encodeAcceleratorContentSnapshot("handlers", time.Now().UTC()), Pending: true},
-					{ID: "service", Content: encodeAcceleratorContentSnapshot("service", time.Now().UTC()), Pending: true},
-				},
-			},
-		},
-	})
+	writeAcceleratorStateForTest(t, ctx,
+		testAcceleratorArtifact("handlers", "handlers", true),
+		testAcceleratorArtifact("service", "service", true),
+	)
 
-	scopeID := "generate-api"
 	artifactID := "handlers"
-	require.NoError(t, ctx.MarkAcceleratorAsResolved(&scopeID, &artifactID))
+	require.NoError(t, ctx.MarkAcceleratorAsResolved(&artifactID))
 
-	state := readAcceleratorStateForTest(t, ctx)
-	require.Len(t, state.Scopes, 1)
-	require.Len(t, state.Scopes[0].Artifacts, 2)
-	assert.False(t, state.Scopes[0].Artifacts[0].Pending)
-	assert.True(t, state.Scopes[0].Artifacts[1].Pending)
+	artifacts := readAcceleratorArtifactsForTest(t, ctx)
+	require.Len(t, artifacts, 2)
+	assert.False(t, artifacts[0].Pending)
+	assert.True(t, artifacts[1].Pending)
 }
 
-func TestAcceleratorState_MarkAllArtifactsInScopeAsResolved(t *testing.T) {
+func TestAcceleratorState_MarkAllArtifactsAsResolved(t *testing.T) {
 	ctx := newAcceleratorStateContext(t)
-	writeAcceleratorStateForTest(t, ctx, &acceleratorState{
-		Version: 1,
-		Scopes: []acceleratorStateScope{
-			{
-				ID: "generate-api",
-				Artifacts: []acceleratorStateArtifact{
-					{ID: "handlers", Content: encodeAcceleratorContentSnapshot("handlers", time.Now().UTC()), Pending: true},
-					{ID: "service", Content: encodeAcceleratorContentSnapshot("service", time.Now().UTC()), Pending: true},
-				},
-			},
-			{
-				ID: "other",
-				Artifacts: []acceleratorStateArtifact{
-					{ID: "ignored", Content: encodeAcceleratorContentSnapshot("ignored", time.Now().UTC()), Pending: true},
-				},
-			},
-		},
-	})
+	writeAcceleratorStateForTest(t, ctx,
+		testAcceleratorArtifact("handlers", "handlers", true),
+		testAcceleratorArtifact("nested/page.ts", "page", true),
+	)
 
-	scopeID := "generate-api"
-	require.NoError(t, ctx.MarkAcceleratorAsResolved(&scopeID, nil))
+	require.NoError(t, ctx.MarkAcceleratorAsResolved(nil))
 
-	state := readAcceleratorStateForTest(t, ctx)
-	assert.False(t, state.Scopes[0].Artifacts[0].Pending)
-	assert.False(t, state.Scopes[0].Artifacts[1].Pending)
-	assert.True(t, state.Scopes[1].Artifacts[0].Pending)
-}
-
-func TestAcceleratorState_MarkAllArtifactsGloballyAsResolved(t *testing.T) {
-	ctx := newAcceleratorStateContext(t)
-	writeAcceleratorStateForTest(t, ctx, &acceleratorState{
-		Version: 1,
-		Scopes: []acceleratorStateScope{
-			{
-				ID: "generate-api",
-				Artifacts: []acceleratorStateArtifact{
-					{ID: "handlers", Content: encodeAcceleratorContentSnapshot("handlers", time.Now().UTC()), Pending: true},
-				},
-			},
-			{
-				ID: "generate-web",
-				Artifacts: []acceleratorStateArtifact{
-					{ID: "page.ts", Content: encodeAcceleratorContentSnapshot("page", time.Now().UTC()), Pending: true},
-				},
-			},
-		},
-	})
-
-	require.NoError(t, ctx.MarkAcceleratorAsResolved(nil, nil))
-
-	state := readAcceleratorStateForTest(t, ctx)
-	assert.False(t, state.Scopes[0].Artifacts[0].Pending)
-	assert.False(t, state.Scopes[1].Artifacts[0].Pending)
+	artifacts := readAcceleratorArtifactsForTest(t, ctx)
+	require.Len(t, artifacts, 2)
+	assert.False(t, artifacts[0].Pending)
+	assert.False(t, artifacts[1].Pending)
 }
 
 func TestAcceleratorState_ListNotResolvedAccelerators(t *testing.T) {
 	ctx := newAcceleratorStateContext(t)
-	writeAcceleratorStateForTest(t, ctx, &acceleratorState{
-		Version: 1,
-		Scopes: []acceleratorStateScope{
-			{
-				ID: "generate-api",
-				Artifacts: []acceleratorStateArtifact{
-					{ID: "handlers", Content: encodeAcceleratorContentSnapshot("handlers", time.Now().UTC()), Pending: true},
-					{ID: "service", Content: encodeAcceleratorContentSnapshot("service", time.Now().UTC()), Pending: false},
-				},
-			},
-		},
-	})
+	writeAcceleratorStateForTest(t, ctx,
+		testAcceleratorArtifact("handlers", "handlers", true),
+		testAcceleratorArtifact("service", "service", false),
+	)
 
-	items, err := ctx.ListNotResolvedAccelerators(nil)
+	items, err := ctx.ListNotResolvedAccelerators()
 	require.NoError(t, err)
 	require.Len(t, items, 1)
-	assert.Equal(t, "generate-api", items[0].ScopeID)
 	assert.Equal(t, "handlers", items[0].ArtifactID)
 	assert.True(t, items[0].Pending)
 }
 
 func TestAcceleratorState_ListAcceleratorsIncludesResolvedWhenRequested(t *testing.T) {
 	ctx := newAcceleratorStateContext(t)
-	writeAcceleratorStateForTest(t, ctx, &acceleratorState{
-		Version: 1,
-		Scopes: []acceleratorStateScope{
-			{
-				ID: "generate-api",
-				Artifacts: []acceleratorStateArtifact{
-					{ID: "handlers", Content: encodeAcceleratorContentSnapshot("handlers", time.Now().UTC()), Pending: true},
-					{ID: "service", Content: encodeAcceleratorContentSnapshot("service", time.Now().UTC()), Pending: false},
-				},
-			},
-		},
-	})
+	writeAcceleratorStateForTest(t, ctx,
+		testAcceleratorArtifact("handlers", "handlers", true),
+		testAcceleratorArtifact("service", "service", false),
+	)
 
-	items, err := ctx.ListAccelerators(nil, true)
+	items, err := ctx.ListAccelerators(true)
 	require.NoError(t, err)
 	require.Len(t, items, 2)
 	assert.Equal(t, "handlers", items[0].ArtifactID)
@@ -141,56 +72,16 @@ func TestAcceleratorState_ListAcceleratorsIncludesResolvedWhenRequested(t *testi
 	assert.Equal(t, acceleratorReportStateResolved, items[1].State)
 }
 
-func TestAcceleratorState_ListNotResolvedAcceleratorsByScope(t *testing.T) {
-	ctx := newAcceleratorStateContext(t)
-	writeAcceleratorStateForTest(t, ctx, &acceleratorState{
-		Version: 1,
-		Scopes: []acceleratorStateScope{
-			{
-				ID: "generate-api",
-				Artifacts: []acceleratorStateArtifact{
-					{ID: "handlers", Content: encodeAcceleratorContentSnapshot("handlers", time.Now().UTC()), Pending: true},
-				},
-			},
-			{
-				ID: "generate-web",
-				Artifacts: []acceleratorStateArtifact{
-					{ID: "page.ts", Content: encodeAcceleratorContentSnapshot("page", time.Now().UTC()), Pending: true},
-				},
-			},
-		},
-	})
-
-	scopeID := "generate-web"
-	items, err := ctx.ListNotResolvedAccelerators(&scopeID)
-	require.NoError(t, err)
-	require.Len(t, items, 1)
-	assert.Equal(t, "generate-web", items[0].ScopeID)
-	assert.Equal(t, "page.ts", items[0].ArtifactID)
-}
-
 func TestAcceleratorState_GetAcceleratorState(t *testing.T) {
 	ctx := newAcceleratorStateContext(t)
-	writeAcceleratorStateForTest(t, ctx, &acceleratorState{
-		Version: 1,
-		Scopes: []acceleratorStateScope{
-			{
-				ID: "generate-api",
-				Artifacts: []acceleratorStateArtifact{
-					{
-						ID:               "handlers.go",
-						Content:          encodeAcceleratorContentSnapshot("package handlers", time.Now().UTC()),
-						InstructionsPath: strPtr("instructions/handlers.md"),
-						Pending:          true,
-					},
-				},
-			},
-		},
-	})
+	artifact := testAcceleratorArtifact("handlers.go", "package handlers", true)
+	artifact.InstructionsPath = strPtr("instructions/handlers.md")
+	writeAcceleratorStateForTest(t, ctx, artifact)
+	require.NoError(t, os.MkdirAll(filepath.Join(ctx.config.CCodePath, "instructions"), 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(ctx.config.CCodePath, "instructions", "handlers.md"), nil, 0644))
 
-	item, err := ctx.GetAcceleratorState("generate-api", "handlers.go")
+	item, err := ctx.GetAcceleratorState("handlers.go")
 	require.NoError(t, err)
-	assert.Equal(t, "generate-api", item.ScopeID)
 	assert.Equal(t, "handlers.go", item.ArtifactID)
 	assert.NotEmpty(t, item.Content)
 	require.NotNil(t, item.InstructionsPath)
@@ -198,132 +89,58 @@ func TestAcceleratorState_GetAcceleratorState(t *testing.T) {
 	assert.True(t, item.Pending)
 }
 
-func TestAcceleratorState_GetAcceleratorStateReturnsResolvedArtifact(t *testing.T) {
+func TestAcceleratorState_ListAcceleratorInstructionsFiltersResolved(t *testing.T) {
 	ctx := newAcceleratorStateContext(t)
-	writeAcceleratorStateForTest(t, ctx, &acceleratorState{
-		Version: 1,
-		Scopes: []acceleratorStateScope{
-			{
-				ID: "generate-api",
-				Artifacts: []acceleratorStateArtifact{
-					{
-						ID:      "service.go",
-						Content: encodeAcceleratorContentSnapshot("package service", time.Now().UTC()),
-						Pending: false,
-					},
-				},
-			},
-		},
-	})
+	instructionsPath := filepath.Join(ctx.config.CCodePath, "instructions")
+	require.NoError(t, os.MkdirAll(instructionsPath, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(instructionsPath, "handlers.md"), []byte("# Handlers"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(instructionsPath, "service.md"), []byte("# Service"), 0644))
 
-	item, err := ctx.GetAcceleratorState("generate-api", "service.go")
-	require.NoError(t, err)
-	assert.Equal(t, "service.go", item.ArtifactID)
-	assert.False(t, item.Pending)
-	assert.Equal(t, acceleratorReportStateResolved, item.State)
-}
-
-func TestAcceleratorState_ListAcceleratorInstructionsExcludesResolvedByDefault(t *testing.T) {
-	ctx := newAcceleratorStateContext(t)
-	require.NoError(t, os.MkdirAll(filepath.Join(ctx.config.CCodePath, "instructions"), 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(ctx.config.CCodePath, "instructions", "handlers.md"), []byte("# Handlers"), 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(ctx.config.CCodePath, "instructions", "service.md"), []byte("# Service"), 0644))
-	writeAcceleratorStateForTest(t, ctx, &acceleratorState{
-		Version: 1,
-		Scopes: []acceleratorStateScope{
-			{
-				ID: "generate-api",
-				Artifacts: []acceleratorStateArtifact{
-					{
-						ID:                   "handlers.go",
-						Content:              encodeAcceleratorContentSnapshot("handlers", time.Now().UTC()),
-						InstructionsPath:     strPtr("instructions/handlers.md"),
-						Pending:              true,
-						InstructionsChecksum: checksumAcceleratorBytes([]byte("# Handlers")),
-					},
-					{
-						ID:                   "service.go",
-						Content:              encodeAcceleratorContentSnapshot("service", time.Now().UTC()),
-						InstructionsPath:     strPtr("instructions/service.md"),
-						Pending:              false,
-						InstructionsChecksum: checksumAcceleratorBytes([]byte("# Service")),
-					},
-				},
-			},
-		},
-	})
+	handlers := testAcceleratorArtifact("handlers.go", "handlers", true)
+	handlers.InstructionsPath = strPtr("instructions/handlers.md")
+	handlers.InstructionsChecksum = checksumAcceleratorBytes([]byte("# Handlers"))
+	service := testAcceleratorArtifact("service.go", "service", false)
+	service.InstructionsPath = strPtr("instructions/service.md")
+	service.InstructionsChecksum = checksumAcceleratorBytes([]byte("# Service"))
+	writeAcceleratorStateForTest(t, ctx, handlers, service)
 
 	items, err := ctx.ListAcceleratorInstructions()
 	require.NoError(t, err)
 	require.Len(t, items, 1)
-	assert.Equal(t, "generate-api", items[0].ScopeID)
 	assert.Equal(t, "handlers.go", items[0].ArtifactID)
-	require.NotNil(t, items[0].InstructionsPath)
-	assert.Equal(t, "instructions/handlers.md", *items[0].InstructionsPath)
-}
 
-func TestAcceleratorState_ListAcceleratorInstructionsIncludesResolvedWhenRequested(t *testing.T) {
-	ctx := newAcceleratorStateContext(t)
-	require.NoError(t, os.MkdirAll(filepath.Join(ctx.config.CCodePath, "instructions"), 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(ctx.config.CCodePath, "instructions", "service.md"), []byte("# Service"), 0644))
-	writeAcceleratorStateForTest(t, ctx, &acceleratorState{
-		Version: 1,
-		Scopes: []acceleratorStateScope{
-			{
-				ID: "generate-api",
-				Artifacts: []acceleratorStateArtifact{
-					{
-						ID:                   "service.go",
-						Content:              encodeAcceleratorContentSnapshot("service", time.Now().UTC()),
-						InstructionsPath:     strPtr("instructions/service.md"),
-						Pending:              false,
-						InstructionsChecksum: checksumAcceleratorBytes([]byte("# Service")),
-					},
-				},
-			},
-		},
-	})
-
-	defaultItems, err := ctx.ListAcceleratorInstructions()
+	items, err = ctx.ListAcceleratorInstructionsWithResolved(true)
 	require.NoError(t, err)
-	require.Empty(t, defaultItems)
-
-	items, err := ctx.ListAcceleratorInstructionsWithResolved(true)
-	require.NoError(t, err)
-	require.Len(t, items, 1)
-	assert.Equal(t, "service.go", items[0].ArtifactID)
-	assert.Equal(t, acceleratorReportStateResolved, items[0].State)
+	require.Len(t, items, 2)
+	assert.Equal(t, "service.go", items[1].ArtifactID)
+	assert.Equal(t, acceleratorReportStateResolved, items[1].State)
 }
 
 func TestAcceleratorState_ListReportsCorruptStateWithoutDeletingFile(t *testing.T) {
 	ctx := newAcceleratorStateContext(t)
-	stateFilePath := acceleratorArtifactStateFilePath(ctx.acceleratorStateFilePath(), "generate-api", "handlers.go")
+	stateFilePath := acceleratorArtifactStateFilePath(ctx.acceleratorStateFilePath(), "handlers.go")
 	require.NoError(t, os.MkdirAll(filepath.Dir(stateFilePath), 0755))
 	require.NoError(t, os.WriteFile(stateFilePath, []byte("{not json}\n"), 0644))
 
-	items, err := ctx.ListNotResolvedAccelerators(nil)
+	items, err := ctx.ListNotResolvedAccelerators()
 	require.NoError(t, err)
 	require.Len(t, items, 1)
-	assert.Equal(t, "generate-api", items[0].ScopeID)
 	assert.Equal(t, "handlers.go", items[0].ArtifactID)
 	assert.Equal(t, acceleratorReportStateCorrupt, items[0].State)
 	assert.Contains(t, items[0].Message, "Re-run the accelerator")
-
-	payload, err := os.ReadFile(stateFilePath)
-	require.NoError(t, err)
-	assert.Equal(t, "{not json}\n", string(payload))
+	require.FileExists(t, stateFilePath)
 }
 
 func TestAcceleratorState_ListReportsAmbiguousStateWithoutDeletingFile(t *testing.T) {
 	ctx := newAcceleratorStateContext(t)
-	stateFilePath := acceleratorArtifactStateFilePath(ctx.acceleratorStateFilePath(), "generate-api", "handlers.go")
+	stateFilePath := acceleratorArtifactStateFilePath(ctx.acceleratorStateFilePath(), "handlers.go")
 	require.NoError(t, os.MkdirAll(filepath.Dir(stateFilePath), 0755))
 	require.NoError(t, os.WriteFile(stateFilePath, []byte(
 		`{"pending":true,"code":"`+encodeAcceleratorContentSnapshot("handlers", time.Now().UTC())+`"}`+"\n"+
 			`{"pending":false,"code":"`+encodeAcceleratorContentSnapshot("handlers", time.Now().UTC())+`"}`+"\n",
 	), 0644))
 
-	items, err := ctx.ListNotResolvedAccelerators(nil)
+	items, err := ctx.ListNotResolvedAccelerators()
 	require.NoError(t, err)
 	require.Len(t, items, 1)
 	assert.Equal(t, acceleratorReportStateAmbiguous, items[0].State)
@@ -337,19 +154,14 @@ func TestAcceleratorState_ListReportsAmbiguousStateWithoutDeletingFile(t *testin
 
 func TestAcceleratorState_ListDeduplicatesRepeatedStateLines(t *testing.T) {
 	ctx := newAcceleratorStateContext(t)
-	stateFilePath := acceleratorArtifactStateFilePath(ctx.acceleratorStateFilePath(), "generate-api", "handlers.go")
-	writeAcceleratorOutputForTest(t, ctx, "handlers.go", "handlers")
-	artifact := acceleratorStateArtifact{
-		ID:      "handlers.go",
-		Content: encodeAcceleratorContentSnapshot("handlers", time.Now().UTC()),
-		Pending: true,
-	}
-	require.NoError(t, saveAcceleratorArtifactStateFile(stateFilePath, artifact))
+	artifact := testAcceleratorArtifact("handlers.go", "handlers", true)
+	writeAcceleratorStateForTest(t, ctx, artifact)
+	stateFilePath := acceleratorArtifactStateFilePath(ctx.acceleratorStateFilePath(), artifact.ID)
 	payload, err := os.ReadFile(stateFilePath)
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(stateFilePath, append(payload, payload...), 0644))
 
-	items, err := ctx.ListNotResolvedAccelerators(nil)
+	items, err := ctx.ListNotResolvedAccelerators()
 	require.NoError(t, err)
 	require.Len(t, items, 1)
 	assert.Equal(t, acceleratorReportStatePending, items[0].State)
@@ -361,23 +173,16 @@ func TestAcceleratorState_ListDeduplicatesRepeatedStateLines(t *testing.T) {
 
 func TestAcceleratorState_ListReportsMissingInstructions(t *testing.T) {
 	ctx := newAcceleratorStateContext(t)
-	stateFilePath := acceleratorArtifactStateFilePath(ctx.acceleratorStateFilePath(), "generate-api", "handlers.go")
-	writeAcceleratorOutputForTest(t, ctx, "handlers.go", "handlers")
-	artifact := acceleratorStateArtifact{
-		ID:                   "handlers.go",
-		Content:              encodeAcceleratorContentSnapshot("handlers", time.Now().UTC()),
-		InstructionsPath:     strPtr("instructions/missing.md"),
-		Pending:              false,
-		InstructionsChecksum: "sha256:old",
-	}
-	require.NoError(t, saveAcceleratorArtifactStateFile(stateFilePath, artifact))
+	artifact := testAcceleratorArtifact("handlers.go", "handlers", false)
+	artifact.InstructionsPath = strPtr("instructions/missing.md")
+	artifact.InstructionsChecksum = "sha256:old"
+	writeAcceleratorStateForTest(t, ctx, artifact)
 
-	items, err := ctx.ListNotResolvedAccelerators(nil)
+	items, err := ctx.ListNotResolvedAccelerators()
 	require.NoError(t, err)
 	require.Len(t, items, 1)
 	assert.False(t, items[0].Pending)
 	assert.Equal(t, acceleratorReportStateMissingInstructions, items[0].State)
-	assert.Contains(t, items[0].Message, "Instruction file is missing")
 
 	references, err := ctx.ListAcceleratorInstructions()
 	require.NoError(t, err)
@@ -387,45 +192,32 @@ func TestAcceleratorState_ListReportsMissingInstructions(t *testing.T) {
 
 func TestAcceleratorState_ListReportsMissingArtifactBeforeMissingInstructions(t *testing.T) {
 	ctx := newAcceleratorStateContext(t)
-	stateFilePath := acceleratorArtifactStateFilePath(ctx.acceleratorStateFilePath(), "generate-api", "handlers.go")
-	artifact := acceleratorStateArtifact{
-		ID:                   "handlers.go",
-		Content:              encodeAcceleratorContentSnapshot("handlers", time.Now().UTC()),
-		InstructionsPath:     strPtr("instructions/missing.md"),
-		Pending:              false,
-		InstructionsChecksum: "sha256:old",
-	}
+	artifact := testAcceleratorArtifact("handlers.go", "handlers", false)
+	artifact.InstructionsPath = strPtr("instructions/missing.md")
+	artifact.InstructionsChecksum = "sha256:old"
+	stateFilePath := acceleratorArtifactStateFilePath(ctx.acceleratorStateFilePath(), artifact.ID)
 	require.NoError(t, saveAcceleratorArtifactStateFile(stateFilePath, artifact))
 
-	items, err := ctx.ListNotResolvedAccelerators(nil)
+	items, err := ctx.ListNotResolvedAccelerators()
 	require.NoError(t, err)
 	require.Len(t, items, 1)
-	assert.False(t, items[0].Pending)
 	assert.Equal(t, acceleratorReportStateMissingArtifact, items[0].State)
-	assert.Contains(t, items[0].Message, "Artifact file is missing")
 }
 
 func TestAcceleratorState_InspectionRefreshesChangedInstructionChecksum(t *testing.T) {
 	ctx := newAcceleratorStateContext(t)
 	require.NoError(t, os.MkdirAll(filepath.Join(ctx.config.CCodePath, "instructions"), 0755))
 	require.NoError(t, os.WriteFile(filepath.Join(ctx.config.CCodePath, "instructions", "handlers.md"), []byte("# New instructions"), 0644))
-	writeAcceleratorOutputForTest(t, ctx, "handlers.go", "handlers")
+	artifact := testAcceleratorArtifact("handlers.go", "handlers", false)
+	artifact.InstructionsPath = strPtr("instructions/handlers.md")
+	artifact.InstructionsChecksum = checksumAcceleratorBytes([]byte("# Old instructions"))
+	writeAcceleratorStateForTest(t, ctx, artifact)
 
-	stateFilePath := acceleratorArtifactStateFilePath(ctx.acceleratorStateFilePath(), "generate-api", "handlers.go")
-	artifact := acceleratorStateArtifact{
-		ID:                   "handlers.go",
-		Content:              encodeAcceleratorContentSnapshot("handlers", time.Now().UTC()),
-		InstructionsPath:     strPtr("instructions/handlers.md"),
-		Pending:              false,
-		InstructionsChecksum: checksumAcceleratorBytes([]byte("# Old instructions")),
-	}
-	require.NoError(t, saveAcceleratorArtifactStateFile(stateFilePath, artifact))
-
-	item, err := ctx.GetAcceleratorState("generate-api", "handlers.go")
+	item, err := ctx.GetAcceleratorState("handlers.go")
 	require.NoError(t, err)
 	assert.True(t, item.Pending)
-	assert.Equal(t, acceleratorReportStatePending, item.State)
 
+	stateFilePath := acceleratorArtifactStateFilePath(ctx.acceleratorStateFilePath(), artifact.ID)
 	storedArtifact, err := loadAcceleratorArtifactStateFile(stateFilePath)
 	require.NoError(t, err)
 	assert.True(t, storedArtifact.Pending)
@@ -444,70 +236,64 @@ func TestAcceleratorState_GetAcceleratorInstruction(t *testing.T) {
 
 func TestAcceleratorState_GetAcceleratorInstructionReturnsErrorWhenMissing(t *testing.T) {
 	ctx := newAcceleratorStateContext(t)
-
 	_, err := ctx.GetAcceleratorInstruction("instructions/missing.md")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "instruction file not found")
 }
 
-func TestAcceleratorState_MarkResolvedReturnsErrorWhenScopeOrArtifactNotFound(t *testing.T) {
+func TestAcceleratorState_MarkResolvedReturnsErrorWhenArtifactNotFound(t *testing.T) {
 	ctx := newAcceleratorStateContext(t)
-	writeAcceleratorStateForTest(t, ctx, &acceleratorState{
-		Version: 1,
-		Scopes: []acceleratorStateScope{
-			{
-				ID: "generate-api",
-				Artifacts: []acceleratorStateArtifact{
-					{ID: "handlers", Content: encodeAcceleratorContentSnapshot("handlers", time.Now().UTC()), Pending: true},
-				},
-			},
-		},
-	})
-
-	scopeID := "missing-scope"
-	err := ctx.MarkAcceleratorAsResolved(&scopeID, nil)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "scope")
-
-	scopeID = "generate-api"
 	artifactID := "missing-artifact"
-	err = ctx.MarkAcceleratorAsResolved(&scopeID, &artifactID)
+	err := ctx.MarkAcceleratorAsResolved(&artifactID)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "artifact")
 }
 
 func newAcceleratorStateContext(t *testing.T) *Context {
 	t.Helper()
-
 	rootDir := t.TempDir()
 	ccodePath := filepath.Join(rootDir, "ccode")
 	require.NoError(t, os.MkdirAll(ccodePath, 0755))
-
 	return NewContext(&Config{
 		CCodePath:  ccodePath,
 		OutputPath: filepath.Join(rootDir, "output"),
 	})
 }
 
-func writeAcceleratorStateForTest(t *testing.T, ctx *Context, state *acceleratorState) {
+func testAcceleratorArtifact(id string, content string, pending bool) acceleratorStateArtifact {
+	return acceleratorStateArtifact{
+		ID:      id,
+		Content: encodeAcceleratorContentSnapshot(content, time.Now().UTC()),
+		Pending: pending,
+	}
+}
+
+func writeAcceleratorStateForTest(t *testing.T, ctx *Context, artifacts ...acceleratorStateArtifact) {
 	t.Helper()
-	require.NoError(t, saveAcceleratorState(ctx.acceleratorStateFilePath(), state))
-	for _, scope := range state.Scopes {
-		for _, artifact := range scope.Artifacts {
-			content, err := decodeAcceleratorContentSnapshot(artifact.Content)
-			if err != nil {
-				continue
-			}
+	for _, artifact := range artifacts {
+		stateFilePath := acceleratorArtifactStateFilePath(ctx.acceleratorStateFilePath(), artifact.ID)
+		require.NoError(t, saveAcceleratorArtifactStateFile(stateFilePath, artifact))
+		content, err := decodeAcceleratorContentSnapshot(artifact.Content)
+		if err == nil {
 			writeAcceleratorOutputForTest(t, ctx, artifact.ID, content)
 		}
 	}
 }
 
-func readAcceleratorStateForTest(t *testing.T, ctx *Context) *acceleratorState {
+func readAcceleratorArtifactsForTest(t *testing.T, ctx *Context) []acceleratorStateArtifact {
 	t.Helper()
-	state, err := loadAcceleratorState(ctx.acceleratorStateFilePath())
+	items, err := ctx.inspectAcceleratorState()
 	require.NoError(t, err)
-	return state
+	artifacts := []acceleratorStateArtifact{}
+	for _, item := range items {
+		if item.Artifact == nil {
+			continue
+		}
+		artifact := *item.Artifact
+		artifact.ID = item.ArtifactID
+		artifacts = append(artifacts, artifact)
+	}
+	return artifacts
 }
 
 func writeAcceleratorOutputForTest(t *testing.T, ctx *Context, artifactID string, content string) {
