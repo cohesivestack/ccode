@@ -29,7 +29,7 @@ If local docs are unavailable, retrieve the matching Markdown from `https://raw.
 
 ## Author generation
 
-Use this workflow for processes, templates, OpenAPI or database inputs, generated outputs, accelerators, scopes, and accelerator instructions.
+Use this workflow for processes, templates, OpenAPI or database inputs, generated outputs, accelerators, and accelerator instructions.
 
 - Keep process source, templates, specs, seed data, and instructions under `ccode_path`.
 - Name runnable entry points `*.process.ts`. Keep ordinary `.ts` files as imported helpers.
@@ -74,7 +74,7 @@ Use this workflow for processes, templates, OpenAPI or database inputs, generate
   boolean `omitLeadingSlash`.
 - Use `ctx.generate(...)` only for files the generator may overwrite.
 - Use `ctx.accelerate(...)` for proposals that must preserve later human or agent edits.
-- Use stable artifact IDs. Call `ctx.setScope(...)` when the process filename is not a durable state namespace.
+- Use stable, workspace-unique artifact IDs that match their relative output paths.
 - Attach instructions only when downstream resolvement is required. State the target edits, constraints, preserved behavior, and verification steps.
 - Keep instruction paths inside `ccode_path` and split large processes into focused helpers instead of growing template logic.
 
@@ -82,7 +82,13 @@ After changing generation inputs, run the exact process when safe, inspect every
 
 ## Run generation and apply accelerator work
 
-1. Confirm the requested process path relative to `ccode_path`, then run it:
+1. Confirm the requested process path relative to `ccode_path`. When the process is not specified, inspect the available entry points first:
+
+   ```bash
+   ccode list processes
+   ```
+
+   Then run the selected process:
 
    ```bash
    ccode run <process>
@@ -100,14 +106,14 @@ After changing generation inputs, run the exact process when safe, inspect every
 5. Fetch each required bundle:
 
    ```bash
-   ccode get accelerated <scopeId>:<artifactId> --instructions --for-agent
+   ccode get accelerated <artifactId> --instructions --for-agent
    ```
 
 6. Treat `composed_markdown` as the primary bundle when present. Apply it to `output_path/<artifactId>` while preserving compatible human edits and repository conventions.
 7. If the generated proposal requires no edits, accept it explicitly:
 
    ```bash
-   ccode resolve <scopeId>:<artifactId>
+   ccode resolve <artifactId>
    ```
 
 8. Run checks named by the bundle and target project, then rerun both list commands and report remaining state.
@@ -120,11 +126,11 @@ Use this workflow only for merge, rebase, cherry-pick, or add/delete conflicts i
 
 1. Confirm the active Git operation and separate conflicts into generator inputs, output artifacts, and accelerator state. Keep unrelated conflicts out of scope.
 2. Do not run a generator while its process, templates, specs, inputs, or instructions are conflicted.
-3. For each state file, treat every non-empty line as a candidate for the scope and artifact encoded by its path.
+3. For each state file, treat every non-empty line as a candidate for the artifact encoded by its path.
 4. Remove conflict markers and blank lines, deduplicate exact candidate lines, and retain multiple distinct valid JSON candidates when none is clearly obsolete. The CLI can report this as `ambiguous` for later repair.
 5. Preserve every candidate as a complete record. Never combine `code`, `accelerated_checksum`, `instructions_checksum`, `instructions`, or `pending` values from different candidates.
 6. Prefer retaining an added state file in an unclear add/delete conflict. Delete state only when the merged generator intentionally stops emitting the artifact or the user confirms removal. Do not infer obsolescence from a currently conflicted or renamed instruction file.
-7. Validate each retained line as a complete JSON object and confirm that the path identifies the intended scope and artifact.
+7. Validate each retained line as a complete JSON object and confirm that the path identifies the intended artifact.
 8. Once related conflicts are resolved, inspect state with the two list commands above. After the Git operation completes and inputs are coherent, rerun the affected process to rebuild or disambiguate state.
 
 Report retained ambiguity and missing artifacts or instructions instead of hiding them.
