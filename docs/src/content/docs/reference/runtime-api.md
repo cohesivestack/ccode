@@ -18,8 +18,6 @@ import * as Database from "@ccode/database";
 interface Context {
   println(message: string): void;
   runProcess(process: string): void;
-  setScope(scopeName: string): void;
-  scope(): string;
   renderTemplate(templatePath: string, data: any): string;
   generate(templatePath: string, filePath: string, data: any): void;
   accelerate(
@@ -167,15 +165,6 @@ Writes to process stdout.
 
 ```ts
 ctx.println("building docs");
-```
-
-## scope and setScope
-
-Reads or overrides the active accelerator scope.
-
-```ts
-ctx.println(ctx.scope());
-ctx.setScope("api-handlers");
 ```
 
 ## renderTemplate

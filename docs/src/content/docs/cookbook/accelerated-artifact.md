@@ -26,8 +26,6 @@ export default function main(ctx: Context) {
     packageName: "handlers",
   };
 
-  ctx.setScope("generate-api");
-
   ctx.accelerate(
     "handlers.go",
     "templates/handlers.tpl",
@@ -56,8 +54,8 @@ Review the generated handler file, keep package naming stable, and add endpoint-
 ```bash
 ccode run api/generate
 ccode list accelerated --for-agent
-ccode get accelerated generate-api:handlers.go --instructions --for-agent
-ccode resolve generate-api:handlers.go
+ccode get accelerated handlers.go --instructions --for-agent
+ccode resolve handlers.go
 ```
 
 The target file is `output_path/handlers.go`. If it is edited after generation, the next run will not overwrite it unless the file still matches the stored generated snapshot. Use `ccode resolve` when the proposal requires no edits and should be accepted as-is.

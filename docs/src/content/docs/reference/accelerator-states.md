@@ -3,10 +3,10 @@ title: Accelerator States
 description: State values and metadata exposed by accelerator inspection commands.
 ---
 
-Accelerator state records are stored per scope and artifact.
+Accelerator state records are stored per artifact.
 
 ```text
-<hidden_path>/accelerators/<scope>/<artifact-id>.accelerated.json
+<hidden_path>/accelerators/<artifact-id>.accelerated.json
 ```
 
 ## State values
@@ -29,7 +29,6 @@ Inspection responses include:
 
 ```json
 {
-  "scope_id": "generate-api",
   "artifact_id": "handlers.go",
   "instructions_path": "instructions/handlers.md",
   "pending": true,
@@ -60,7 +59,7 @@ Repeated identical state lines are collapsed. Missing artifacts are reported bef
 When a pending generated proposal requires no edits, mark it resolved explicitly:
 
 ```bash
-ccode resolve <scopeId>:<artifactId>
+ccode resolve <artifactId>
 ```
 
 This changes only the accelerator state; it does not modify the output artifact. If a later run changes the generated content or instructions, the artifact becomes pending again.
@@ -70,7 +69,7 @@ This changes only the accelerator state; it does not modify the output artifact.
 Use:
 
 ```bash
-ccode get accelerated <scopeId>:<artifactId> --instructions --for-agent
+ccode get accelerated <artifactId> --instructions --for-agent
 ```
 
 The JSON response includes instruction markdown, decoded accelerated content, and a composed markdown bundle suitable for an agent prompt.

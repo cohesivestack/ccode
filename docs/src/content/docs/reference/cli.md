@@ -29,10 +29,18 @@ ccode run <process>
 
 Runs a `*.process.ts` TypeScript process under `ccode_path`. The process path is relative and may omit `.process.ts`.
 
+## List runnable processes
+
+```bash
+ccode list processes
+```
+
+Recursively lists runnable `*.process.ts` files under `ccode_path` as process identifiers without the common suffix. Results are sorted and emitted as a JSON array. Dot-prefixed directories and the configured `hidden_path` are not inspected.
+
 ## Resolve an accelerated artifact
 
 ```bash
-ccode resolve <scopeId>:<artifactId>
+ccode resolve <artifactId>
 ```
 
 Resolves a pending accelerated artifact without changing its output file. Use this when the generated proposal requires no edits and can be accepted as-is. A later run marks it pending again if the generated content or attached instructions change.
@@ -40,9 +48,9 @@ Resolves a pending accelerated artifact without changing its output file. Use th
 ## List accelerated artifacts
 
 ```bash
-ccode list accelerated [scopeId]
-ccode list accelerated [scopeId] --include-resolved
-ccode list accelerated [scopeId] --for-agent
+ccode list accelerated
+ccode list accelerated --include-resolved
+ccode list accelerated --for-agent
 ```
 
 Lists unresolved accelerated artifacts by default. Use `--include-resolved` to include resolved artifacts.
@@ -60,9 +68,9 @@ Lists instruction references attached to accelerated artifacts.
 ## Get an accelerated artifact
 
 ```bash
-ccode get accelerated <scopeId>:<artifactId>
-ccode get accelerated <scopeId>:<artifactId> --instructions
-ccode get accelerated <scopeId>:<artifactId> --instructions --for-agent
+ccode get accelerated <artifactId>
+ccode get accelerated <artifactId> --instructions
+ccode get accelerated <artifactId> --instructions --for-agent
 ```
 
 Without `--instructions`, the command returns metadata. With `--instructions`, it returns a composed resolvement bundle containing instruction markdown and decoded accelerated content.

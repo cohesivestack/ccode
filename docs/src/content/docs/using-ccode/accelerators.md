@@ -13,11 +13,10 @@ ctx.accelerate(id, templatePath, data, instructionsPath?);
 
 The runtime:
 
-1. Uses the active scope.
-2. Renders `templatePath` relative to `ccode_path`.
-3. Writes or updates accelerator state.
-4. Targets `output_path/<id>`.
-5. Writes the target only when it is safe.
+1. Renders `templatePath` relative to `ccode_path`.
+2. Writes or updates accelerator state.
+3. Targets `output_path/<id>`.
+4. Writes the target only when it is safe.
 
 ## Safe-write behavior
 
@@ -32,14 +31,12 @@ If the target file exists and differs from the last generated snapshot, Cohesive
 Accelerator state is stored at:
 
 ```text
-<hidden_path>/accelerators/<scope>/<artifact-id>.accelerated.json
+<hidden_path>/accelerators/<artifact-id>.accelerated.json
 ```
 
-The default scope is the process file name without `.process.ts`. Override it with:
-
-```ts
-ctx.setScope("generate-api");
-```
+Artifact IDs are output paths relative to `output_path` and must be unique across
+the workspace. Nested IDs create matching directories below both `output_path`
+and the accelerator state directory.
 
 ## Instructions
 
@@ -60,9 +57,8 @@ Instruction paths are normalized under `ccode_path`.
 
 ```bash
 ccode list accelerated
-ccode list accelerated generate-api
-ccode get accelerated generate-api:handlers.go
-ccode get accelerated generate-api:handlers.go --instructions
+ccode get accelerated handlers.go
+ccode get accelerated handlers.go --instructions
 ```
 
 Use `--for-agent` for JSON output.
@@ -70,11 +66,7 @@ Use `--for-agent` for JSON output.
 If the generated proposal is already acceptable and needs no edits, mark it resolved explicitly:
 
 ```bash
-ccode resolve generate-api:handlers.go
+ccode resolve handlers.go
 ```
 
 This updates only accelerator state. A later change to the generated content or instructions makes the artifact pending again.
-
-## Cleanup behavior
-
-After a successful `ccode run`, the runner removes accelerator state files in scopes used by that run when those states were not produced during the run. This prevents old unresolved state from lingering after a process stops emitting an artifact.

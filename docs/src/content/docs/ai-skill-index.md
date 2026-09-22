@@ -72,31 +72,30 @@ For accelerated artifacts:
 - Use `ctx.generate(...)` only for files that should be regenerated.
 - Use `ctx.accelerate(...)` for files that may need human or agent resolvement.
 - Inspect unresolved accelerator work with `ccode list accelerated --for-agent`.
-- Fetch one resolvement bundle with `ccode get accelerated <scopeId>:<artifactId> --instructions --for-agent`.
+- Fetch one resolvement bundle with `ccode get accelerated <artifactId> --instructions --for-agent`.
 
 ## Command index
 
 ```bash
 ccode init [path] --version <version>
 ccode run <process>
-ccode resolve <scopeId>:<artifactId>
-ccode list accelerated [scopeId]
-ccode list accelerated [scopeId] --include-resolved
+ccode resolve <artifactId>
+ccode list processes
+ccode list accelerated
+ccode list accelerated --include-resolved
 ccode list instructions
 ccode list instructions --include-resolved
-ccode get accelerated <scopeId>:<artifactId>
-ccode get accelerated <scopeId>:<artifactId> --instructions
+ccode get accelerated <artifactId>
+ccode get accelerated <artifactId> --instructions
 ccode get instruction <path>
 ```
 
-Add `--for-agent` to list and get commands when the caller needs machine-readable JSON.
+`ccode list processes` always returns machine-readable JSON. Add `--for-agent` to accelerator list and get commands when the caller needs structured output.
 
 ## Runtime API index
 
 ```ts
 ctx.println(message)
-ctx.setScope(scopeName)
-ctx.scope()
 ctx.renderTemplate(templatePath, data)
 ctx.generate(templatePath, filePath, data)
 ctx.accelerate(id, templatePath, data, instructionsPath?)

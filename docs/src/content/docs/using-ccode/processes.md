@@ -60,17 +60,6 @@ export default function main(ctx: Context) {
 }
 ```
 
-## Scope
-
-Each process has an active accelerator scope. The default is the process file name without `.process.ts`.
-
-```ts
-ctx.scope();
-ctx.setScope("openapi-handlers");
-```
-
-Use a custom scope when one process emits artifacts that should be grouped under a durable workflow name instead of the file name.
-
 ## Running another process
 
 Call `runProcess` to run another process synchronously with the same resolved
@@ -82,8 +71,8 @@ export default function main(ctx: Context) {
 }
 ```
 
-The child process gets its own JavaScript runtime, runner context, and default
-scope. If it fails, the error stops the calling process unless it is caught.
+The child process gets its own JavaScript runtime and runner context. If it
+fails, the error stops the calling process unless it is caught.
 Circular executions, such as `a` running `b` and `b` running `a`, return an
 error.
 
