@@ -96,6 +96,39 @@ func TestNewRootCmd_DefaultConfigWhenNoFile(t *testing.T) {
 	assert.Equal(t, ".", captured.OutputPath)
 }
 
+func TestNewRootCmd_ListProcesses(t *testing.T) {
+	tmp := t.TempDir()
+	projectPath := filepath.Join(tmp, "ccode")
+	configPath := filepath.Join(tmp, "ccode.yaml")
+	configYAML := `ccode_path: ccode
+output_path: .
+hidden_path: internal-support
+version: v1.2.3
+`
+	require.NoError(t, os.WriteFile(configPath, []byte(configYAML), 0644))
+
+	paths := []string{
+		"generate.process.ts",
+		"api/client.process.ts",
+		"api/helper.ts",
+		".hidden/ignored.process.ts",
+		"internal-support/ignored.process.ts",
+	}
+	for _, path := range paths {
+		fullPath := filepath.Join(projectPath, filepath.FromSlash(path))
+		require.NoError(t, os.MkdirAll(filepath.Dir(fullPath), 0755))
+		require.NoError(t, os.WriteFile(fullPath, []byte("export default function () {}\n"), 0644))
+	}
+
+	cmd := newRootCmd(nil, nil)
+	var stdout bytes.Buffer
+	cmd.SetOut(&stdout)
+	cmd.SetArgs([]string{"--config", configPath, "list", "processes"})
+
+	require.NoError(t, cmd.Execute())
+	assert.JSONEq(t, `["api/client", "generate"]`, stdout.String())
+}
+
 func TestNewRootCmd_InitUsesArgsAndConfigFlag(t *testing.T) {
 	var capturedProjectPath string
 	var capturedConfigPath string

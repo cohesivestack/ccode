@@ -193,7 +193,26 @@ Syntax:
 
 	listCmd := &cobra.Command{
 		Use:   "list",
-		Short: "List accelerator metadata",
+		Short: "List processes and accelerator metadata",
+	}
+
+	listProcessesCmd := &cobra.Command{
+		Use:   "processes",
+		Short: "List runnable processes",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := loadConfig(cmd)
+			if err != nil {
+				return err
+			}
+
+			processes, err := ccode.NewContext(cfg).ListProcesses()
+			if err != nil {
+				return err
+			}
+
+			return writeJSON(cmd, processes)
+		},
 	}
 
 	listAcceleratedCmd := &cobra.Command{
@@ -375,6 +394,7 @@ Syntax:
 	rootCmd.AddCommand(resolveCmd)
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(getCmd)
+	listCmd.AddCommand(listProcessesCmd)
 	listCmd.AddCommand(listAcceleratedCmd)
 	listCmd.AddCommand(listInstructionsCmd)
 	getCmd.AddCommand(getAcceleratedCmd)
