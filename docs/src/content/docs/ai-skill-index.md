@@ -71,7 +71,7 @@ For accelerated artifacts:
 - Run the exact process you changed when validation is possible.
 - Use `ctx.generate(...)` only for files that should be regenerated.
 - Use `ctx.accelerate(...)` for files that may need human or agent resolvement.
-- Inspect unresolved accelerator work with `ccode list accelerated --for-agent`.
+- Inspect unresolved accelerator work with `ccode list acc --for-agent`.
 - Fetch one resolvement bundle with `ccode get accelerated <artifactId> --guide --for-agent`.
 
 ## Command index
@@ -81,8 +81,8 @@ ccode init [path] --version <version>
 ccode run <process>
 ccode resolve <artifactId>
 ccode list processes
-ccode list accelerated
-ccode list accelerated --include-resolved
+ccode list acc
+ccode list acc --include-resolved
 ccode get accelerated <artifactId>
 ccode get accelerated <artifactId> --guide
 ccode get guide <path>

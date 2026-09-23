@@ -42,13 +42,13 @@ Inspection responses include:
 List commands return unresolved resources by default:
 
 ```bash
-ccode list accelerated
+ccode list acc
 ```
 
 Add `--include-resolved` to include resolved resources:
 
 ```bash
-ccode list accelerated --include-resolved
+ccode list acc --include-resolved
 ```
 
 Repeated identical state lines are collapsed. Missing artifacts are reported before missing guides. A changed guide file refreshes its saved checksum and marks the artifact pending again.

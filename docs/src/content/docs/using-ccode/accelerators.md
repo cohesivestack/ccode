@@ -56,7 +56,7 @@ Guide paths are normalized under `ccode_path`.
 ## Inspecting work
 
 ```bash
-ccode list accelerated
+ccode list acc
 ccode get accelerated handlers.go
 ccode get accelerated handlers.go --guide
 ```

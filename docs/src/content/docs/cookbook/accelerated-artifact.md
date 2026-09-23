@@ -53,7 +53,7 @@ Review the generated handler file, keep package naming stable, and add endpoint-
 
 ```bash
 ccode run api/generate
-ccode list accelerated --for-agent
+ccode list acc --for-agent
 ccode get accelerated handlers.go --guide --for-agent
 ccode resolve handlers.go
 ```

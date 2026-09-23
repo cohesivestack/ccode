@@ -48,9 +48,9 @@ Resolves a pending accelerated artifact without changing its output file. Use th
 ## List accelerated artifacts
 
 ```bash
-ccode list accelerated
-ccode list accelerated --include-resolved
-ccode list accelerated --for-agent
+ccode list acc
+ccode list acc --include-resolved
+ccode list acc --for-agent
 ```
 
 Lists unresolved accelerated artifacts by default. Use `--include-resolved` to include resolved artifacts.
