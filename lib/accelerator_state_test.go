@@ -75,41 +75,41 @@ func TestAcceleratorState_ListAcceleratorsIncludesResolvedWhenRequested(t *testi
 func TestAcceleratorState_GetAcceleratorState(t *testing.T) {
 	ctx := newAcceleratorStateContext(t)
 	artifact := testAcceleratorArtifact("handlers.go", "package handlers", true)
-	artifact.InstructionsPath = strPtr("instructions/handlers.md")
+	artifact.GuidePath = strPtr("guides/handlers.md")
 	writeAcceleratorStateForTest(t, ctx, artifact)
-	require.NoError(t, os.MkdirAll(filepath.Join(ctx.config.CCodePath, "instructions"), 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(ctx.config.CCodePath, "instructions", "handlers.md"), nil, 0644))
+	require.NoError(t, os.MkdirAll(filepath.Join(ctx.config.CCodePath, "guides"), 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(ctx.config.CCodePath, "guides", "handlers.md"), nil, 0644))
 
 	item, err := ctx.GetAcceleratorState("handlers.go")
 	require.NoError(t, err)
 	assert.Equal(t, "handlers.go", item.ArtifactID)
 	assert.NotEmpty(t, item.Content)
-	require.NotNil(t, item.InstructionsPath)
-	assert.Equal(t, "instructions/handlers.md", *item.InstructionsPath)
+	require.NotNil(t, item.GuidePath)
+	assert.Equal(t, "guides/handlers.md", *item.GuidePath)
 	assert.True(t, item.Pending)
 }
 
-func TestAcceleratorState_ListAcceleratorInstructionsFiltersResolved(t *testing.T) {
+func TestAcceleratorState_ListAcceleratorGuidesFiltersResolved(t *testing.T) {
 	ctx := newAcceleratorStateContext(t)
-	instructionsPath := filepath.Join(ctx.config.CCodePath, "instructions")
-	require.NoError(t, os.MkdirAll(instructionsPath, 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(instructionsPath, "handlers.md"), []byte("# Handlers"), 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(instructionsPath, "service.md"), []byte("# Service"), 0644))
+	guidePath := filepath.Join(ctx.config.CCodePath, "guides")
+	require.NoError(t, os.MkdirAll(guidePath, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(guidePath, "handlers.md"), []byte("# Handlers"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(guidePath, "service.md"), []byte("# Service"), 0644))
 
 	handlers := testAcceleratorArtifact("handlers.go", "handlers", true)
-	handlers.InstructionsPath = strPtr("instructions/handlers.md")
-	handlers.InstructionsChecksum = checksumAcceleratorBytes([]byte("# Handlers"))
+	handlers.GuidePath = strPtr("guides/handlers.md")
+	handlers.GuideChecksum = checksumAcceleratorBytes([]byte("# Handlers"))
 	service := testAcceleratorArtifact("service.go", "service", false)
-	service.InstructionsPath = strPtr("instructions/service.md")
-	service.InstructionsChecksum = checksumAcceleratorBytes([]byte("# Service"))
+	service.GuidePath = strPtr("guides/service.md")
+	service.GuideChecksum = checksumAcceleratorBytes([]byte("# Service"))
 	writeAcceleratorStateForTest(t, ctx, handlers, service)
 
-	items, err := ctx.ListAcceleratorInstructions()
+	items, err := ctx.ListAcceleratorGuides()
 	require.NoError(t, err)
 	require.Len(t, items, 1)
 	assert.Equal(t, "handlers.go", items[0].ArtifactID)
 
-	items, err = ctx.ListAcceleratorInstructionsWithResolved(true)
+	items, err = ctx.ListAcceleratorGuidesWithResolved(true)
 	require.NoError(t, err)
 	require.Len(t, items, 2)
 	assert.Equal(t, "service.go", items[1].ArtifactID)
@@ -171,30 +171,30 @@ func TestAcceleratorState_ListDeduplicatesRepeatedStateLines(t *testing.T) {
 	assert.Equal(t, 1, strings.Count(string(cleanedPayload), "\n"))
 }
 
-func TestAcceleratorState_ListReportsMissingInstructions(t *testing.T) {
+func TestAcceleratorState_ListReportsMissingGuide(t *testing.T) {
 	ctx := newAcceleratorStateContext(t)
 	artifact := testAcceleratorArtifact("handlers.go", "handlers", false)
-	artifact.InstructionsPath = strPtr("instructions/missing.md")
-	artifact.InstructionsChecksum = "sha256:old"
+	artifact.GuidePath = strPtr("guides/missing.md")
+	artifact.GuideChecksum = "sha256:old"
 	writeAcceleratorStateForTest(t, ctx, artifact)
 
 	items, err := ctx.ListNotResolvedAccelerators()
 	require.NoError(t, err)
 	require.Len(t, items, 1)
 	assert.False(t, items[0].Pending)
-	assert.Equal(t, acceleratorReportStateMissingInstructions, items[0].State)
+	assert.Equal(t, acceleratorReportStateMissingGuide, items[0].State)
 
-	references, err := ctx.ListAcceleratorInstructions()
+	references, err := ctx.ListAcceleratorGuides()
 	require.NoError(t, err)
 	require.Len(t, references, 1)
-	assert.Equal(t, acceleratorReportStateMissingInstructions, references[0].State)
+	assert.Equal(t, acceleratorReportStateMissingGuide, references[0].State)
 }
 
-func TestAcceleratorState_ListReportsMissingArtifactBeforeMissingInstructions(t *testing.T) {
+func TestAcceleratorState_ListReportsMissingArtifactBeforeMissingGuide(t *testing.T) {
 	ctx := newAcceleratorStateContext(t)
 	artifact := testAcceleratorArtifact("handlers.go", "handlers", false)
-	artifact.InstructionsPath = strPtr("instructions/missing.md")
-	artifact.InstructionsChecksum = "sha256:old"
+	artifact.GuidePath = strPtr("guides/missing.md")
+	artifact.GuideChecksum = "sha256:old"
 	stateFilePath := acceleratorArtifactStateFilePath(ctx.acceleratorStateFilePath(), artifact.ID)
 	require.NoError(t, saveAcceleratorArtifactStateFile(stateFilePath, artifact))
 
@@ -204,13 +204,13 @@ func TestAcceleratorState_ListReportsMissingArtifactBeforeMissingInstructions(t 
 	assert.Equal(t, acceleratorReportStateMissingArtifact, items[0].State)
 }
 
-func TestAcceleratorState_InspectionRefreshesChangedInstructionChecksum(t *testing.T) {
+func TestAcceleratorState_InspectionRefreshesChangedGuideChecksum(t *testing.T) {
 	ctx := newAcceleratorStateContext(t)
-	require.NoError(t, os.MkdirAll(filepath.Join(ctx.config.CCodePath, "instructions"), 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(ctx.config.CCodePath, "instructions", "handlers.md"), []byte("# New instructions"), 0644))
+	require.NoError(t, os.MkdirAll(filepath.Join(ctx.config.CCodePath, "guides"), 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(ctx.config.CCodePath, "guides", "handlers.md"), []byte("# New guide"), 0644))
 	artifact := testAcceleratorArtifact("handlers.go", "handlers", false)
-	artifact.InstructionsPath = strPtr("instructions/handlers.md")
-	artifact.InstructionsChecksum = checksumAcceleratorBytes([]byte("# Old instructions"))
+	artifact.GuidePath = strPtr("guides/handlers.md")
+	artifact.GuideChecksum = checksumAcceleratorBytes([]byte("# Old guide"))
 	writeAcceleratorStateForTest(t, ctx, artifact)
 
 	item, err := ctx.GetAcceleratorState("handlers.go")
@@ -221,24 +221,24 @@ func TestAcceleratorState_InspectionRefreshesChangedInstructionChecksum(t *testi
 	storedArtifact, err := loadAcceleratorArtifactStateFile(stateFilePath)
 	require.NoError(t, err)
 	assert.True(t, storedArtifact.Pending)
-	assert.Equal(t, checksumAcceleratorBytes([]byte("# New instructions")), storedArtifact.InstructionsChecksum)
+	assert.Equal(t, checksumAcceleratorBytes([]byte("# New guide")), storedArtifact.GuideChecksum)
 }
 
-func TestAcceleratorState_GetAcceleratorInstruction(t *testing.T) {
+func TestAcceleratorState_GetAcceleratorGuide(t *testing.T) {
 	ctx := newAcceleratorStateContext(t)
-	require.NoError(t, os.MkdirAll(filepath.Join(ctx.config.CCodePath, "instructions"), 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(ctx.config.CCodePath, "instructions", "handlers.md"), []byte("# Instructions"), 0644))
+	require.NoError(t, os.MkdirAll(filepath.Join(ctx.config.CCodePath, "guides"), 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(ctx.config.CCodePath, "guides", "handlers.md"), []byte("# Guide"), 0644))
 
-	content, err := ctx.GetAcceleratorInstruction("instructions/handlers.md")
+	content, err := ctx.GetAcceleratorGuide("guides/handlers.md")
 	require.NoError(t, err)
-	assert.Equal(t, "# Instructions", content)
+	assert.Equal(t, "# Guide", content)
 }
 
-func TestAcceleratorState_GetAcceleratorInstructionReturnsErrorWhenMissing(t *testing.T) {
+func TestAcceleratorState_GetAcceleratorGuideReturnsErrorWhenMissing(t *testing.T) {
 	ctx := newAcceleratorStateContext(t)
-	_, err := ctx.GetAcceleratorInstruction("instructions/missing.md")
+	_, err := ctx.GetAcceleratorGuide("guides/missing.md")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "instruction file not found")
+	assert.Contains(t, err.Error(), "guide file not found")
 }
 
 func TestAcceleratorState_MarkResolvedReturnsErrorWhenArtifactNotFound(t *testing.T) {

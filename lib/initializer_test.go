@@ -90,7 +90,7 @@ func TestInitializer_InitRefreshesGeneratedSupportFilesAndPreservesUserFiles(t *
 		require.NoError(t, os.WriteFile(filepath.Join(hiddenLibPath, name), []byte("obsolete generated support"), 0644))
 	}
 	require.NoError(t, os.WriteFile(buildCachePath, []byte("cached bundle"), 0644))
-	require.NoError(t, os.WriteFile(statePath, []byte(`{"pending":true,"instructions":"","accelerated_checksum":"sha256:test","instructions_checksum":"","code":"dGVzdA=="}`+"\n"), 0644))
+	require.NoError(t, os.WriteFile(statePath, []byte(`{"pending":true,"guide":"","accelerated_checksum":"sha256:test","guide_checksum":"","code":"dGVzdA=="}`+"\n"), 0644))
 	require.NoError(t, os.WriteFile(tsconfigPath, []byte(`{"existing":true}`), 0644))
 
 	var logs bytes.Buffer

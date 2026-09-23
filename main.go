@@ -13,17 +13,17 @@ import (
 	"github.com/spf13/viper"
 )
 
-type acceleratorInstructionsAgentResult struct {
-	ArtifactID           string  `json:"artifact_id"`
-	InstructionsPath     *string `json:"instructions_path"`
-	State                string  `json:"state"`
-	Message              string  `json:"message,omitempty"`
-	InstructionsMarkdown string  `json:"instructions_markdown"`
-	AcceleratedContent   string  `json:"accelerated_content"`
-	ComposedMarkdown     string  `json:"composed_markdown"`
+type acceleratorGuideAgentResult struct {
+	ArtifactID         string  `json:"artifact_id"`
+	GuidePath          *string `json:"guide_path"`
+	State              string  `json:"state"`
+	Message            string  `json:"message,omitempty"`
+	GuideMarkdown      string  `json:"guide_markdown"`
+	AcceleratedContent string  `json:"accelerated_content"`
+	ComposedMarkdown   string  `json:"composed_markdown"`
 }
 
-type instructionContentAgentResult struct {
+type guideContentAgentResult struct {
 	Path     string `json:"path"`
 	Markdown string `json:"markdown"`
 }
@@ -237,7 +237,7 @@ Syntax:
 
 	getCmd := &cobra.Command{
 		Use:   "get",
-		Short: "Get accelerator details and instructions",
+		Short: "Get accelerator details and guides",
 	}
 
 	getAcceleratedCmd := &cobra.Command{
@@ -256,7 +256,7 @@ Syntax:
 				return err
 			}
 
-			emitInstructions, err := cmd.Flags().GetBool("instructions")
+			emitGuide, err := cmd.Flags().GetBool("guide")
 			if err != nil {
 				return err
 			}
@@ -265,13 +265,13 @@ Syntax:
 				return err
 			}
 
-			if !emitInstructions {
+			if !emitGuide {
 				return writeJSON(cmd, ccode.AcceleratorArtifactMetadata{
-					ArtifactID:       state.ArtifactID,
-					InstructionsPath: state.InstructionsPath,
-					Pending:          state.Pending,
-					State:            state.State,
-					Message:          state.Message,
+					ArtifactID: state.ArtifactID,
+					GuidePath:  state.GuidePath,
+					Pending:    state.Pending,
+					State:      state.State,
+					Message:    state.Message,
 				})
 			}
 
@@ -283,24 +283,24 @@ Syntax:
 				}
 			}
 
-			instructionsMarkdown := ""
-			if state.InstructionsPath != nil && !isStringBlank(*state.InstructionsPath) {
-				instructionsMarkdown, err = context.GetAcceleratorInstruction(*state.InstructionsPath)
+			guideMarkdown := ""
+			if state.GuidePath != nil && !isStringBlank(*state.GuidePath) {
+				guideMarkdown, err = context.GetAcceleratorGuide(*state.GuidePath)
 				if err != nil && state.Message == "" {
 					return err
 				}
 			}
 
-			composedMarkdown := composeAcceleratedInstructionsMarkdown(instructionsMarkdown, acceleratedContent, state.ArtifactID, state.Message)
+			composedMarkdown := composeAcceleratedGuideMarkdown(guideMarkdown, acceleratedContent, state.ArtifactID, state.Message)
 			if forAgent {
-				return writeJSON(cmd, acceleratorInstructionsAgentResult{
-					ArtifactID:           state.ArtifactID,
-					InstructionsPath:     state.InstructionsPath,
-					State:                state.State,
-					Message:              state.Message,
-					InstructionsMarkdown: instructionsMarkdown,
-					AcceleratedContent:   acceleratedContent,
-					ComposedMarkdown:     composedMarkdown,
+				return writeJSON(cmd, acceleratorGuideAgentResult{
+					ArtifactID:         state.ArtifactID,
+					GuidePath:          state.GuidePath,
+					State:              state.State,
+					Message:            state.Message,
+					GuideMarkdown:      guideMarkdown,
+					AcceleratedContent: acceleratedContent,
+					ComposedMarkdown:   composedMarkdown,
 				})
 			}
 
@@ -308,12 +308,12 @@ Syntax:
 			return err
 		},
 	}
-	getAcceleratedCmd.Flags().Bool("instructions", false, "Include instruction markdown with decoded accelerated content")
+	getAcceleratedCmd.Flags().Bool("guide", false, "Include guide markdown with decoded accelerated content")
 	getAcceleratedCmd.Flags().Bool("for-agent", false, "Output machine-readable JSON")
 
-	getInstructionCmd := &cobra.Command{
-		Use:   "instruction <path>",
-		Short: "Get raw accelerator instruction markdown",
+	getGuideCmd := &cobra.Command{
+		Use:   "guide <path>",
+		Short: "Get raw accelerator guide markdown",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := loadConfig(cmd)
@@ -322,7 +322,7 @@ Syntax:
 			}
 
 			context := ccode.NewContext(cfg)
-			markdown, err := context.GetAcceleratorInstruction(args[0])
+			markdown, err := context.GetAcceleratorGuide(args[0])
 			if err != nil {
 				return err
 			}
@@ -332,7 +332,7 @@ Syntax:
 				return err
 			}
 			if forAgent {
-				return writeJSON(cmd, instructionContentAgentResult{
+				return writeJSON(cmd, guideContentAgentResult{
 					Path:     args[0],
 					Markdown: markdown,
 				})
@@ -342,7 +342,7 @@ Syntax:
 			return err
 		},
 	}
-	getInstructionCmd.Flags().Bool("for-agent", false, "Output machine-readable JSON")
+	getGuideCmd.Flags().Bool("for-agent", false, "Output machine-readable JSON")
 
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(initCmd)
@@ -352,7 +352,7 @@ Syntax:
 	listCmd.AddCommand(listProcessesCmd)
 	listCmd.AddCommand(listAcceleratedCmd)
 	getCmd.AddCommand(getAcceleratedCmd)
-	getCmd.AddCommand(getInstructionCmd)
+	getCmd.AddCommand(getGuideCmd)
 
 	return rootCmd
 }
@@ -363,11 +363,11 @@ func writeJSON(cmd *cobra.Command, payload any) error {
 	return encoder.Encode(payload)
 }
 
-func composeAcceleratedInstructionsMarkdown(instructionsMarkdown string, acceleratedContent string, artifactID string, stateMessage string) string {
+func composeAcceleratedGuideMarkdown(guideMarkdown string, acceleratedContent string, artifactID string, stateMessage string) string {
 	builder := &strings.Builder{}
 
-	if !isStringBlank(instructionsMarkdown) {
-		builder.WriteString(strings.TrimRight(instructionsMarkdown, "\n"))
+	if !isStringBlank(guideMarkdown) {
+		builder.WriteString(strings.TrimRight(guideMarkdown, "\n"))
 		builder.WriteString("\n")
 	}
 

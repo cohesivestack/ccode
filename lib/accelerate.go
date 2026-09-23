@@ -14,45 +14,45 @@ import (
 )
 
 type acceleratorStateArtifact struct {
-	ID                   string  `json:"id"`
-	Content              string  `json:"content"`
-	InstructionsPath     *string `json:"instructions_path"`
-	Pending              bool    `json:"pending"`
-	AcceleratedChecksum  string  `json:"accelerated_checksum"`
-	InstructionsChecksum string  `json:"instructions_checksum"`
+	ID                  string  `json:"id"`
+	Content             string  `json:"content"`
+	GuidePath           *string `json:"guide_path"`
+	Pending             bool    `json:"pending"`
+	AcceleratedChecksum string  `json:"accelerated_checksum"`
+	GuideChecksum       string  `json:"guide_checksum"`
 }
 
 const (
-	acceleratorReportStatePending             = "pending"
-	acceleratorReportStateResolved            = "resolved"
-	acceleratorReportStateCorrupt             = "corrupt"
-	acceleratorReportStateAmbiguous           = "ambiguous"
-	acceleratorReportStateMissingArtifact     = "missing_artifact"
-	acceleratorReportStateMissingInstructions = "missing_instructions"
+	acceleratorReportStatePending         = "pending"
+	acceleratorReportStateResolved        = "resolved"
+	acceleratorReportStateCorrupt         = "corrupt"
+	acceleratorReportStateAmbiguous       = "ambiguous"
+	acceleratorReportStateMissingArtifact = "missing_artifact"
+	acceleratorReportStateMissingGuide    = "missing_guide"
 )
 
 type AcceleratorArtifactMetadata struct {
-	ArtifactID       string  `json:"artifact_id"`
-	InstructionsPath *string `json:"instructions_path"`
-	Pending          bool    `json:"pending"`
-	State            string  `json:"state"`
-	Message          string  `json:"message,omitempty"`
+	ArtifactID string  `json:"artifact_id"`
+	GuidePath  *string `json:"guide_path"`
+	Pending    bool    `json:"pending"`
+	State      string  `json:"state"`
+	Message    string  `json:"message,omitempty"`
 }
 
 type AcceleratorArtifactState struct {
-	ArtifactID       string  `json:"artifact_id"`
-	Content          string  `json:"content"`
-	InstructionsPath *string `json:"instructions_path"`
-	Pending          bool    `json:"pending"`
-	State            string  `json:"state"`
-	Message          string  `json:"message,omitempty"`
+	ArtifactID string  `json:"artifact_id"`
+	Content    string  `json:"content"`
+	GuidePath  *string `json:"guide_path"`
+	Pending    bool    `json:"pending"`
+	State      string  `json:"state"`
+	Message    string  `json:"message,omitempty"`
 }
 
-type AcceleratorInstructionReference struct {
-	ArtifactID       string  `json:"artifact_id"`
-	InstructionsPath *string `json:"instructions_path"`
-	State            string  `json:"state"`
-	Message          string  `json:"message,omitempty"`
+type AcceleratorGuideReference struct {
+	ArtifactID string  `json:"artifact_id"`
+	GuidePath  *string `json:"guide_path"`
+	State      string  `json:"state"`
+	Message    string  `json:"message,omitempty"`
 }
 
 type inspectedAcceleratorArtifact struct {
@@ -62,7 +62,7 @@ type inspectedAcceleratorArtifact struct {
 	Message    string
 }
 
-func (ctx *RunnerContext) Accelerate(id string, templatePath string, data goja.Value, instructionsPath ...string) error {
+func (ctx *RunnerContext) Accelerate(id string, templatePath string, data goja.Value, guidePath ...string) error {
 	if ctx == nil || ctx.ccodeContext == nil {
 		return fmt.Errorf("runner context is not initialized")
 	}
@@ -88,13 +88,13 @@ func (ctx *RunnerContext) Accelerate(id string, templatePath string, data goja.V
 		Pending:             true,
 		AcceleratedChecksum: checksumAcceleratorBytes([]byte(rendered)),
 	}
-	if len(instructionsPath) > 0 {
-		normalizedInstructionsPath, err := ctx.normalizeInstructionsPath(instructionsPath[0])
+	if len(guidePath) > 0 {
+		normalizedGuidePath, err := ctx.normalizeGuidePath(guidePath[0])
 		if err != nil {
 			return err
 		}
-		memoryArtifact.InstructionsPath = &normalizedInstructionsPath
-		memoryArtifact.InstructionsChecksum = ctx.acceleratorInstructionChecksum(normalizedInstructionsPath)
+		memoryArtifact.GuidePath = &normalizedGuidePath
+		memoryArtifact.GuideChecksum = ctx.acceleratorGuideChecksum(normalizedGuidePath)
 	}
 
 	stateRootPath := ctx.acceleratorStateFilePath()
@@ -168,12 +168,12 @@ func (ctx *RunnerContext) acceleratorStateFilePath() string {
 	return ctx.ccodeContext.acceleratorStateFilePath()
 }
 
-func (ctx *RunnerContext) normalizeInstructionsPath(instructionsPath string) (string, error) {
-	return ctx.ccodeContext.normalizeAcceleratorInstructionPath(instructionsPath)
+func (ctx *RunnerContext) normalizeGuidePath(guidePath string) (string, error) {
+	return ctx.ccodeContext.normalizeAcceleratorGuidePath(guidePath)
 }
 
-func (ctx *RunnerContext) acceleratorInstructionChecksum(instructionsPath string) string {
-	return ctx.ccodeContext.acceleratorInstructionChecksum(instructionsPath)
+func (ctx *RunnerContext) acceleratorGuideChecksum(guidePath string) string {
+	return ctx.ccodeContext.acceleratorGuideChecksum(guidePath)
 }
 
 func normalizeAcceleratorPathPart(value string, label string) (string, error) {
@@ -293,7 +293,7 @@ func (ctx *Context) inspectParsedAcceleratorArtifact(path string, artifactID str
 		State:      acceleratorArtifactReportState(artifact),
 	}
 
-	if artifact.InstructionsPath == nil || isStringBlank(*artifact.InstructionsPath) {
+	if artifact.GuidePath == nil || isStringBlank(*artifact.GuidePath) {
 		if !ctx.acceleratorOutputArtifactExists(artifactID) {
 			item.State = acceleratorReportStateMissingArtifact
 			item.Message = acceleratorStateMessage(acceleratorReportStateMissingArtifact)
@@ -301,13 +301,13 @@ func (ctx *Context) inspectParsedAcceleratorArtifact(path string, artifactID str
 		return item, nil
 	}
 
-	normalizedInstructionsPath, err := ctx.normalizeAcceleratorInstructionPath(*artifact.InstructionsPath)
+	normalizedGuidePath, err := ctx.normalizeAcceleratorGuidePath(*artifact.GuidePath)
 	if err != nil {
 		item.State = acceleratorReportStateCorrupt
 		item.Message = acceleratorStateMessage(acceleratorReportStateCorrupt)
 		return item, nil
 	}
-	artifact.InstructionsPath = &normalizedInstructionsPath
+	artifact.GuidePath = &normalizedGuidePath
 
 	if !ctx.acceleratorOutputArtifactExists(artifactID) {
 		item.Artifact = &artifact
@@ -316,21 +316,21 @@ func (ctx *Context) inspectParsedAcceleratorArtifact(path string, artifactID str
 		return item, nil
 	}
 
-	instructionsFullPath := filepath.Join(ctx.config.CCodePath, filepath.FromSlash(normalizedInstructionsPath))
-	instructionsContent, err := os.ReadFile(instructionsFullPath)
+	guideFullPath := filepath.Join(ctx.config.CCodePath, filepath.FromSlash(normalizedGuidePath))
+	guideContent, err := os.ReadFile(guideFullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			item.Artifact = &artifact
-			item.State = acceleratorReportStateMissingInstructions
-			item.Message = acceleratorStateMessage(acceleratorReportStateMissingInstructions)
+			item.State = acceleratorReportStateMissingGuide
+			item.Message = acceleratorStateMessage(acceleratorReportStateMissingGuide)
 			return item, nil
 		}
-		return item, fmt.Errorf("read instruction file %q: %w", normalizedInstructionsPath, err)
+		return item, fmt.Errorf("read guide file %q: %w", normalizedGuidePath, err)
 	}
 
-	instructionsChecksum := checksumAcceleratorBytes(instructionsContent)
-	if artifact.InstructionsChecksum != instructionsChecksum {
-		artifact.InstructionsChecksum = instructionsChecksum
+	guideChecksum := checksumAcceleratorBytes(guideContent)
+	if artifact.GuideChecksum != guideChecksum {
+		artifact.GuideChecksum = guideChecksum
 		artifact.Pending = true
 		if path != "" {
 			if err := saveAcceleratorArtifactStateFile(path, artifact); err != nil {
@@ -367,8 +367,8 @@ func acceleratorStateMessage(state string) string {
 		return "State file is ambiguous. Re-run the accelerator to rebuild it."
 	case acceleratorReportStateMissingArtifact:
 		return "Artifact file is missing. Restore it or re-run the accelerator."
-	case acceleratorReportStateMissingInstructions:
-		return "Instruction file is missing. Restore it or re-run the accelerator."
+	case acceleratorReportStateMissingGuide:
+		return "Guide file is missing. Restore it or re-run the accelerator."
 	default:
 		return ""
 	}
@@ -386,7 +386,7 @@ func acceleratorReportStateIsProblem(state string) bool {
 	return state == acceleratorReportStateCorrupt ||
 		state == acceleratorReportStateAmbiguous ||
 		state == acceleratorReportStateMissingArtifact ||
-		state == acceleratorReportStateMissingInstructions
+		state == acceleratorReportStateMissingGuide
 }
 
 func acceleratorMetadataFromInspected(item inspectedAcceleratorArtifact) AcceleratorArtifactMetadata {
@@ -396,7 +396,7 @@ func acceleratorMetadataFromInspected(item inspectedAcceleratorArtifact) Acceler
 		Message:    item.Message,
 	}
 	if item.Artifact != nil {
-		metadata.InstructionsPath = item.Artifact.InstructionsPath
+		metadata.GuidePath = item.Artifact.GuidePath
 		metadata.Pending = item.Artifact.Pending
 	}
 	return metadata
@@ -410,30 +410,30 @@ func acceleratorStateFromInspected(item inspectedAcceleratorArtifact) *Accelerat
 	}
 	if item.Artifact != nil {
 		state.Content = item.Artifact.Content
-		state.InstructionsPath = item.Artifact.InstructionsPath
+		state.GuidePath = item.Artifact.GuidePath
 		state.Pending = item.Artifact.Pending
 	}
 	return state
 }
 
-func acceleratorInstructionReferenceFromInspected(item inspectedAcceleratorArtifact) AcceleratorInstructionReference {
-	reference := AcceleratorInstructionReference{
+func acceleratorGuideReferenceFromInspected(item inspectedAcceleratorArtifact) AcceleratorGuideReference {
+	reference := AcceleratorGuideReference{
 		ArtifactID: item.ArtifactID,
 		State:      item.State,
 		Message:    item.Message,
 	}
 	if item.Artifact != nil {
-		reference.InstructionsPath = item.Artifact.InstructionsPath
+		reference.GuidePath = item.Artifact.GuidePath
 	}
 	return reference
 }
 
 type acceleratorArtifactStateFile struct {
-	Pending              bool   `json:"pending"`
-	Instructions         string `json:"instructions"`
-	AcceleratedChecksum  string `json:"accelerated_checksum"`
-	InstructionsChecksum string `json:"instructions_checksum"`
-	Code                 string `json:"code"`
+	Pending             bool   `json:"pending"`
+	Guide               string `json:"guide"`
+	AcceleratedChecksum string `json:"accelerated_checksum"`
+	GuideChecksum       string `json:"guide_checksum"`
+	Code                string `json:"code"`
 }
 
 func loadAcceleratorArtifactStateFile(path string) (acceleratorStateArtifact, error) {
@@ -514,17 +514,17 @@ func parseAcceleratorArtifactStatePayload(payload []byte) (acceleratorStateArtif
 		return acceleratorStateArtifact{}, err
 	}
 
-	var instructionsPath *string
-	if !isStringBlank(fileState.Instructions) {
-		instructionsPath = &fileState.Instructions
+	var guidePath *string
+	if !isStringBlank(fileState.Guide) {
+		guidePath = &fileState.Guide
 	}
 
 	return acceleratorStateArtifact{
-		Content:              fileState.Code,
-		InstructionsPath:     instructionsPath,
-		Pending:              fileState.Pending,
-		AcceleratedChecksum:  fileState.AcceleratedChecksum,
-		InstructionsChecksum: fileState.InstructionsChecksum,
+		Content:             fileState.Code,
+		GuidePath:           guidePath,
+		Pending:             fileState.Pending,
+		AcceleratedChecksum: fileState.AcceleratedChecksum,
+		GuideChecksum:       fileState.GuideChecksum,
 	}, nil
 }
 
@@ -537,15 +537,15 @@ func removeAcceleratorArtifactStateFile(path string) error {
 
 func acceleratorArtifactGeneratedStateMatches(storedArtifact acceleratorStateArtifact, memoryArtifact acceleratorStateArtifact) bool {
 	return storedArtifact.AcceleratedChecksum == memoryArtifact.AcceleratedChecksum &&
-		acceleratorArtifactInstructionsPath(storedArtifact) == acceleratorArtifactInstructionsPath(memoryArtifact) &&
-		storedArtifact.InstructionsChecksum == memoryArtifact.InstructionsChecksum
+		acceleratorArtifactGuidePath(storedArtifact) == acceleratorArtifactGuidePath(memoryArtifact) &&
+		storedArtifact.GuideChecksum == memoryArtifact.GuideChecksum
 }
 
-func acceleratorArtifactInstructionsPath(artifact acceleratorStateArtifact) string {
-	if artifact.InstructionsPath == nil {
+func acceleratorArtifactGuidePath(artifact acceleratorStateArtifact) string {
+	if artifact.GuidePath == nil {
 		return ""
 	}
-	return *artifact.InstructionsPath
+	return *artifact.GuidePath
 }
 
 func saveAcceleratorArtifactStateFile(path string, artifact acceleratorStateArtifact) error {
@@ -553,17 +553,17 @@ func saveAcceleratorArtifactStateFile(path string, artifact acceleratorStateArti
 		return fmt.Errorf("create accelerator artifact state directory for %q: %w", path, err)
 	}
 
-	instructions := ""
-	if artifact.InstructionsPath != nil {
-		instructions = *artifact.InstructionsPath
+	guide := ""
+	if artifact.GuidePath != nil {
+		guide = *artifact.GuidePath
 	}
 
 	fileState := acceleratorArtifactStateFile{
-		Pending:              artifact.Pending,
-		Instructions:         instructions,
-		AcceleratedChecksum:  artifact.AcceleratedChecksum,
-		InstructionsChecksum: artifact.InstructionsChecksum,
-		Code:                 artifact.Content,
+		Pending:             artifact.Pending,
+		Guide:               guide,
+		AcceleratedChecksum: artifact.AcceleratedChecksum,
+		GuideChecksum:       artifact.GuideChecksum,
+		Code:                artifact.Content,
 	}
 	if fileState.AcceleratedChecksum == "" && artifact.Content != "" {
 		content, err := decodeAcceleratorContentSnapshot(artifact.Content)
@@ -640,33 +640,33 @@ func (ctx *Context) acceleratorStateRootPath() string {
 	return filepath.Join(hiddenPath, "accelerators")
 }
 
-func (ctx *Context) normalizeAcceleratorInstructionPath(instructionsPath string) (string, error) {
-	if isStringBlank(instructionsPath) {
-		return "", fmt.Errorf("instructions path is required when provided")
+func (ctx *Context) normalizeAcceleratorGuidePath(guidePath string) (string, error) {
+	if isStringBlank(guidePath) {
+		return "", fmt.Errorf("guide path is required when provided")
 	}
 
-	normalizedPath := filepath.Clean(filepath.FromSlash(strings.TrimSpace(instructionsPath)))
+	normalizedPath := filepath.Clean(filepath.FromSlash(strings.TrimSpace(guidePath)))
 	if filepath.IsAbs(normalizedPath) {
 		relativePath, err := filepath.Rel(ctx.config.CCodePath, normalizedPath)
 		if err != nil {
-			return "", fmt.Errorf("resolve instructions path %q: %w", instructionsPath, err)
+			return "", fmt.Errorf("resolve guide path %q: %w", guidePath, err)
 		}
 		normalizedPath = filepath.Clean(relativePath)
 	}
 
 	if normalizedPath == "." || normalizedPath == ".." || strings.HasPrefix(normalizedPath, ".."+string(filepath.Separator)) {
-		return "", fmt.Errorf("instructions path %q must be inside ccode path", instructionsPath)
+		return "", fmt.Errorf("guide path %q must be inside ccode path", guidePath)
 	}
 
 	return filepath.ToSlash(normalizedPath), nil
 }
 
-func (ctx *Context) acceleratorInstructionChecksum(instructionsPath string) string {
-	if ctx == nil || ctx.config == nil || isStringBlank(instructionsPath) {
+func (ctx *Context) acceleratorGuideChecksum(guidePath string) string {
+	if ctx == nil || ctx.config == nil || isStringBlank(guidePath) {
 		return ""
 	}
 
-	fullPath := filepath.Join(ctx.config.CCodePath, filepath.FromSlash(instructionsPath))
+	fullPath := filepath.Join(ctx.config.CCodePath, filepath.FromSlash(guidePath))
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
 		return ""
@@ -771,11 +771,11 @@ func (ctx *Context) GetAcceleratorState(artifactID string) (*AcceleratorArtifact
 	return nil, fmt.Errorf("accelerator artifact %q not found", normalizedArtifactID)
 }
 
-func (ctx *Context) ListAcceleratorInstructions() ([]AcceleratorInstructionReference, error) {
-	return ctx.ListAcceleratorInstructionsWithResolved(false)
+func (ctx *Context) ListAcceleratorGuides() ([]AcceleratorGuideReference, error) {
+	return ctx.ListAcceleratorGuidesWithResolved(false)
 }
 
-func (ctx *Context) ListAcceleratorInstructionsWithResolved(includeResolved bool) ([]AcceleratorInstructionReference, error) {
+func (ctx *Context) ListAcceleratorGuidesWithResolved(includeResolved bool) ([]AcceleratorGuideReference, error) {
 	if ctx == nil || ctx.config == nil {
 		return nil, fmt.Errorf("context config is required")
 	}
@@ -785,40 +785,40 @@ func (ctx *Context) ListAcceleratorInstructionsWithResolved(includeResolved bool
 		return nil, err
 	}
 
-	references := []AcceleratorInstructionReference{}
+	references := []AcceleratorGuideReference{}
 	for _, item := range items {
 		if !acceleratorReportStateMatchesListFilter(item.State, includeResolved) {
 			continue
 		}
-		if item.Artifact == nil || item.Artifact.InstructionsPath == nil || isStringBlank(*item.Artifact.InstructionsPath) {
+		if item.Artifact == nil || item.Artifact.GuidePath == nil || isStringBlank(*item.Artifact.GuidePath) {
 			if !acceleratorReportStateIsProblem(item.State) {
 				continue
 			}
 		}
-		references = append(references, acceleratorInstructionReferenceFromInspected(item))
+		references = append(references, acceleratorGuideReferenceFromInspected(item))
 	}
 
 	return references, nil
 }
 
-func (ctx *Context) GetAcceleratorInstruction(markdownPath string) (string, error) {
+func (ctx *Context) GetAcceleratorGuide(guidePath string) (string, error) {
 	if ctx == nil || ctx.config == nil {
 		return "", fmt.Errorf("context config is required")
 	}
 
-	normalizedPath, err := ctx.normalizeAcceleratorInstructionPath(markdownPath)
+	normalizedPath, err := ctx.normalizeAcceleratorGuidePath(guidePath)
 	if err != nil {
 		return "", err
 	}
 
 	fullPath := filepath.Join(ctx.config.CCodePath, filepath.FromSlash(normalizedPath))
 	if !fileExists(fullPath) {
-		return "", fmt.Errorf("instruction file not found: %s", normalizedPath)
+		return "", fmt.Errorf("guide file not found: %s", normalizedPath)
 	}
 
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
-		return "", fmt.Errorf("read instruction file %q: %w", normalizedPath, err)
+		return "", fmt.Errorf("read guide file %q: %w", normalizedPath, err)
 	}
 
 	return string(content), nil
@@ -852,22 +852,22 @@ func (ctx *RunnerContext) GetAcceleratorState(artifactID string) (*AcceleratorAr
 	return ctx.ccodeContext.GetAcceleratorState(artifactID)
 }
 
-func (ctx *RunnerContext) ListAcceleratorInstructions() ([]AcceleratorInstructionReference, error) {
-	return ctx.ListAcceleratorInstructionsWithResolved(false)
+func (ctx *RunnerContext) ListAcceleratorGuides() ([]AcceleratorGuideReference, error) {
+	return ctx.ListAcceleratorGuidesWithResolved(false)
 }
 
-func (ctx *RunnerContext) ListAcceleratorInstructionsWithResolved(includeResolved bool) ([]AcceleratorInstructionReference, error) {
+func (ctx *RunnerContext) ListAcceleratorGuidesWithResolved(includeResolved bool) ([]AcceleratorGuideReference, error) {
 	if ctx == nil || ctx.ccodeContext == nil {
 		return nil, fmt.Errorf("runner context is not initialized")
 	}
 
-	return ctx.ccodeContext.ListAcceleratorInstructionsWithResolved(includeResolved)
+	return ctx.ccodeContext.ListAcceleratorGuidesWithResolved(includeResolved)
 }
 
-func (ctx *RunnerContext) GetAcceleratorInstruction(markdownPath string) (string, error) {
+func (ctx *RunnerContext) GetAcceleratorGuide(guidePath string) (string, error) {
 	if ctx == nil || ctx.ccodeContext == nil {
 		return "", fmt.Errorf("runner context is not initialized")
 	}
 
-	return ctx.ccodeContext.GetAcceleratorInstruction(markdownPath)
+	return ctx.ccodeContext.GetAcceleratorGuide(guidePath)
 }

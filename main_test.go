@@ -235,13 +235,13 @@ func TestNewRootCmd_GetAcceleratedExcludesContent(t *testing.T) {
 	assert.NotContains(t, output, "package handlers")
 }
 
-func TestNewRootCmd_GetAcceleratedInstructionsReturnsComposedMarkdown(t *testing.T) {
+func TestNewRootCmd_GetAcceleratedGuideReturnsComposedMarkdown(t *testing.T) {
 	configPath, _ := setupAcceleratorCLIProject(t)
 
 	cmd := newRootCmd(nil, nil)
 	var stdout bytes.Buffer
 	cmd.SetOut(&stdout)
-	cmd.SetArgs([]string{"--config", configPath, "get", "accelerated", "handlers.go", "--instructions"})
+	cmd.SetArgs([]string{"--config", configPath, "get", "accelerated", "handlers.go", "--guide"})
 
 	require.NoError(t, cmd.Execute())
 	output := stdout.String()
@@ -263,28 +263,31 @@ func TestNewRootCmd_ListAndGetForAgentOutputValidJSON(t *testing.T) {
 	require.NoError(t, json.Unmarshal(listOut.Bytes(), &listPayload))
 	require.Len(t, listPayload, 1)
 	assert.Equal(t, "handlers.go", listPayload[0]["artifact_id"])
+	assert.Equal(t, "guides/handlers.md", listPayload[0]["guide_path"])
 	assert.Equal(t, true, listPayload[0]["pending"])
 
 	getCmd := newRootCmd(nil, nil)
 	var getOut bytes.Buffer
 	getCmd.SetOut(&getOut)
-	getCmd.SetArgs([]string{"--config", configPath, "get", "accelerated", "handlers.go", "--instructions", "--for-agent"})
+	getCmd.SetArgs([]string{"--config", configPath, "get", "accelerated", "handlers.go", "--guide", "--for-agent"})
 	require.NoError(t, getCmd.Execute())
 
 	var getPayload map[string]any
 	require.NoError(t, json.Unmarshal(getOut.Bytes(), &getPayload))
 	assert.Equal(t, "handlers.go", getPayload["artifact_id"])
+	assert.Equal(t, "guides/handlers.md", getPayload["guide_path"])
+	assert.Equal(t, "# Update handlers", getPayload["guide_markdown"])
 	assert.Equal(t, "package handlers", getPayload["accelerated_content"])
 	assert.Contains(t, getPayload["composed_markdown"], "New accelerated content")
 }
 
-func TestNewRootCmd_GetInstruction(t *testing.T) {
+func TestNewRootCmd_GetGuide(t *testing.T) {
 	configPath, _ := setupAcceleratorCLIProject(t)
 
 	getCmd := newRootCmd(nil, nil)
 	var getOut bytes.Buffer
 	getCmd.SetOut(&getOut)
-	getCmd.SetArgs([]string{"--config", configPath, "get", "instruction", "instructions/handlers.md"})
+	getCmd.SetArgs([]string{"--config", configPath, "get", "guide", "guides/handlers.md"})
 	require.NoError(t, getCmd.Execute())
 	assert.Equal(t, "# Update handlers", getOut.String())
 }
@@ -294,9 +297,9 @@ func setupAcceleratorCLIProject(t *testing.T) (string, string) {
 
 	rootDir := t.TempDir()
 	ccodePath := filepath.Join(rootDir, "ccode")
-	require.NoError(t, os.MkdirAll(filepath.Join(ccodePath, "instructions"), 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(ccodePath, "instructions", "handlers.md"), []byte("# Update handlers"), 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(ccodePath, "instructions", "service.md"), []byte("# Update service"), 0644))
+	require.NoError(t, os.MkdirAll(filepath.Join(ccodePath, "guides"), 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(ccodePath, "guides", "handlers.md"), []byte("# Update handlers"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(ccodePath, "guides", "service.md"), []byte("# Update service"), 0644))
 
 	configPath := filepath.Join(rootDir, "ccode.yaml")
 	outputPath := filepath.Join(rootDir, "out")
@@ -308,8 +311,8 @@ func setupAcceleratorCLIProject(t *testing.T) (string, string) {
 
 	stateDir := filepath.Join(ccodePath, ".ccode", "accelerators")
 	require.NoError(t, os.MkdirAll(stateDir, 0755))
-	writeAcceleratorStateFileForCLITest(t, filepath.Join(stateDir, "handlers.go.accelerated.json"), true, "instructions/handlers.md", "package handlers", "# Update handlers")
-	writeAcceleratorStateFileForCLITest(t, filepath.Join(stateDir, "service.go.accelerated.json"), false, "instructions/service.md", "package service", "# Update service")
+	writeAcceleratorStateFileForCLITest(t, filepath.Join(stateDir, "handlers.go.accelerated.json"), true, "guides/handlers.md", "package handlers", "# Update handlers")
+	writeAcceleratorStateFileForCLITest(t, filepath.Join(stateDir, "service.go.accelerated.json"), false, "guides/service.md", "package service", "# Update service")
 
 	return configPath, ccodePath
 }
@@ -318,25 +321,25 @@ func encodeSnapshotForCLITest(content string) string {
 	return base64.StdEncoding.EncodeToString([]byte(content))
 }
 
-func writeAcceleratorStateFileForCLITest(t *testing.T, path string, pending bool, instructionsPath string, code string, instructions string) {
+func writeAcceleratorStateFileForCLITest(t *testing.T, path string, pending bool, guidePath string, code string, guide string) {
 	t.Helper()
 
 	type stateFile struct {
-		Pending              bool   `json:"pending"`
-		Instructions         string `json:"instructions"`
-		AcceleratedChecksum  string `json:"accelerated_checksum"`
-		InstructionsChecksum string `json:"instructions_checksum"`
-		Code                 string `json:"code"`
+		Pending             bool   `json:"pending"`
+		Guide               string `json:"guide"`
+		AcceleratedChecksum string `json:"accelerated_checksum"`
+		GuideChecksum       string `json:"guide_checksum"`
+		Code                string `json:"code"`
 	}
 
 	state := stateFile{
 		Pending:             pending,
-		Instructions:        instructionsPath,
+		Guide:               guidePath,
 		AcceleratedChecksum: checksumForCLITest(code),
 		Code:                encodeSnapshotForCLITest(code),
 	}
-	if instructions != "" {
-		state.InstructionsChecksum = checksumForCLITest(instructions)
+	if guide != "" {
+		state.GuideChecksum = checksumForCLITest(guide)
 	}
 
 	payload, err := json.Marshal(state)

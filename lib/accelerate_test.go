@@ -40,16 +40,16 @@ func TestAccelerator_AccelerateWritesArtifactAndState(t *testing.T) {
 	var stateFile map[string]any
 	require.NoError(t, json.Unmarshal(stateFileContent, &stateFile))
 	assert.Equal(t, true, stateFile["pending"])
-	assert.Contains(t, stateFile, "instructions")
+	assert.Contains(t, stateFile, "guide")
 	assert.Contains(t, stateFile, "accelerated_checksum")
-	assert.Contains(t, stateFile, "instructions_checksum")
+	assert.Contains(t, stateFile, "guide_checksum")
 	assert.Contains(t, stateFile, "code")
 
 	artifacts := readAcceleratorArtifactsForTest(t, ctx.ccodeContext)
 	require.Len(t, artifacts, 1)
 	require.Equal(t, "handlers", artifacts[0].ID)
 	assert.True(t, artifacts[0].Pending)
-	assert.Nil(t, artifacts[0].InstructionsPath)
+	assert.Nil(t, artifacts[0].GuidePath)
 	assert.NotContains(t, artifacts[0].Content, "Z:")
 	assert.NotEmpty(t, artifacts[0].AcceleratedChecksum)
 
@@ -58,23 +58,23 @@ func TestAccelerator_AccelerateWritesArtifactAndState(t *testing.T) {
 	assert.Equal(t, "Hello Carlos!", decoded)
 }
 
-func TestAccelerator_AccelerateStoresRelativeInstructionsPath(t *testing.T) {
+func TestAccelerator_AccelerateStoresRelativeGuidePath(t *testing.T) {
 	ctx := newRunnerTemplateTestContext(t)
 
 	require.NoError(t, os.MkdirAll(filepath.Join(ctx.ccodeContext.config.CCodePath, "templates"), 0755))
-	require.NoError(t, os.MkdirAll(filepath.Join(ctx.ccodeContext.config.CCodePath, "instructions"), 0755))
+	require.NoError(t, os.MkdirAll(filepath.Join(ctx.ccodeContext.config.CCodePath, "guides"), 0755))
 	require.NoError(t, os.WriteFile(filepath.Join(ctx.ccodeContext.config.CCodePath, "templates", "handlers.tpl"), []byte("Hello {{ data.name }}!"), 0644))
 
 	value, err := ctx.runtime.RunString(`({ name: "Carlos" })`)
 	require.NoError(t, err)
 
-	absoluteInstructionsPath := filepath.Join(ctx.ccodeContext.config.CCodePath, "instructions", "handlers.md")
-	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value, absoluteInstructionsPath))
+	absoluteGuidePath := filepath.Join(ctx.ccodeContext.config.CCodePath, "guides", "handlers.md")
+	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value, absoluteGuidePath))
 
 	artifacts := readAcceleratorArtifactsForTest(t, ctx.ccodeContext)
 	require.Len(t, artifacts, 1)
-	require.NotNil(t, artifacts[0].InstructionsPath)
-	assert.Equal(t, "instructions/handlers.md", *artifacts[0].InstructionsPath)
+	require.NotNil(t, artifacts[0].GuidePath)
+	assert.Equal(t, "guides/handlers.md", *artifacts[0].GuidePath)
 }
 
 func TestAccelerator_AccelerateSkipsOverwriteForModifiedFile(t *testing.T) {
@@ -195,24 +195,24 @@ func TestAccelerator_AcceleratePreservesStateWhenGeneratedMetadataMatches(t *tes
 	assert.False(t, artifacts[0].Pending)
 }
 
-func TestAccelerator_AccelerateResetsStateWhenInstructionsChecksumChanges(t *testing.T) {
+func TestAccelerator_AccelerateResetsStateWhenGuideChecksumChanges(t *testing.T) {
 	ctx := newRunnerTemplateTestContext(t)
 
 	require.NoError(t, os.MkdirAll(filepath.Join(ctx.ccodeContext.config.CCodePath, "templates"), 0755))
-	require.NoError(t, os.MkdirAll(filepath.Join(ctx.ccodeContext.config.CCodePath, "instructions"), 0755))
+	require.NoError(t, os.MkdirAll(filepath.Join(ctx.ccodeContext.config.CCodePath, "guides"), 0755))
 	require.NoError(t, os.WriteFile(filepath.Join(ctx.ccodeContext.config.CCodePath, "templates", "handlers.tpl"), []byte("Generated"), 0644))
-	instructionsFilePath := filepath.Join(ctx.ccodeContext.config.CCodePath, "instructions", "handlers.md")
-	require.NoError(t, os.WriteFile(instructionsFilePath, []byte("First instructions"), 0644))
+	guideFilePath := filepath.Join(ctx.ccodeContext.config.CCodePath, "guides", "handlers.md")
+	require.NoError(t, os.WriteFile(guideFilePath, []byte("First guide"), 0644))
 
 	value, err := ctx.runtime.RunString(`({})`)
 	require.NoError(t, err)
-	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value, "instructions/handlers.md"))
+	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value, "guides/handlers.md"))
 
 	artifactID := "handlers"
 	require.NoError(t, ctx.MarkAcceleratorAsResolved(&artifactID))
 
-	require.NoError(t, os.WriteFile(instructionsFilePath, []byte("Second instructions"), 0644))
-	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value, "instructions/handlers.md"))
+	require.NoError(t, os.WriteFile(guideFilePath, []byte("Second guide"), 0644))
+	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value, "guides/handlers.md"))
 
 	artifacts := readAcceleratorArtifactsForTest(t, ctx.ccodeContext)
 	require.Len(t, artifacts, 1)
@@ -263,7 +263,7 @@ func TestAccelerator_AccelerateResetsStateWhenMultipleStateLinesDiffer(t *testin
 	stateFileContent, err := os.ReadFile(stateFilePath)
 	require.NoError(t, err)
 	trimmedStateLine := strings.TrimSpace(string(stateFileContent))
-	require.NoError(t, os.WriteFile(stateFilePath, []byte(trimmedStateLine+"\n"+`{"pending":false,"instructions":"","accelerated_checksum":"sha256:different","instructions_checksum":"","code":"RGlmZmVyZW50"}`+"\n"), 0644))
+	require.NoError(t, os.WriteFile(stateFilePath, []byte(trimmedStateLine+"\n"+`{"pending":false,"guide":"","accelerated_checksum":"sha256:different","guide_checksum":"","code":"RGlmZmVyZW50"}`+"\n"), 0644))
 
 	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value))
 

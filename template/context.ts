@@ -10,7 +10,7 @@ export interface Context {
     id: string,
     templatePath: string,
     data: any,
-    instructionsPath?: string,
+    guidePath?: string,
   ) => void;
   parseJSONFromBytes: (jsonBytes: number[]) => Record<string, any>;
   parseJSONFromString: (jsonString: string) => Record<string, any>;
