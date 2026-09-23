@@ -31,7 +31,7 @@ Run the process and inspect accelerator work:
 
 ```bash
 ccode run api/generate
-ccode list accelerated --for-agent
+ccode list acc --for-agent
 ccode get accelerated handlers.ts --guide --for-agent
 ```
 

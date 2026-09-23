@@ -98,7 +98,7 @@ After changing generation inputs, run the exact process when safe, inspect every
 3. List unresolved artifacts:
 
    ```bash
-   ccode list accelerated --for-agent
+   ccode list acc --for-agent
    ```
 
 4. Handle `pending` items; skip `resolved` unless the request includes resolved items. Diagnose `corrupt`, `ambiguous`, `missing_artifact`, or `missing_guide` before editing.
