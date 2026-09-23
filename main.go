@@ -235,32 +235,6 @@ Syntax:
 	listAcceleratedCmd.Flags().Bool("include-resolved", false, "Include resolved accelerator artifacts")
 	listAcceleratedCmd.Flags().Bool("for-agent", false, "Output machine-readable JSON")
 
-	listInstructionsCmd := &cobra.Command{
-		Use:   "instructions",
-		Short: "List accelerator instruction references",
-		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := loadConfig(cmd)
-			if err != nil {
-				return err
-			}
-
-			context := ccode.NewContext(cfg)
-			includeResolved, err := cmd.Flags().GetBool("include-resolved")
-			if err != nil {
-				return err
-			}
-			items, err := context.ListAcceleratorInstructionsWithResolved(includeResolved)
-			if err != nil {
-				return err
-			}
-
-			return writeJSON(cmd, items)
-		},
-	}
-	listInstructionsCmd.Flags().Bool("include-resolved", false, "Include resolved accelerator instruction references")
-	listInstructionsCmd.Flags().Bool("for-agent", false, "Output machine-readable JSON")
-
 	getCmd := &cobra.Command{
 		Use:   "get",
 		Short: "Get accelerator details and instructions",
@@ -377,7 +351,6 @@ Syntax:
 	rootCmd.AddCommand(getCmd)
 	listCmd.AddCommand(listProcessesCmd)
 	listCmd.AddCommand(listAcceleratedCmd)
-	listCmd.AddCommand(listInstructionsCmd)
 	getCmd.AddCommand(getAcceleratedCmd)
 	getCmd.AddCommand(getInstructionCmd)
 

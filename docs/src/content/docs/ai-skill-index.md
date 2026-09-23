@@ -83,8 +83,6 @@ ccode resolve <artifactId>
 ccode list processes
 ccode list accelerated
 ccode list accelerated --include-resolved
-ccode list instructions
-ccode list instructions --include-resolved
 ccode get accelerated <artifactId>
 ccode get accelerated <artifactId> --instructions
 ccode get instruction <path>

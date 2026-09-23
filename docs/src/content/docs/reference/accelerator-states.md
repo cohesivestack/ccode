@@ -43,7 +43,6 @@ List commands return unresolved resources by default:
 
 ```bash
 ccode list accelerated
-ccode list instructions
 ```
 
 Add `--include-resolved` to include resolved resources:

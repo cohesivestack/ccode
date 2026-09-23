@@ -95,11 +95,10 @@ After changing generation inputs, run the exact process when safe, inspect every
    ```
 
 2. Review command output and every changed target under `output_path`.
-3. List unresolved artifacts and instructions:
+3. List unresolved artifacts:
 
    ```bash
    ccode list accelerated --for-agent
-   ccode list instructions --for-agent
    ```
 
 4. Handle `pending` items; skip `resolved` unless the request includes resolved items. Diagnose `corrupt`, `ambiguous`, `missing_artifact`, or `missing_instructions` before editing.

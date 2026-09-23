@@ -278,25 +278,8 @@ func TestNewRootCmd_ListAndGetForAgentOutputValidJSON(t *testing.T) {
 	assert.Contains(t, getPayload["composed_markdown"], "New accelerated content")
 }
 
-func TestNewRootCmd_ListInstructionsAndGetInstruction(t *testing.T) {
+func TestNewRootCmd_GetInstruction(t *testing.T) {
 	configPath, _ := setupAcceleratorCLIProject(t)
-
-	listCmd := newRootCmd(nil, nil)
-	var listOut bytes.Buffer
-	listCmd.SetOut(&listOut)
-	listCmd.SetArgs([]string{"--config", configPath, "list", "instructions"})
-	require.NoError(t, listCmd.Execute())
-	assert.Contains(t, listOut.String(), `"instructions_path": "instructions/handlers.md"`)
-	assert.NotContains(t, listOut.String(), `"instructions_path": "instructions/service.md"`)
-	assert.NotContains(t, listOut.String(), "package handlers")
-
-	includeResolvedCmd := newRootCmd(nil, nil)
-	var includeResolvedOut bytes.Buffer
-	includeResolvedCmd.SetOut(&includeResolvedOut)
-	includeResolvedCmd.SetArgs([]string{"--config", configPath, "list", "instructions", "--include-resolved"})
-	require.NoError(t, includeResolvedCmd.Execute())
-	assert.Contains(t, includeResolvedOut.String(), `"instructions_path": "instructions/handlers.md"`)
-	assert.Contains(t, includeResolvedOut.String(), `"instructions_path": "instructions/service.md"`)
 
 	getCmd := newRootCmd(nil, nil)
 	var getOut bytes.Buffer

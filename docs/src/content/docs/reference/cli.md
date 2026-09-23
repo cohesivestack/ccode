@@ -55,16 +55,6 @@ ccode list accelerated --for-agent
 
 Lists unresolved accelerated artifacts by default. Use `--include-resolved` to include resolved artifacts.
 
-## List instruction references
-
-```bash
-ccode list instructions
-ccode list instructions --include-resolved
-ccode list instructions --for-agent
-```
-
-Lists instruction references attached to accelerated artifacts.
-
 ## Get an accelerated artifact
 
 ```bash
