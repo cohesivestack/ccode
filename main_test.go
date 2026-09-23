@@ -148,13 +148,13 @@ func TestNewRootCmd_InitUsesArgsAndConfigFlag(t *testing.T) {
 	assert.Equal(t, "v1.2.3", capturedVersion)
 }
 
-func TestNewRootCmd_ListAcceleratedExcludesContent(t *testing.T) {
+func TestNewRootCmd_ListAccExcludesContent(t *testing.T) {
 	configPath, _ := setupAcceleratorCLIProject(t)
 
 	cmd := newRootCmd(nil, nil)
 	var stdout bytes.Buffer
 	cmd.SetOut(&stdout)
-	cmd.SetArgs([]string{"--config", configPath, "list", "accelerated"})
+	cmd.SetArgs([]string{"--config", configPath, "list", "acc"})
 
 	require.NoError(t, cmd.Execute())
 	output := stdout.String()
@@ -171,7 +171,7 @@ func TestNewRootCmd_ListAcceleratedIncludeResolved(t *testing.T) {
 	cmd := newRootCmd(nil, nil)
 	var stdout bytes.Buffer
 	cmd.SetOut(&stdout)
-	cmd.SetArgs([]string{"--config", configPath, "list", "accelerated", "--include-resolved"})
+	cmd.SetArgs([]string{"--config", configPath, "list", "acc", "--include-resolved"})
 
 	require.NoError(t, cmd.Execute())
 	output := stdout.String()
@@ -190,7 +190,7 @@ func TestNewRootCmd_ResolveMarksAcceleratorAsResolved(t *testing.T) {
 	listCmd := newRootCmd(nil, nil)
 	var stdout bytes.Buffer
 	listCmd.SetOut(&stdout)
-	listCmd.SetArgs([]string{"--config", configPath, "list", "accelerated", "--include-resolved"})
+	listCmd.SetArgs([]string{"--config", configPath, "list", "acc", "--include-resolved"})
 	require.NoError(t, listCmd.Execute())
 
 	var items []ccode.AcceleratorArtifactMetadata
@@ -256,7 +256,7 @@ func TestNewRootCmd_ListAndGetForAgentOutputValidJSON(t *testing.T) {
 	listCmd := newRootCmd(nil, nil)
 	var listOut bytes.Buffer
 	listCmd.SetOut(&listOut)
-	listCmd.SetArgs([]string{"--config", configPath, "list", "accelerated", "--for-agent"})
+	listCmd.SetArgs([]string{"--config", configPath, "list", "acc", "--for-agent"})
 	require.NoError(t, listCmd.Execute())
 
 	var listPayload []map[string]any

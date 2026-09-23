@@ -209,8 +209,8 @@ Syntax:
 		},
 	}
 
-	listAcceleratedCmd := &cobra.Command{
-		Use:   "accelerated",
+	listAccCmd := &cobra.Command{
+		Use:   "acc",
 		Short: "List pending accelerated artifacts",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -232,8 +232,8 @@ Syntax:
 			return writeJSON(cmd, items)
 		},
 	}
-	listAcceleratedCmd.Flags().Bool("include-resolved", false, "Include resolved accelerator artifacts")
-	listAcceleratedCmd.Flags().Bool("for-agent", false, "Output machine-readable JSON")
+	listAccCmd.Flags().Bool("include-resolved", false, "Include resolved accelerator artifacts")
+	listAccCmd.Flags().Bool("for-agent", false, "Output machine-readable JSON")
 
 	getCmd := &cobra.Command{
 		Use:   "get",
@@ -350,7 +350,7 @@ Syntax:
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(getCmd)
 	listCmd.AddCommand(listProcessesCmd)
-	listCmd.AddCommand(listAcceleratedCmd)
+	listCmd.AddCommand(listAccCmd)
 	getCmd.AddCommand(getAcceleratedCmd)
 	getCmd.AddCommand(getGuideCmd)
 
