@@ -29,9 +29,9 @@ If local docs are unavailable, retrieve the matching Markdown from `https://raw.
 
 ## Author generation
 
-Use this workflow for processes, templates, OpenAPI or database inputs, generated outputs, accelerators, and accelerator instructions.
+Use this workflow for processes, templates, OpenAPI or database inputs, generated outputs, accelerators, and accelerator guides.
 
-- Keep process source, templates, specs, seed data, and instructions under `ccode_path`.
+- Keep process source, templates, specs, seed data, and guides under `ccode_path`.
 - Name runnable entry points `*.process.ts`. Keep ordinary `.ts` files as imported helpers.
 - Default-export the process function and import `Context` from `@ccode/context`.
 - Parse each input once and normalize it into plain template data in TypeScript.
@@ -75,8 +75,8 @@ Use this workflow for processes, templates, OpenAPI or database inputs, generate
 - Use `ctx.generate(...)` only for files the generator may overwrite.
 - Use `ctx.accelerate(...)` for proposals that must preserve later human or agent edits.
 - Use stable, workspace-unique artifact IDs that match their relative output paths.
-- Attach instructions only when downstream resolvement is required. State the target edits, constraints, preserved behavior, and verification steps.
-- Keep instruction paths inside `ccode_path` and split large processes into focused helpers instead of growing template logic.
+- Attach a guide only when downstream resolvement is required. State the target edits, constraints, preserved behavior, and verification steps.
+- Keep guide paths inside `ccode_path` and split large processes into focused helpers instead of growing template logic.
 
 After changing generation inputs, run the exact process when safe, inspect every changed target, inspect unresolved accelerator state, and run the workspace's relevant checks.
 
@@ -101,11 +101,11 @@ After changing generation inputs, run the exact process when safe, inspect every
    ccode list accelerated --for-agent
    ```
 
-4. Handle `pending` items; skip `resolved` unless the request includes resolved items. Diagnose `corrupt`, `ambiguous`, `missing_artifact`, or `missing_instructions` before editing.
+4. Handle `pending` items; skip `resolved` unless the request includes resolved items. Diagnose `corrupt`, `ambiguous`, `missing_artifact`, or `missing_guide` before editing.
 5. Fetch each required bundle:
 
    ```bash
-   ccode get accelerated <artifactId> --instructions --for-agent
+   ccode get accelerated <artifactId> --guide --for-agent
    ```
 
 6. Treat `composed_markdown` as the primary bundle when present. Apply it to `output_path/<artifactId>` while preserving compatible human edits and repository conventions.
@@ -117,22 +117,22 @@ After changing generation inputs, run the exact process when safe, inspect every
 
 8. Run checks named by the bundle and target project, then rerun both list commands and report remaining state.
 
-Do not hand-edit accelerator state during normal generation work or force `pending: false`; use `ccode resolve` for that transition. Use `--include-resolved` only for a requested complete inventory. Stop before guessing when instructions are missing, state is ambiguous, or proposed content conflicts with intentional local edits.
+Do not hand-edit accelerator state during normal generation work or force `pending: false`; use `ccode resolve` for that transition. Use `--include-resolved` only for a requested complete inventory. Stop before guessing when guides are missing, state is ambiguous, or proposed content conflicts with intentional local edits.
 
 ## Resolve accelerator-state Git conflicts
 
 Use this workflow only for merge, rebase, cherry-pick, or add/delete conflicts involving `<hidden_path>/accelerators/**/*.accelerated.json`.
 
 1. Confirm the active Git operation and separate conflicts into generator inputs, output artifacts, and accelerator state. Keep unrelated conflicts out of scope.
-2. Do not run a generator while its process, templates, specs, inputs, or instructions are conflicted.
+2. Do not run a generator while its process, templates, specs, inputs, or guides are conflicted.
 3. For each state file, treat every non-empty line as a candidate for the artifact encoded by its path.
 4. Remove conflict markers and blank lines, deduplicate exact candidate lines, and retain multiple distinct valid JSON candidates when none is clearly obsolete. The CLI can report this as `ambiguous` for later repair.
-5. Preserve every candidate as a complete record. Never combine `code`, `accelerated_checksum`, `instructions_checksum`, `instructions`, or `pending` values from different candidates.
-6. Prefer retaining an added state file in an unclear add/delete conflict. Delete state only when the merged generator intentionally stops emitting the artifact or the user confirms removal. Do not infer obsolescence from a currently conflicted or renamed instruction file.
+5. Preserve every candidate as a complete record. Never combine `code`, `accelerated_checksum`, `guide_checksum`, `guide`, or `pending` values from different candidates.
+6. Prefer retaining an added state file in an unclear add/delete conflict. Delete state only when the merged generator intentionally stops emitting the artifact or the user confirms removal. Do not infer obsolescence from a currently conflicted or renamed guide file.
 7. Validate each retained line as a complete JSON object and confirm that the path identifies the intended artifact.
 8. Once related conflicts are resolved, inspect state with the two list commands above. After the Git operation completes and inputs are coherent, rerun the affected process to rebuild or disambiguate state.
 
-Report retained ambiguity and missing artifacts or instructions instead of hiding them.
+Report retained ambiguity and missing artifacts or guides instead of hiding them.
 
 ## Always preserve
 

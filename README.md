@@ -22,7 +22,7 @@ export default function main(ctx: Context) {
     "handlers.ts",
     "templates/handlers.tpl",
     { spec },
-    "instructions/handlers.md",
+    "guides/handlers.md",
   );
 }
 ```
@@ -32,7 +32,7 @@ Run the process and inspect accelerator work:
 ```bash
 ccode run api/generate
 ccode list accelerated --for-agent
-ccode get accelerated handlers.ts --instructions --for-agent
+ccode get accelerated handlers.ts --guide --for-agent
 ```
 
 ## Website and documentation
