@@ -3,12 +3,12 @@ title: Accelerators
 description: Safe generation for artifacts that need human or agent resolvement.
 ---
 
-Accelerators are Cohesive Code's resolvement workflow. They let a process propose an artifact, attach instructions, and avoid overwriting a file once it has been changed.
+Accelerators are Cohesive Code's resolvement workflow. They let a process propose an artifact, attach a guide, and avoid overwriting a file once it has been changed.
 
 ## API
 
 ```ts
-ctx.accelerate(id, templatePath, data, instructionsPath?);
+ctx.accelerate(id, templatePath, data, guidePath?);
 ```
 
 The runtime:
@@ -38,27 +38,27 @@ Artifact IDs are output paths relative to `output_path` and must be unique acros
 the workspace. Nested IDs create matching directories below both `output_path`
 and the accelerator state directory.
 
-## Instructions
+## Guides
 
-An optional instructions file can be attached to an artifact:
+An optional guide file can be attached to an artifact:
 
 ```ts
 ctx.accelerate(
   "handlers.go",
   "templates/handlers.tpl",
   model,
-  "instructions/handlers.md",
+  "guides/handlers.md",
 );
 ```
 
-Instruction paths are normalized under `ccode_path`.
+Guide paths are normalized under `ccode_path`.
 
 ## Inspecting work
 
 ```bash
 ccode list accelerated
 ccode get accelerated handlers.go
-ccode get accelerated handlers.go --instructions
+ccode get accelerated handlers.go --guide
 ```
 
 Use `--for-agent` for JSON output.
@@ -69,4 +69,4 @@ If the generated proposal is already acceptable and needs no edits, mark it reso
 ccode resolve handlers.go
 ```
 
-This updates only accelerator state. A later change to the generated content or instructions makes the artifact pending again.
+This updates only accelerator state. A later change to the generated content or guide makes the artifact pending again.

@@ -26,7 +26,7 @@ This matters for agents. A skill can inspect the config, know where process sour
 
 Use `generate` when the output should be overwritten every time the process runs.
 
-Use `accelerate` when the output is a proposal. Accelerated artifacts are tracked with a generated snapshot and optional instructions. If the target file has been changed since the last generated snapshot, Cohesive Code does not overwrite it.
+Use `accelerate` when the output is a proposal. Accelerated artifacts are tracked with a generated snapshot and an optional guide. If the target file has been changed since the last generated snapshot, Cohesive Code does not overwrite it.
 
 That safe-write behavior is the core of the system. It lets code generation continue without erasing local judgement, hand edits, or agent refinements.
 
@@ -36,11 +36,11 @@ Accelerator inspection commands expose exactly the information an agent needs:
 
 - unresolved artifacts
 - current state
-- optional instruction markdown
+- optional guide markdown
 - decoded proposed content
 - machine-readable JSON via `--for-agent`
 
-List commands intentionally do not dump generated content or instruction bodies. Agents can first discover work, then request a focused bundle for one artifact.
+List commands intentionally do not dump generated content or guide bodies. Agents can first discover work, then request a focused bundle for one artifact.
 
 ## Cohesion over automation
 

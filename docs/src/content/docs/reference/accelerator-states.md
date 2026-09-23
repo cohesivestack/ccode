@@ -11,7 +11,7 @@ Accelerator state records are stored per artifact.
 
 ## State values
 
-`pending` means the artifact has unresolved generated content or changed instructions.
+`pending` means the artifact has unresolved generated content or a changed guide.
 
 `resolved` means the output has been changed from the stored generated snapshot or the generated proposal was explicitly accepted with `ccode resolve`.
 
@@ -21,7 +21,7 @@ Accelerator state records are stored per artifact.
 
 `missing_artifact` means the target output file is missing.
 
-`missing_instructions` means an attached instruction file is missing.
+`missing_guide` means an attached guide file is missing.
 
 ## Metadata fields
 
@@ -30,7 +30,7 @@ Inspection responses include:
 ```json
 {
   "artifact_id": "handlers.go",
-  "instructions_path": "instructions/handlers.md",
+  "guide_path": "guides/handlers.md",
   "pending": true,
   "state": "pending",
   "message": ""
@@ -51,7 +51,7 @@ Add `--include-resolved` to include resolved resources:
 ccode list accelerated --include-resolved
 ```
 
-Repeated identical state lines are collapsed. Missing artifacts are reported before missing instructions. Changed instruction files refresh their saved checksum and mark the artifact pending again.
+Repeated identical state lines are collapsed. Missing artifacts are reported before missing guides. A changed guide file refreshes its saved checksum and marks the artifact pending again.
 
 ## Accepting an unchanged proposal
 
@@ -61,14 +61,14 @@ When a pending generated proposal requires no edits, mark it resolved explicitly
 ccode resolve <artifactId>
 ```
 
-This changes only the accelerator state; it does not modify the output artifact. If a later run changes the generated content or instructions, the artifact becomes pending again.
+This changes only the accelerator state; it does not modify the output artifact. If a later run changes the generated content or guide, the artifact becomes pending again.
 
 ## Resolution bundle
 
 Use:
 
 ```bash
-ccode get accelerated <artifactId> --instructions --for-agent
+ccode get accelerated <artifactId> --guide --for-agent
 ```
 
-The JSON response includes instruction markdown, decoded accelerated content, and a composed markdown bundle suitable for an agent prompt.
+The JSON response includes guide markdown, decoded accelerated content, and a composed markdown bundle suitable for an agent prompt.

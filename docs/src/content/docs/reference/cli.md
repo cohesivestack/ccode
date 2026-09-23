@@ -43,7 +43,7 @@ Recursively lists runnable `*.process.ts` files under `ccode_path` as process id
 ccode resolve <artifactId>
 ```
 
-Resolves a pending accelerated artifact without changing its output file. Use this when the generated proposal requires no edits and can be accepted as-is. A later run marks it pending again if the generated content or attached instructions change.
+Resolves a pending accelerated artifact without changing its output file. Use this when the generated proposal requires no edits and can be accepted as-is. A later run marks it pending again if the generated content or attached guide changes.
 
 ## List accelerated artifacts
 
@@ -59,17 +59,17 @@ Lists unresolved accelerated artifacts by default. Use `--include-resolved` to i
 
 ```bash
 ccode get accelerated <artifactId>
-ccode get accelerated <artifactId> --instructions
-ccode get accelerated <artifactId> --instructions --for-agent
+ccode get accelerated <artifactId> --guide
+ccode get accelerated <artifactId> --guide --for-agent
 ```
 
-Without `--instructions`, the command returns metadata. With `--instructions`, it returns a composed resolvement bundle containing instruction markdown and decoded accelerated content.
+Without `--guide`, the command returns metadata. With `--guide`, it returns a composed resolvement bundle containing guide markdown and decoded accelerated content.
 
-## Get an instruction file
+## Get a guide file
 
 ```bash
-ccode get instruction <path>
-ccode get instruction <path> --for-agent
+ccode get guide <path>
+ccode get guide <path> --for-agent
 ```
 
-Reads raw instruction markdown. The path is resolved using Cohesive Code's accelerator instruction rules.
+Reads raw guide markdown. The path is resolved using Cohesive Code's accelerator guide rules.

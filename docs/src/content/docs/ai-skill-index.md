@@ -65,14 +65,14 @@ For accelerated artifacts:
 ## Agent operating rules
 
 - Treat `ccode.yaml` as the workspace contract.
-- Keep source files, templates, specs, and instructions under `ccode_path`.
+- Keep source files, templates, specs, and guides under `ccode_path`.
 - Do not hand-edit `.ccode/build/`.
 - Do not edit `.ccode/lib/` in an application workspace; rerun `ccode init` to refresh it.
 - Run the exact process you changed when validation is possible.
 - Use `ctx.generate(...)` only for files that should be regenerated.
 - Use `ctx.accelerate(...)` for files that may need human or agent resolvement.
 - Inspect unresolved accelerator work with `ccode list accelerated --for-agent`.
-- Fetch one resolvement bundle with `ccode get accelerated <artifactId> --instructions --for-agent`.
+- Fetch one resolvement bundle with `ccode get accelerated <artifactId> --guide --for-agent`.
 
 ## Command index
 
@@ -84,8 +84,8 @@ ccode list processes
 ccode list accelerated
 ccode list accelerated --include-resolved
 ccode get accelerated <artifactId>
-ccode get accelerated <artifactId> --instructions
-ccode get instruction <path>
+ccode get accelerated <artifactId> --guide
+ccode get guide <path>
 ```
 
 `ccode list processes` always returns machine-readable JSON. Add `--for-agent` to accelerator list and get commands when the caller needs structured output.
@@ -96,7 +96,7 @@ ccode get instruction <path>
 ctx.println(message)
 ctx.renderTemplate(templatePath, data)
 ctx.generate(templatePath, filePath, data)
-ctx.accelerate(id, templatePath, data, instructionsPath?)
+ctx.accelerate(id, templatePath, data, guidePath?)
 ctx.parseJSONFromBytes(jsonBytes)
 ctx.parseJSONFromString(jsonString)
 ctx.parseJSONFromFile(filePath)

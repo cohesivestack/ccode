@@ -16,7 +16,7 @@ hidden_path: .ccode
 
 ## Keys
 
-`ccode_path` is where process source, templates, specs, data, instructions, and generated support files live. Default: `ccode`.
+`ccode_path` is where process source, templates, specs, data, guides, and generated support files live. Default: `ccode`.
 
 `version` is required. The wrapper uses it to choose the release binary for the workspace.
 

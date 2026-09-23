@@ -72,7 +72,7 @@ ccode/
     generate.process.ts
   data/
     seed.json
-  instructions/
+  guides/
     handlers.md
   specs/
     api.yaml
@@ -83,7 +83,7 @@ ccode/
       client.tpl
 ```
 
-Use stable folders for process entrypoints, templates, input specs, and resolvement instructions. Keep files inside `ccode_path` unless there is a clear reason to use external inputs.
+Use stable folders for process entrypoints, templates, input specs, and resolvement guides. Keep files inside `ccode_path` unless there is a clear reason to use external inputs.
 
 ## Process paths
 

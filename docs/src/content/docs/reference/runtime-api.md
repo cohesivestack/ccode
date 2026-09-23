@@ -24,7 +24,7 @@ interface Context {
     id: string,
     templatePath: string,
     data: any,
-    instructionsPath?: string,
+    guidePath?: string,
   ): void;
   parseJSONFromBytes(jsonBytes: number[]): Record<string, any>;
   parseJSONFromString(jsonString: string): Record<string, any>;
@@ -188,7 +188,7 @@ ctx.generate("templates/readme.tpl", "README.generated.md", model);
 Renders a template, tracks generated state, and writes safely to `output_path/<id>`.
 
 ```ts
-ctx.accelerate("src/handlers.ts", "templates/handlers.tpl", model, "instructions/handlers.md");
+ctx.accelerate("src/handlers.ts", "templates/handlers.tpl", model, "guides/handlers.md");
 ```
 
 ## parseJSONFrom*

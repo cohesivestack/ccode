@@ -1,6 +1,6 @@
 ---
 title: Accelerated Artifact
-description: Create a generated proposal with attached resolvement instructions.
+description: Create a generated proposal with attached resolvement guides.
 ---
 
 ## Layout
@@ -10,7 +10,7 @@ ccode.yaml
 ccode/
   api/
     generate.process.ts
-  instructions/
+  guides/
     handlers.md
   templates/
     handlers.tpl
@@ -30,7 +30,7 @@ export default function main(ctx: Context) {
     "handlers.go",
     "templates/handlers.tpl",
     model,
-    "instructions/handlers.md",
+    "guides/handlers.md",
   );
 }
 ```
@@ -41,7 +41,7 @@ export default function main(ctx: Context) {
 package {{ data.packageName }}
 ```
 
-## Instructions
+## Guides
 
 ```markdown
 # Handler resolvement
@@ -54,7 +54,7 @@ Review the generated handler file, keep package naming stable, and add endpoint-
 ```bash
 ccode run api/generate
 ccode list accelerated --for-agent
-ccode get accelerated handlers.go --instructions --for-agent
+ccode get accelerated handlers.go --guide --for-agent
 ccode resolve handlers.go
 ```
 
