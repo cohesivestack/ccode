@@ -322,9 +322,9 @@ export default function main(ctx: Context) {
   };
   const versionSpecific: OpenAPI.V3_1.Document = document;
   const inspection: Database.Inspection =
-    ctx.inspectDatabase("sqlite://:memory:");
+    ctx.inspectDatabase("sqlite://file?mode=memory");
   const sqlite: Database.SQLite.Inspection =
-    ctx.inspectDatabase("sqlite://:memory:");
+    ctx.inspectDatabase("sqlite://file?mode=memory");
 
   ctx.println(JSON.stringify({
     version: versionSpecific.openapi,
