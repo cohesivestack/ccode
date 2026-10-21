@@ -24,7 +24,7 @@ func TestInstallRunnerNativeUtilitiesCreatesCompleteInternalAPI(t *testing.T) {
 	native := nativeValue.ToObject(runtime)
 	rootKeys := native.Keys()
 	sort.Strings(rootKeys)
-	assert.Equal(t, []string{"go", "openapi", "string", "typescript"}, rootKeys)
+	assert.Equal(t, []string{"go", "path", "string", "typescript"}, rootKeys)
 
 	tests := []struct {
 		name      string
@@ -87,25 +87,21 @@ func TestInstallRunnerNativeUtilitiesCreatesCompleteInternalAPI(t *testing.T) {
 		})
 	}
 
-	openAPIValue := native.Get("openapi")
-	require.False(t, goja.IsUndefined(openAPIValue))
-	openAPI := openAPIValue.ToObject(runtime)
-	assert.Equal(t, []string{"path"}, openAPI.Keys())
-
-	pathValue := openAPI.Get("path")
+	assert.Nil(t, native.Get("openapi"))
+	pathValue := native.Get("path")
 	require.False(t, goja.IsUndefined(pathValue))
 	path := pathValue.ToObject(runtime)
-	pathFunctions := []string{"toColon", "toSquareBrackets", "toAngleBrackets", "toDollar"}
+	pathFunctions := []string{"toCurlyBrackets", "toColon", "toSquareBrackets", "toAngleBrackets", "toDollar"}
 	actualPathFunctions := path.Keys()
 	sort.Strings(actualPathFunctions)
 	sort.Strings(pathFunctions)
 	assert.Equal(t, pathFunctions, actualPathFunctions)
 	for _, name := range pathFunctions {
 		_, callable := goja.AssertFunction(path.Get(name))
-		assert.True(t, callable, "openapi.path.%s", name)
+		assert.True(t, callable, "path.%s", name)
 	}
 
-	for _, name := range []string{"Go", "Strings", "TypeScript", "OpenAPI", "Path", "go", "string", "typescript", "openapi"} {
+	for _, name := range []string{"Go", "Strings", "TypeScript", "OpenAPI", "Path", "go", "string", "typescript", "openapi", "path"} {
 		value := runtime.Get(name)
 		assert.True(t, value == nil || goja.IsUndefined(value), "global %s", name)
 	}
@@ -122,7 +118,7 @@ func TestInstallRunnerNativeUtilitiesCreatesCompleteInternalAPI(t *testing.T) {
 	assert.JSONEq(t, `{"enumerable":false,"configurable":false,"writable":false}`, descriptor.String())
 }
 
-func TestRunnerNativeOpenAPIPathUtilitiesDelegateToExistingTransformations(t *testing.T) {
+func TestRunnerNativePathUtilitiesDelegateToExistingTransformations(t *testing.T) {
 	runtime := goja.New()
 	require.NoError(t, installRunnerNativeUtilities(runtime))
 
@@ -131,14 +127,14 @@ func TestRunnerNativeOpenAPIPathUtilitiesDelegateToExistingTransformations(t *te
 		function  string
 		transform func(string, bool) string
 	}{
-		{name: "colon", function: "toColon", transform: openAPIPathToColon},
-		{name: "square brackets", function: "toSquareBrackets", transform: openAPIPathToSquareBrackets},
-		{name: "angle brackets", function: "toAngleBrackets", transform: openAPIPathToAngleBrackets},
-		{name: "dollar", function: "toDollar", transform: openAPIPathToDollar},
+		{name: "curly brackets", function: "toCurlyBrackets", transform: pathToCurlyBrackets},
+		{name: "colon", function: "toColon", transform: pathToColon},
+		{name: "square brackets", function: "toSquareBrackets", transform: pathToSquareBrackets},
+		{name: "angle brackets", function: "toAngleBrackets", transform: pathToAngleBrackets},
+		{name: "dollar", function: "toDollar", transform: pathToDollar},
 	}
 
 	path := runtime.Get("__ccodeNative").ToObject(runtime).
-		Get("openapi").ToObject(runtime).
 		Get("path").ToObject(runtime)
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -252,10 +248,11 @@ func TestRunnerNativeUtilitiesThrowCatchableJavaScriptErrors(t *testing.T) {
 		{name: "TypeScript initialisms are not an array", expression: `__ccodeNative.typescript.toValueIdentifier("value", "ID")`, expected: "native typescript.toValueIdentifier initialisms must be an array of strings"},
 		{name: "TypeScript initialism is not a string", expression: `__ccodeNative.typescript.toValueIdentifier("value", [42])`, expected: "native typescript.toValueIdentifier initialisms[0] must be a string"},
 		{name: "TypeScript initialism is blank", expression: `__ccodeNative.typescript.toTypeIdentifier("value", [" "])`, expected: "native typescript.toTypeIdentifier initialisms[0] must not be blank"},
-		{name: "OpenAPI path input missing", expression: `__ccodeNative.openapi.path.toColon()`, expected: "native openapi.path.toColon requires a string value"},
-		{name: "OpenAPI path input invalid", expression: `__ccodeNative.openapi.path.toSquareBrackets(42)`, expected: "native openapi.path.toSquareBrackets requires a string value"},
-		{name: "OpenAPI path option string", expression: `__ccodeNative.openapi.path.toAngleBrackets("/users/{id}", "true")`, expected: "native openapi.path.toAngleBrackets omitLeadingSlash must be a boolean"},
-		{name: "OpenAPI path option undefined", expression: `__ccodeNative.openapi.path.toDollar("/users/{id}", undefined)`, expected: "native openapi.path.toDollar omitLeadingSlash must be a boolean"},
+		{name: "curly brackets input invalid", expression: `__ccodeNative.path.toCurlyBrackets(null)`, expected: "native path.toCurlyBrackets requires a string value"},
+		{name: "path input missing", expression: `__ccodeNative.path.toColon()`, expected: "native path.toColon requires a string value"},
+		{name: "path input invalid", expression: `__ccodeNative.path.toSquareBrackets(42)`, expected: "native path.toSquareBrackets requires a string value"},
+		{name: "path option string", expression: `__ccodeNative.path.toAngleBrackets("/users/{id}", "true")`, expected: "native path.toAngleBrackets omitLeadingSlash must be a boolean"},
+		{name: "path option undefined", expression: `__ccodeNative.path.toDollar("/users/{id}", undefined)`, expected: "native path.toDollar omitLeadingSlash must be a boolean"},
 	}
 
 	for _, test := range tests {

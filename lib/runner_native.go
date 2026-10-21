@@ -61,22 +61,18 @@ func installRunnerNativeUtilities(runtime *goja.Runtime) error {
 		}
 	}
 
-	openAPIPathNamespace := runtime.NewObject()
-	openAPIPathFunctions := []runnerNativeFunction{
-		{name: "toColon", transform: nativeOpenAPIPathTransformation(runtime, "openapi.path.toColon", openAPIPathToColon)},
-		{name: "toSquareBrackets", transform: nativeOpenAPIPathTransformation(runtime, "openapi.path.toSquareBrackets", openAPIPathToSquareBrackets)},
-		{name: "toAngleBrackets", transform: nativeOpenAPIPathTransformation(runtime, "openapi.path.toAngleBrackets", openAPIPathToAngleBrackets)},
-		{name: "toDollar", transform: nativeOpenAPIPathTransformation(runtime, "openapi.path.toDollar", openAPIPathToDollar)},
+	pathNamespace := runtime.NewObject()
+	pathFunctions := []runnerNativeFunction{
+		{name: "toCurlyBrackets", transform: nativePathTransformation(runtime, "path.toCurlyBrackets", pathToCurlyBrackets)},
+		{name: "toColon", transform: nativePathTransformation(runtime, "path.toColon", pathToColon)},
+		{name: "toSquareBrackets", transform: nativePathTransformation(runtime, "path.toSquareBrackets", pathToSquareBrackets)},
+		{name: "toAngleBrackets", transform: nativePathTransformation(runtime, "path.toAngleBrackets", pathToAngleBrackets)},
+		{name: "toDollar", transform: nativePathTransformation(runtime, "path.toDollar", pathToDollar)},
 	}
-	for _, function := range openAPIPathFunctions {
-		if err := openAPIPathNamespace.Set(function.name, function.transform); err != nil {
-			return fmt.Errorf("register native openapi.path.%s: %w", function.name, err)
+	for _, function := range pathFunctions {
+		if err := pathNamespace.Set(function.name, function.transform); err != nil {
+			return fmt.Errorf("register native path.%s: %w", function.name, err)
 		}
-	}
-
-	openAPINamespace := runtime.NewObject()
-	if err := openAPINamespace.Set("path", openAPIPathNamespace); err != nil {
-		return fmt.Errorf("register native openapi.path namespace: %w", err)
 	}
 
 	native := runtime.NewObject()
@@ -89,8 +85,8 @@ func installRunnerNativeUtilities(runtime *goja.Runtime) error {
 	if err := native.Set("typescript", typeScriptNamespace); err != nil {
 		return fmt.Errorf("register native typescript namespace: %w", err)
 	}
-	if err := native.Set("openapi", openAPINamespace); err != nil {
-		return fmt.Errorf("register native openapi namespace: %w", err)
+	if err := native.Set("path", pathNamespace); err != nil {
+		return fmt.Errorf("register native path namespace: %w", err)
 	}
 
 	if err := runtime.GlobalObject().DefineDataProperty(
@@ -138,7 +134,7 @@ func nativeInitialismTransformation(
 	}
 }
 
-func nativeOpenAPIPathTransformation(
+func nativePathTransformation(
 	runtime *goja.Runtime,
 	name string,
 	transform func(string, bool) string,

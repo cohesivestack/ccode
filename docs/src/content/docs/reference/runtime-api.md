@@ -75,7 +75,7 @@ The default `@ccode/openapi` entry point exposes the ergonomic `ApiModel`,
 `ApiModelByVersion`, and `Version` types. Independent class declarations live in
 `OpenAPI.V3_0`, `OpenAPI.V3_1`, and `OpenAPI.V3_2`. These are type contracts for
 Go-created objects, not JavaScript constructors; use `import type` for models.
-The reference and path helpers remain runtime exports from the default module.
+The reference helpers remain runtime exports from the default module.
 
 Specification-shaped types now live in `@ccode/openapi/raw`, with the same
 `V3_0`, `V3_1`, and `V3_2` namespaces and `Document<V>` selection alias.
@@ -86,11 +86,12 @@ functions continue to return raw documents.
 
 General string transformations are exported from `@ccode/string`, Go-specific
 naming transformations are exported from `@ccode/go`, and TypeScript
-declaration identifiers are exported from `@ccode/typescript`. OpenAPI path
-transformations are available under `OpenAPI.Path`:
+declaration identifiers are exported from `@ccode/typescript`. Route path
+transformations are exported from `@ccode/path`:
 
 ```ts
 import * as Go from "@ccode/go";
+import * as Path from "@ccode/path";
 import * as Strings from "@ccode/string";
 import * as TypeScript from "@ccode/typescript";
 
@@ -115,24 +116,34 @@ TypeScript.toTypeIdentifier("user id"); // "UserId"
 TypeScript.toValueIdentifier("user id"); // "userId"
 TypeScript.toValueIdentifier("class"); // "class_"
 
-OpenAPI.Path.toColon("/users/{userId}"); // "/users/:userId"
-OpenAPI.Path.toSquareBrackets("/users/{userId}"); // "/users/[userId]"
+Path.toCurlyBrackets("/users/:userId"); // "/users/{userId}"
+Path.toCurlyBrackets("/users/[userId]"); // "/users/{userId}"
+Path.toColon("/users/{userId}"); // "/users/:userId"
+Path.toSquareBrackets("/users/{userId}"); // "/users/[userId]"
 ```
 
-The path helpers convert every nonempty OpenAPI `{parameter}` expression to
-colon, square-bracket, angle-bracket, or dollar syntax. They preserve the
-leading slash unless `omitLeadingSlash` is enabled:
+Each path helper recognizes curly-bracket (`{id}`), colon (`:id`),
+square-bracket (`[id]`), angle-bracket (`<id>`), and dollar (`$id`) parameters,
+including mixed syntax in one path. It converts them to the requested format
+and preserves the leading slash unless `omitLeadingSlash` is enabled:
 
 ```ts
-OpenAPI.Path.toAngleBrackets("/users/{userId}"); // "/users/<userId>"
-OpenAPI.Path.toDollar("/users/{userId}", {
+Path.toAngleBrackets("/users/{userId}"); // "/users/<userId>"
+Path.toDollar("/users/{userId}", {
   omitLeadingSlash: true,
 }); // "users/$userId"
 ```
 
-The same functions can be imported directly from `@ccode/openapi/path`. These
-helpers only convert path syntax. They do not interpolate runtime parameter
-values or validate parameter declarations against a Path Item or Operation.
+Parameter names start with a Unicode letter or underscore and may contain
+letters, digits, combining marks, underscores, and hyphens. Dots separate
+parameters, so `Path.toCurlyBrackets("/files/:file.:extension")` returns
+`"/files/{file}.{extension}"`. Static text, empty placeholders, and malformed
+bracket groups are preserved. Framework-specific regex constraints, optional
+parameters, and catch-all semantics are outside the supported syntax.
+
+These helpers only convert route path syntax. They do not interpolate runtime
+values or validate parameter declarations. Run `ccode init` to refresh support
+files after upgrading, and import path helpers from `@ccode/path`.
 
 `camelCase`, `pascalCase`, `titleCase`, and `sentenceCase` accept an optional
 read-only initialism array. The Go and TypeScript identifier helpers accept the

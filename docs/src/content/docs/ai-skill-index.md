@@ -107,10 +107,11 @@ ctx.inspectDatabase(connectionURL)
 ctx.inspectDatabase(connectionURL, { expectedEngine })
 OpenAPI.isReference(value)
 OpenAPI.parseReference(reference)
-OpenAPI.Path.toColon(path, options?)
-OpenAPI.Path.toSquareBrackets(path, options?)
-OpenAPI.Path.toAngleBrackets(path, options?)
-OpenAPI.Path.toDollar(path, options?)
+Path.toCurlyBrackets(path, options?)
+Path.toColon(path, options?)
+Path.toSquareBrackets(path, options?)
+Path.toAngleBrackets(path, options?)
+Path.toDollar(path, options?)
 Strings.camelCase(value, initialisms?)
 Strings.pascalCase(value, initialisms?)
 Strings.snakeCase(value)
@@ -130,7 +131,8 @@ TypeScript.toTypeIdentifier(value, initialisms?)
 TypeScript.toValueIdentifier(value, initialisms?)
 ```
 
-Import `OpenAPI` from `@ccode/openapi`, `Strings` from `@ccode/string`, `Go`
-from `@ccode/go`, and `TypeScript` from `@ccode/typescript`. Templates provide
-equivalent string, Go naming, TypeScript naming, and OpenAPI path filters; see
+Import `OpenAPI` from `@ccode/openapi`, `Path` from `@ccode/path`, `Strings`
+from `@ccode/string`, `Go` from `@ccode/go`, and `TypeScript` from
+`@ccode/typescript`. Templates provide equivalent string, Go naming,
+TypeScript naming, and route path filters; see
 [Templates](/using-ccode/templates/).

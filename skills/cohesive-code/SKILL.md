@@ -13,8 +13,8 @@ description: Work with Cohesive Code (`ccode`) workspaces end to end, including 
 4. Inspect the generated modules under `<ccode_path>/.ccode/lib/` when runtime
    API details matter. Use `context.ts` for `Context`; use the public module
    declarations for imports such as `@ccode/openapi`, `@ccode/database`,
-   `@ccode/string`, `@ccode/go`, and `@ccode/typescript`. Do not import
-   `internal/` modules.
+   `@ccode/string`, `@ccode/path`, `@ccode/go`, and `@ccode/typescript`.
+   Do not import `internal/` modules.
 5. Read `docs/src/content/docs/ai-skill-index.md`, then load only the pages it identifies for the task.
 
 If local docs are unavailable, retrieve the matching Markdown from `https://raw.githubusercontent.com/cohesivestack/ccode/master/docs/src/content/docs/`. Prefer sources in this order: generated local types, checked-out implementation and CLI output, local docs, then older examples. Use the official `https://github.com/OAI/OpenAPI-Specification` reference only when local types and docs do not answer an OpenAPI schema question.
@@ -36,9 +36,9 @@ Use this workflow for processes, templates, OpenAPI or database inputs, generate
 - Default-export the process function and import `Context` from `@ccode/context`.
 - Parse each input once and normalize it into plain template data in TypeScript.
 - Import `* as OpenAPI` from `@ccode/openapi` and use `OpenAPI.parseReference` when a process needs the document and fragment parts of a preserved `$ref`.
-- Use `OpenAPI.Path.toColon`, `OpenAPI.Path.toSquareBrackets`,
-  `OpenAPI.Path.toAngleBrackets`, or `OpenAPI.Path.toDollar` when generated
-  framework paths need OpenAPI `{parameter}` syntax converted. Pass
+- Import `* as Path` from `@ccode/path` and use `Path.toCurlyBrackets`,
+  `Path.toColon`, `Path.toSquareBrackets`, `Path.toAngleBrackets`, or
+  `Path.toDollar` to convert route parameters between any supported syntaxes. Pass
   `{ omitLeadingSlash: true }` only when the target syntax omits the initial
   slash. These helpers do not interpolate values or validate parameter
   declarations.
@@ -65,12 +65,12 @@ Use this workflow for processes, templates, OpenAPI or database inputs, generate
   (`camelCase`, `pascalCase`, `snakeCase`, `kebabCase`, `constantCase`,
   `dotCase`, `pathCase`, `titleCase`, `sentenceCase`, `upperFirst`,
   `lowerFirst`, `normalizeSpace`, `goExported`, `goUnexported`, and
-  `goPackage`, `typeScriptType`, and `typeScriptValue`, plus `openAPIPathToColon`,
-  `openAPIPathToSquareBrackets`, `openAPIPathToAngleBrackets`, and
-  `openAPIPathToDollar`). Only the case filters and Go or TypeScript identifier
+  `goPackage`, `typeScriptType`, and `typeScriptValue`, plus
+  `pathToCurlyBrackets`, `pathToColon`, `pathToSquareBrackets`, `pathToAngleBrackets`, and
+  `pathToDollar`). Only the case filters and Go or TypeScript identifier
   filters documented as initialism-aware accept `initialisms=[...]`. Use the
   TypeScript-specific filters for declaration identifiers instead of rebuilding
-  sanitization in templates. OpenAPI path filters accept the keyword-only
+  sanitization in templates. Route path filters accept the keyword-only
   boolean `omitLeadingSlash`.
 - Use `ctx.generate(...)` only for files the generator may overwrite.
 - Use `ctx.accelerate(...)` for proposals that must preserve later human or agent edits.

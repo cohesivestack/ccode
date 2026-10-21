@@ -33,10 +33,11 @@ var templateFilterSpecs = []templateFilterSpec{
 	{name: "goPackage", filter: stringTemplateFilter("goPackage", stringToGoPackage)},
 	{name: "typeScriptType", filter: initialismTemplateFilter("typeScriptType", stringToTypeScriptTypeIdentifier)},
 	{name: "typeScriptValue", filter: initialismTemplateFilter("typeScriptValue", stringToTypeScriptValueIdentifier)},
-	{name: "openAPIPathToColon", filter: openAPIPathTemplateFilter("openAPIPathToColon", openAPIPathToColon)},
-	{name: "openAPIPathToSquareBrackets", filter: openAPIPathTemplateFilter("openAPIPathToSquareBrackets", openAPIPathToSquareBrackets)},
-	{name: "openAPIPathToAngleBrackets", filter: openAPIPathTemplateFilter("openAPIPathToAngleBrackets", openAPIPathToAngleBrackets)},
-	{name: "openAPIPathToDollar", filter: openAPIPathTemplateFilter("openAPIPathToDollar", openAPIPathToDollar)},
+	{name: "pathToCurlyBrackets", filter: pathTemplateFilter("pathToCurlyBrackets", pathToCurlyBrackets)},
+	{name: "pathToColon", filter: pathTemplateFilter("pathToColon", pathToColon)},
+	{name: "pathToSquareBrackets", filter: pathTemplateFilter("pathToSquareBrackets", pathToSquareBrackets)},
+	{name: "pathToAngleBrackets", filter: pathTemplateFilter("pathToAngleBrackets", pathToAngleBrackets)},
+	{name: "pathToDollar", filter: pathTemplateFilter("pathToDollar", pathToDollar)},
 }
 
 var (
@@ -115,7 +116,7 @@ func initialismTemplateFilter(name string, transform func(string, []string) stri
 	}
 }
 
-func openAPIPathTemplateFilter(name string, transform func(string, bool) string) exec.FilterFunction {
+func pathTemplateFilter(name string, transform func(string, bool) string) exec.FilterFunction {
 	return func(_ *exec.Evaluator, in *exec.Value, params *exec.VarArgs) *exec.Value {
 		omitLeadingSlash, err := templateFilterOmitLeadingSlash(params)
 		if err != nil {

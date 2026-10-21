@@ -250,7 +250,7 @@ func TestRendererGoFilters(t *testing.T) {
 	}
 }
 
-func TestRendererOpenAPIPathFilters(t *testing.T) {
+func TestRendererPathFilters(t *testing.T) {
 	tests := []struct {
 		name     string
 		filter   string
@@ -258,13 +258,16 @@ func TestRendererOpenAPIPathFilters(t *testing.T) {
 		argument string
 		expected string
 	}{
-		{name: "colon default", filter: "openAPIPathToColon", input: "/users/{userId}", expected: "/users/:userId"},
-		{name: "colon omit", filter: "openAPIPathToColon", input: "/users/{userId}", argument: "(omitLeadingSlash=true)", expected: "users/:userId"},
-		{name: "colon preserve explicitly", filter: "openAPIPathToColon", input: "/users/{userId}", argument: "(omitLeadingSlash=false)", expected: "/users/:userId"},
-		{name: "square brackets", filter: "openAPIPathToSquareBrackets", input: "/users/{userId}", expected: "/users/[userId]"},
-		{name: "angle brackets", filter: "openAPIPathToAngleBrackets", input: "/users/{userId}", expected: "/users/<userId>"},
-		{name: "dollar", filter: "openAPIPathToDollar", input: "/users/{userId}", expected: "/users/$userId"},
-		{name: "static path", filter: "openAPIPathToSquareBrackets", input: "/users/current", argument: "(omitLeadingSlash=true)", expected: "users/current"},
+		{name: "curly from colon", filter: "pathToCurlyBrackets", input: "/users/:userId", expected: "/users/{userId}"},
+		{name: "curly from square", filter: "pathToCurlyBrackets", input: "/users/[userId]", argument: "(omitLeadingSlash=true)", expected: "users/{userId}"},
+		{name: "mixed syntax", filter: "pathToColon", input: "/teams/[teamId]/users/<userId>/orders/$orderId", expected: "/teams/:teamId/users/:userId/orders/:orderId"},
+		{name: "colon default", filter: "pathToColon", input: "/users/{userId}", expected: "/users/:userId"},
+		{name: "colon omit", filter: "pathToColon", input: "/users/{userId}", argument: "(omitLeadingSlash=true)", expected: "users/:userId"},
+		{name: "colon preserve explicitly", filter: "pathToColon", input: "/users/{userId}", argument: "(omitLeadingSlash=false)", expected: "/users/:userId"},
+		{name: "square brackets", filter: "pathToSquareBrackets", input: "/users/{userId}", expected: "/users/[userId]"},
+		{name: "angle brackets", filter: "pathToAngleBrackets", input: "/users/{userId}", expected: "/users/<userId>"},
+		{name: "dollar", filter: "pathToDollar", input: "/users/{userId}", expected: "/users/$userId"},
+		{name: "static path", filter: "pathToSquareBrackets", input: "/users/current", argument: "(omitLeadingSlash=true)", expected: "users/current"},
 	}
 
 	for _, test := range tests {
@@ -277,12 +280,13 @@ func TestRendererOpenAPIPathFilters(t *testing.T) {
 	}
 }
 
-func TestRendererOpenAPIPathFilterArgumentValidation(t *testing.T) {
+func TestRendererPathFilterArgumentValidation(t *testing.T) {
 	filters := []string{
-		"openAPIPathToColon",
-		"openAPIPathToSquareBrackets",
-		"openAPIPathToAngleBrackets",
-		"openAPIPathToDollar",
+		"pathToCurlyBrackets",
+		"pathToColon",
+		"pathToSquareBrackets",
+		"pathToAngleBrackets",
+		"pathToDollar",
 	}
 	tests := []struct {
 		name     string

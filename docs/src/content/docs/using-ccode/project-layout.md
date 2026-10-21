@@ -55,7 +55,8 @@ ccode/
 
 The public `go/`, `string/`, and `typescript/` modules provide typed naming
 utilities to processes through `@ccode/go`, `@ccode/string`, and
-`@ccode/typescript`. The `internal/` module is a runtime implementation detail
+`@ccode/typescript`. The `path/` module provides route path syntax conversions
+through `@ccode/path`. The `internal/` module is a runtime implementation detail
 and should not be imported directly.
 
 `<hidden_path>/build/` is compiler cache and can be recreated.

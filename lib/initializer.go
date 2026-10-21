@@ -129,6 +129,7 @@ func Init(projectPath string, configPath string, version string) error {
 }
 
 var obsoleteSupportFileNames = []string{
+	"openapi/path.ts",
 	"openapi.ts",
 	"database.ts",
 	"database-postgresql.ts",

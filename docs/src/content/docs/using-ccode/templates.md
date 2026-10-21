@@ -91,7 +91,7 @@ Then render with simple loops:
 {% endfor %}
 ```
 
-## String, Go, TypeScript naming, and OpenAPI path filters
+## String, Go, TypeScript naming, and route path filters
 
 Cohesive Code adds naming filters to Gonja's standard filters. All of these
 filters require a string input:
@@ -115,10 +115,11 @@ filters require a string input:
 | `goPackage` | `"HTTP Utils"` → `"httputils"` |
 | `typeScriptType` | `"user id"` → `"UserId"` |
 | `typeScriptValue` | `"user id"` → `"userId"` |
-| `openAPIPathToColon` | `"/users/{userId}"` → `"/users/:userId"` |
-| `openAPIPathToSquareBrackets` | `"/users/{userId}"` → `"/users/[userId]"` |
-| `openAPIPathToAngleBrackets` | `"/users/{userId}"` → `"/users/<userId>"` |
-| `openAPIPathToDollar` | `"/users/{userId}"` → `"/users/$userId"` |
+| `pathToCurlyBrackets` | `"/users/:userId"` → `"/users/{userId}"` |
+| `pathToColon` | `"/users/{userId}"` → `"/users/:userId"` |
+| `pathToSquareBrackets` | `"/users/{userId}"` → `"/users/[userId]"` |
+| `pathToAngleBrackets` | `"/users/{userId}"` → `"/users/<userId>"` |
+| `pathToDollar` | `"/users/{userId}"` → `"/users/$userId"` |
 
 Use them with the normal Gonja pipe syntax:
 
@@ -129,8 +130,8 @@ export interface {{ data.name | typeScriptType }} {
   {{ data.property | typeScriptValue }}: string;
 }
 
-{{ data.path | openAPIPathToColon }}
-{{ data.path | openAPIPathToColon(omitLeadingSlash=true) }}
+{{ data.path | pathToColon }}
+{{ data.path | pathToColon(omitLeadingSlash=true) }}
 ```
 
 `camelCase`, `pascalCase`, `titleCase`, `sentenceCase`, `goExported`,
@@ -152,14 +153,15 @@ use PascalCase and value names use camelCase; visibility remains controlled by
 TypeScript syntax rather than capitalization. Reserved value binding names
 receive a trailing underscore. Initialisms match case-insensitively and preserve
 safe characters from the supplied spelling. The list must contain only
-non-blank strings. The four OpenAPI path filters accept the keyword-only boolean
+non-blank strings. The five route path filters accept the keyword-only boolean
 `omitLeadingSlash`, which defaults to `false`. Other filters do not accept
 arguments.
 
-OpenAPI path filters replace every well-formed, nonempty `{parameter}`
-expression and leave malformed expressions unchanged. They only convert the
-path syntax: they do not resolve parameter values or validate declarations
-against a Path Item or Operation.
+Route path filters accept curly-bracket, colon, square-bracket, angle-bracket,
+and dollar parameters, including mixed syntax, and preserve malformed groups.
+They use the same parameter name rules as `@ccode/path`; see
+[Runtime API](/reference/runtime-api/). They only convert path syntax and do not
+resolve parameter values or validate declarations.
 
 ## Path rules
 

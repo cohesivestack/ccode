@@ -33,27 +33,24 @@ export interface NativeTypeScriptUtilities {
   readonly toValueIdentifier: InitialismTransformation;
 }
 
-export type OpenAPIPathTransformation = (
+export type PathTransformation = (
   value: string,
   omitLeadingSlash?: boolean,
 ) => string;
 
-export interface NativeOpenAPIPathUtilities {
-  readonly toColon: OpenAPIPathTransformation;
-  readonly toSquareBrackets: OpenAPIPathTransformation;
-  readonly toAngleBrackets: OpenAPIPathTransformation;
-  readonly toDollar: OpenAPIPathTransformation;
-}
-
-export interface NativeOpenAPIUtilities {
-  readonly path: NativeOpenAPIPathUtilities;
+export interface NativePathUtilities {
+  readonly toCurlyBrackets: PathTransformation;
+  readonly toColon: PathTransformation;
+  readonly toSquareBrackets: PathTransformation;
+  readonly toAngleBrackets: PathTransformation;
+  readonly toDollar: PathTransformation;
 }
 
 export interface NativeUtilities {
   readonly string: NativeStringUtilities;
   readonly go: NativeGoUtilities;
   readonly typescript: NativeTypeScriptUtilities;
-  readonly openapi: NativeOpenAPIUtilities;
+  readonly path: NativePathUtilities;
 }
 
 type NativeGlobal = typeof globalThis & {
