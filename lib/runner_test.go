@@ -310,7 +310,7 @@ func TestRunner_RunBundlesPublicSupportModules(t *testing.T) {
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
 	require.NoError(t, os.WriteFile(processFile, []byte(`import type { Context } from "@ccode/context";
-import * as OpenAPI from "@ccode/openapi";
+import * as OpenAPI from "@ccode/openapi/raw";
 import * as Database from "@ccode/database";
 
 export default function main(ctx: Context) {

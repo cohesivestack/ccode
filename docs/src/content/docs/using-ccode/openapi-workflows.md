@@ -3,7 +3,7 @@ title: OpenAPI Workflows
 description: Parse OpenAPI documents and generate deterministic artifacts.
 ---
 
-Cohesive Code can parse OpenAPI v3 documents from bytes, strings, or files. File parsing resolves paths relative to `ccode_path`. Local and external file references are resolved recursively by default, relative to the file that contains each reference.
+Cohesive Code loads OpenAPI 3.0, 3.1, and 3.2 documents from bytes, strings, or files into versioned ergonomic models. File paths are relative to `ccode_path`. Local references retain their original declarations and source locations.
 
 ## OpenAPI reference
 
@@ -24,7 +24,7 @@ ccode/
 
 ## Recommended process shape
 
-Parse the spec once, reduce it to a template-friendly model, then generate outputs.
+Load the spec once, select the fields needed by the template, then generate outputs.
 
 ```ts
 import type { Context } from "@ccode/context";
@@ -37,33 +37,23 @@ type OperationView = {
 };
 
 export default function main(ctx: Context) {
-  const spec = ctx.parseOpenAPIFromFile("specs/api.yaml", {
+  const api = ctx.loadOpenAPIFromFile("specs/api.yaml", {
     expectedVersion: "3.1",
   });
-  const operations: OperationView[] = [];
+  const operations: OperationView[] = api.operations.map(operation => ({
+    method: operation.method.toUpperCase(),
+    path: operation.path,
+    operationId: operation.operationId ?? fallbackOperationId(operation.method, operation.path),
+  }));
 
-  for (const [path, item] of Object.entries(spec.paths ?? {})) {
-    if (!item) continue;
-
-    for (const method of ["get", "post", "put", "patch", "delete"] as const) {
-      const operation = item[method];
-      if (!operation) continue;
-
-      operations.push({
-        method: method.toUpperCase(),
-        path,
-        operationId: operation.operationId ?? fallbackOperationId(method, path),
-      });
-
-      if (item.$ref) {
-        const source = OpenAPI.parseReference(item.$ref);
-        ctx.println(`loaded ${source.documentName} from ${source.directory}`);
-      }
+  for (const path of api.paths) {
+    if (path.reference) {
+      ctx.println(`loaded ${path.reference.targetSource.documentUri}`);
     }
   }
 
   ctx.generate("templates/docs/operations.tpl", "generated/operations.md", {
-    title: spec.info?.title ?? "API",
+    title: api.info.title,
     operations,
   });
 }
@@ -73,7 +63,15 @@ function fallbackOperationId(method: string, path: string): string {
 }
 ```
 
-Referenced Path Items are materialized without losing their source reference. For example, a Path Item declared as `$ref: ./paths/countries.yaml#/countries` exposes both `item.$ref` and resolved operations such as `item.get`. Generators can therefore infer the source file directly from `$ref`; no separate manifest or second parse is needed. Nested references, including schemas referenced from Path Item files, resolve automatically as well.
+The model offers `api.operations`, effective `operation.parameters`, and scoped
+`server.paths` / `server.operations`. Navigation shares object instances. Schema
+references expose `schema.reference.target`; local constraints and composition
+remain explicit. `api.raw` retains the original parsed root declaration.
+
+For specification-shaped data, use `ctx.parseOpenAPIFromFile` and import types
+from `@ccode/openapi/raw`. The existing file parser still materializes references
+while preserving `$ref` fields. See [Runtime API](/reference/runtime-api/) for
+both loading contracts and migration details.
 
 Use `OpenAPI.isReference(value)` to narrow an unknown value with a string
 `$ref`, and `OpenAPI.parseReference(value.$ref)` to derive its decoded
@@ -98,7 +96,9 @@ declarations against a Path Item or Operation.
 - Swagger/OpenAPI v2 is rejected.
 - Pass `expectedVersion` when the process requires a specific OpenAPI version; parsing fails if the document declares a different version.
 - `parseOpenAPIFromFile` resolves internal and external file references automatically. A missing file or fragment fails parsing with reference context rather than returning a partial document.
-- Optional fields such as `paths`, `components`, and `schemas` need guards.
+- Ergonomic collections default to empty arrays; optional element lookups still need guards.
+- Model graphs contain cycles. Pass a projection of the required fields to templates.
+- Remote references are not fetched by the ergonomic loader.
 - Some OpenAPI values can be references or booleans depending on location.
 - Large templates that walk raw specs become hard to test and resolve.
 - Validate the generated output, not only the process source.

@@ -10,6 +10,8 @@ func TestOpenAPIVersionTypesAreIndependent(t *testing.T) {
 		path       string
 		lowerTypes []string
 	}{
+		{path: "openapi/raw/v3_1.ts", lowerTypes: []string{"V3_0", "v3_0"}},
+		{path: "openapi/raw/v3_2.ts", lowerTypes: []string{"V3_0", "v3_0", "V3_1", "v3_1"}},
 		{path: "openapi/v3_1.ts", lowerTypes: []string{"V3_0", "v3_0"}},
 		{path: "openapi/v3_2.ts", lowerTypes: []string{"V3_0", "v3_0", "V3_1", "v3_1"}},
 	}

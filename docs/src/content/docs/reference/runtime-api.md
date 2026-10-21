@@ -12,7 +12,8 @@ import type { Context } from "@ccode/context";
 ## Surface
 
 ```ts
-import * as OpenAPI from "@ccode/openapi";
+import type * as OpenAPI from "@ccode/openapi";
+import type * as OpenAPIRaw from "@ccode/openapi/raw";
 import * as Database from "@ccode/database";
 
 interface Context {
@@ -29,13 +30,25 @@ interface Context {
   parseJSONFromBytes(jsonBytes: number[]): Record<string, any>;
   parseJSONFromString(jsonString: string): Record<string, any>;
   parseJSONFromFile(filePath: string): Record<string, any>;
-  parseOpenAPIFromBytes(specBytes: number[]): OpenAPI.Document;
-  parseOpenAPIFromString(spec: string): OpenAPI.Document;
-  parseOpenAPIFromFile(filePath: string): OpenAPI.Document;
-  parseOpenAPIFromFile<V extends OpenAPI.Version>(
+  parseOpenAPIFromBytes(specBytes: number[]): OpenAPIRaw.Document;
+  parseOpenAPIFromString(spec: string): OpenAPIRaw.Document;
+  parseOpenAPIFromFile(filePath: string): OpenAPIRaw.Document;
+  parseOpenAPIFromFile<V extends OpenAPIRaw.Version>(
     filePath: string,
     options: { expectedVersion: V },
-  ): OpenAPI.Document<V>;
+  ): OpenAPIRaw.Document<V>;
+  loadOpenAPIFromBytes(specBytes: number[]): OpenAPI.ApiModel;
+  loadOpenAPIFromBytes<V extends OpenAPI.Version>(
+    specBytes: number[], options: { expectedVersion: V },
+  ): OpenAPI.ApiModel<V>;
+  loadOpenAPIFromString(spec: string): OpenAPI.ApiModel;
+  loadOpenAPIFromString<V extends OpenAPI.Version>(
+    spec: string, options: { expectedVersion: V },
+  ): OpenAPI.ApiModel<V>;
+  loadOpenAPIFromFile(filePath: string): OpenAPI.ApiModel;
+  loadOpenAPIFromFile<V extends OpenAPI.Version>(
+    filePath: string, options: { expectedVersion: V },
+  ): OpenAPI.ApiModel<V>;
   inspectDatabase(
     connectionURL: Database.PostgreSQL.ConnectionURL,
   ): Database.PostgreSQL.Inspection;
@@ -58,12 +71,16 @@ interface Context {
 
 Use the local generated `context.ts` as the final contract for the installed workspace version.
 
-General OpenAPI types are top-level exports from `@ccode/openapi`, including
-`Version`, `Document`, `DocumentByVersion`, `Operation`, `Parameter`,
-`Parameters`, `Request`, `ReferenceLike`, and `ReferenceParts`. Normative
-version-specific declarations are ES modules exposed as `V3_0`, `V3_1`,
-and `V3_2`. The module also exports `isReference` and `parseReference` for
-working with preserved `$ref` values.
+The default `@ccode/openapi` entry point exposes the ergonomic `ApiModel`,
+`ApiModelByVersion`, and `Version` types. Independent class declarations live in
+`OpenAPI.V3_0`, `OpenAPI.V3_1`, and `OpenAPI.V3_2`. These are type contracts for
+Go-created objects, not JavaScript constructors; use `import type` for models.
+The reference and path helpers remain runtime exports from the default module.
+
+Specification-shaped types now live in `@ccode/openapi/raw`, with the same
+`V3_0`, `V3_1`, and `V3_2` namespaces and `Document<V>` selection alias.
+Existing raw consumers must change their import path; the `parseOpenAPIFrom*`
+functions continue to return raw documents.
 
 ## Public utility modules
 
@@ -198,6 +215,89 @@ Parses JSON and returns a JavaScript object. The root JSON value must be an obje
 ```ts
 const settings = ctx.parseJSONFromFile("data/settings.json");
 ```
+
+## loadOpenAPIFrom*
+
+Loads an OpenAPI 3.0, 3.1, or 3.2 document on demand and constructs its ergonomic
+model directly in Go. The synchronous call completes before returning. There is
+no document cache across loader calls. File paths are relative to `ccode_path`.
+An explicit `expectedVersion` selects the TypeScript return type and is checked
+at runtime. String and byte loaders also accept this option.
+
+```ts
+import type * as OpenAPI from "@ccode/openapi";
+import type * as OpenAPIRaw from "@ccode/openapi/raw";
+
+const api: OpenAPI.V3_1.ApiModel = ctx.loadOpenAPIFromFile("specs/api.yaml", {
+  expectedVersion: "3.1",
+});
+
+for (const server of api.servers) {
+  for (const route of server.paths) {
+    for (const operation of route.operations) {
+      ctx.println(`${server.expandUrl()} ${operation.method} ${route.path}`);
+    }
+  }
+}
+
+const operation = api.getOperation("get", "/users/{id}");
+const parameter = operation?.getParameter("path", "id");
+const schema = operation?.getResponse("200")
+  ?.getMediaType("application/json")?.schema;
+const target = schema?.kind === "schema" ? schema.reference?.target : undefined;
+const raw: OpenAPI.V3_1.DeepReadonly<OpenAPIRaw.V3_1.Document> = api.raw;
+```
+
+Collections preserve source order and are empty when undeclared, except where
+absence carries meaning (`declaredServers`, `declaredSecurity`, schema `enum`).
+Operations, route views, and server views share object identity. Returned graph
+objects, collections, extensions, and original raw declarations are frozen.
+The graph contains cycles: project the fields needed by a template instead of
+passing or JSON-stringifying the whole graph.
+
+- `api.operations` contains ordinary routes; webhooks and callbacks have their
+  own collections and ownership links. Recursive callbacks expose an explicit
+  `recursiveTarget` edge and an empty `paths` array at the recursion boundary.
+- `operation.parameters` merges path and operation parameters by exact location
+  and name. Original declarations remain in `pathItem.parameters` and
+  `operation.declaredParameters`.
+- Operation servers override path servers, which override root servers. Scoped
+  declarations remain distinct even when their URLs match. A synthetic `/`
+  server represents the default. An explicit empty override uses this default.
+- `server.paths` contains bindings filtered to the operations applicable to that
+  server; `binding.pathItem` still points at the complete ordinary route.
+- `expandUrl` substitutes defaults and validates variable overrides. Relative
+  URLs stay relative; it does not append the operation path.
+- Security alternatives inherit from the root unless explicitly overridden.
+  An empty security array removes inherited requirements; an empty requirement
+  object is an anonymous alternative. Schemes within an alternative use AND.
+- `getPath` uses exact templates. `getResponse` and `getMediaType` use exact
+  declared keys; response lookup does not apply range/default fallback.
+- Schemas preserve composition. `getProperty` returns directly declared
+  properties. Static references expose `reference.target`, including cycles;
+  modern schema sibling constraints stay on the referring schema. Dynamic
+  references retain their text because their targets depend on evaluation.
+- OpenAPI 3.0 retains `nullable` and boolean exclusive bounds. Later versions
+  retain type arrays, numeric exclusive bounds, boolean schemas, and dialect
+  metadata. In 3.0, boolean constraints are available for `additionalProperties`.
+- OpenAPI 3.2 exposes QUERY, additional methods, streaming item schemas, expanded
+  encoding metadata, and the additional example and OAuth fields.
+
+`ApiSource` identifies physical source URIs, JSON Pointers, and one-based source
+positions. `ApiReference` records the original reference, its resolved URI, and
+both source and target locations. `raw` is the original parsed declaration,
+without materialized references; it does not retain YAML comments or formatting.
+This differs from the materialized raw result returned by the existing file
+parser.
+
+Local file references, JSON Pointers, and indexed schema resources/anchors are
+supported. In-memory documents support internal references; use the file loader
+for relative external files. Unindexed remote resources are not fetched. The
+loader uses libopenapi for structural model parsing and checks navigation
+ambiguities such as duplicate operation IDs and parameters; it is not a full
+OpenAPI or JSON Schema validator. Custom vocabulary keywords remain in `raw`.
+
+Run `ccode init` to refresh an existing workspace's support files after upgrading.
 
 ## parseOpenAPIFrom*
 

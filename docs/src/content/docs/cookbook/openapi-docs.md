@@ -29,26 +29,15 @@ type OperationView = {
 };
 
 export default function main(ctx: Context) {
-  const spec = ctx.parseOpenAPIFromFile("specs/api.yaml");
-  const operations: OperationView[] = [];
-
-  for (const [path, item] of Object.entries(spec.paths ?? {})) {
-    if (!item) continue;
-
-    for (const method of ["get", "post", "put", "patch", "delete"] as const) {
-      const operation = item[method];
-      if (!operation) continue;
-
-      operations.push({
-        method: method.toUpperCase(),
-        path,
-        operationId: operation.operationId ?? buildFallbackId(method, path),
-      });
-    }
-  }
+  const api = ctx.loadOpenAPIFromFile("specs/api.yaml");
+  const operations: OperationView[] = api.operations.map(operation => ({
+    method: operation.method.toUpperCase(),
+    path: operation.path,
+    operationId: operation.operationId ?? buildFallbackId(operation.method, operation.path),
+  }));
 
   ctx.generate("templates/docs/operations.tpl", "generated/operations.md", {
-    title: spec.info?.title ?? "API",
+    title: api.info.title,
     operations,
   });
 }

@@ -220,6 +220,15 @@ func (ctx *RunnerContext) toValue(runtime *goja.Runtime) (goja.Value, error) {
 	if err := object.Set("parseOpenAPIFromFile", ctx.ParseOpenAPIFromFile); err != nil {
 		return nil, fmt.Errorf("set runner context functions: %w", err)
 	}
+	if err := object.Set("loadOpenAPIFromFile", ctx.LoadOpenAPIFromFile); err != nil {
+		return nil, fmt.Errorf("set runner context functions: %w", err)
+	}
+	if err := object.Set("loadOpenAPIFromString", ctx.LoadOpenAPIFromString); err != nil {
+		return nil, fmt.Errorf("set runner context functions: %w", err)
+	}
+	if err := object.Set("loadOpenAPIFromBytes", ctx.LoadOpenAPIFromBytes); err != nil {
+		return nil, fmt.Errorf("set runner context functions: %w", err)
+	}
 	if err := object.Set("inspectDatabase", ctx.InspectDatabase); err != nil {
 		return nil, fmt.Errorf("set runner context functions: %w", err)
 	}

@@ -1,5 +1,6 @@
 import type * as Database from "./database";
 import type * as OpenAPI from "./openapi";
+import type * as OpenAPIRaw from "./openapi/raw";
 
 export interface Context {
   println: (message: string) => void;
@@ -15,13 +16,29 @@ export interface Context {
   parseJSONFromBytes: (jsonBytes: number[]) => Record<string, any>;
   parseJSONFromString: (jsonString: string) => Record<string, any>;
   parseJSONFromFile: (filePath: string) => Record<string, any>;
-  parseOpenAPIFromBytes: (specBytes: number[]) => OpenAPI.Document;
-  parseOpenAPIFromString: (spec: string) => OpenAPI.Document;
-  parseOpenAPIFromFile(filePath: string): OpenAPI.Document;
-  parseOpenAPIFromFile<V extends OpenAPI.Version>(
+  parseOpenAPIFromBytes: (specBytes: number[]) => OpenAPIRaw.Document;
+  parseOpenAPIFromString: (spec: string) => OpenAPIRaw.Document;
+  parseOpenAPIFromFile(filePath: string): OpenAPIRaw.Document;
+  parseOpenAPIFromFile<V extends OpenAPIRaw.Version>(
     filePath: string,
     options: { expectedVersion: V },
-  ): OpenAPI.Document<V>;
+  ): OpenAPIRaw.Document<V>;
+  /** Loads a read-only ergonomic graph using the native Go implementation. */
+  loadOpenAPIFromBytes(specBytes: number[]): OpenAPI.ApiModel;
+  loadOpenAPIFromBytes<V extends OpenAPI.Version>(
+    specBytes: number[],
+    options: { expectedVersion: V },
+  ): OpenAPI.ApiModel<V>;
+  loadOpenAPIFromString(spec: string): OpenAPI.ApiModel;
+  loadOpenAPIFromString<V extends OpenAPI.Version>(
+    spec: string,
+    options: { expectedVersion: V },
+  ): OpenAPI.ApiModel<V>;
+  loadOpenAPIFromFile(filePath: string): OpenAPI.ApiModel;
+  loadOpenAPIFromFile<V extends OpenAPI.Version>(
+    filePath: string,
+    options: { expectedVersion: V },
+  ): OpenAPI.ApiModel<V>;
   inspectDatabase(
     connectionURL: Database.PostgreSQL.ConnectionURL,
   ): Database.PostgreSQL.Inspection;
