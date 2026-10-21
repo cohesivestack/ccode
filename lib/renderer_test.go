@@ -17,7 +17,7 @@ func TestRenderer_GojaValueToTemplateDataPreservesObjectOrder(t *testing.T) {
 	value, err := runtime.RunString(`({ z: 1, nested: { beta: 1, alpha: 2 }, a: 3 })`)
 	require.NoError(t, err)
 
-	converted, err := gojaValueToTemplateData(value)
+	converted, err := gojaValueToTemplateData(runtime, value)
 	require.NoError(t, err)
 
 	dict, ok := converted.(exec.Dict)

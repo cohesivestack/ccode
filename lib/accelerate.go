@@ -72,7 +72,7 @@ func (ctx *RunnerContext) Accelerate(id string, templatePath string, data goja.V
 		return err
 	}
 
-	templateData, err := gojaValueToTemplateData(data)
+	templateData, err := gojaValueToTemplateData(ctx.runtime, data)
 	if err != nil {
 		return fmt.Errorf("convert template data: %w", err)
 	}

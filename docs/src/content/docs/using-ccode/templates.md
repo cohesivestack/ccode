@@ -27,6 +27,41 @@ Output:
 Hello Cohesive Code!
 ```
 
+## Model navigation and method calls
+
+Raw documents, ergonomic models, and ordinary JavaScript objects share one
+converter. Pass an ergonomic model directly when the template needs its
+navigation methods:
+
+```ts
+const api = ctx.loadOpenAPIFromFile("specs/api.yaml", { expectedVersion: "3.1" });
+ctx.generate("templates/operations.tpl", "generated/operations.md", api);
+```
+
+```jinja
+{% for server in data.servers %}
+## {{ server.expandUrl() }}
+{% for route in server.paths %}
+{% for operation in route.operations %}
+- {{ operation.method | upper }} {{ route.path }}
+{% endfor %}
+{% endfor %}
+{% endfor %}
+
+{% set operation = data.getOperationById("getUser") %}
+{% if operation %}
+{% set response = operation.getResponse("200") %}
+{% if response %}{{ response.description }}{% endif %}
+{% endif %}
+```
+
+Method arguments are positional. Options use dictionary syntax, for example
+`server.expandUrl({"region": "eu"})` when that server declares `region`.
+JavaScript exceptions become rendering errors. Conversion caches shared objects
+and circular relationships for each render; it does not lazily load fields.
+Avoid serializing or recursively filtering an entire cyclic graph. Use a plain
+projection for those operations, or when only a few fields are needed.
+
 ## Keep templates shallow
 
 Templates should format data. They should not own deep transformation logic, fallback naming, schema walking, or cross-file decisions.

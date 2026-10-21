@@ -442,7 +442,7 @@ func TestRendererGojaUndefinedIsConvertedToNil(t *testing.T) {
 	value, err := runtime.RunString(`[undefined]`)
 	require.NoError(t, err)
 
-	converted, err := gojaValueToTemplateData(value)
+	converted, err := gojaValueToTemplateData(runtime, value)
 	require.NoError(t, err)
 	assert.Equal(t, []any{nil}, converted)
 }

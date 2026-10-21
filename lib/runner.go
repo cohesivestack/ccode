@@ -248,7 +248,7 @@ func (ctx *RunnerContext) RenderTemplate(templatePath string, data goja.Value) (
 		return "", fmt.Errorf("runner context is not initialized")
 	}
 
-	templateData, err := gojaValueToTemplateData(data)
+	templateData, err := gojaValueToTemplateData(ctx.runtime, data)
 	if err != nil {
 		return "", fmt.Errorf("convert template data: %w", err)
 	}

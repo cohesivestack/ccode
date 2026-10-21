@@ -192,6 +192,49 @@ Renders a Gonja template and returns a string.
 const text = ctx.renderTemplate("templates/readme.tpl", model);
 ```
 
+All three output functions use the same Goja-to-Gonja converter. It preserves
+object order, caches shared objects and cycles, and exposes synchronous model
+methods and JavaScript functions as template callables. Methods retain their
+original receiver, even when assigned to a template variable. No JSON
+serialization is involved.
+
+```ts
+const api = ctx.loadOpenAPIFromFile("specs/api.yaml", { expectedVersion: "3.1" });
+ctx.generate("templates/api.tpl", "generated/api.md", api);
+```
+
+```jinja
+{% set operation = data.getOperation("get", "/users/{id}") %}
+{% if operation %}
+{{ operation.method | upper }} {{ operation.path }}
+{% set parameter = operation.getParameter("path", "id") %}
+{% if parameter %}Parameter: {{ parameter.name }}{% endif %}
+{% endif %}
+
+{% for server in data.servers %}
+{{ server.expandUrl() }}
+{% endfor %}
+```
+
+Calls accept positional arguments, including dictionaries and lists. A server
+that declares a `region` variable can be expanded with
+`server.expandUrl({"region": "eu"})`. Keyword arguments such as
+`expandUrl(region="eu")` are rejected; pass one dictionary argument instead.
+Missing or null call results become `none`, and exceptions become rendering
+errors. Existing model objects passed into methods retain their original Goja
+identity. New template dictionaries and lists are converted to Goja values.
+
+Conversion is eager and scoped to each render. Each object is adapted once,
+including objects reached by method results. Converted fields are snapshots;
+mutating JavaScript data inside a template call does not refresh already
+converted fields. Model methods are intended for read-only navigation.
+Raw documents and ordinary plain data continue to use the same converter.
+
+Normal field access, indexing, loops, and method calls can navigate cycles.
+Whole-graph serialization and recursive filters are not cycle-aware; project
+acyclic fields first when using those operations. Prefer projections for large
+models when a template only needs a small portion of their data.
+
 ## generate
 
 Renders a template and writes it to an output file.
@@ -252,8 +295,9 @@ Collections preserve source order and are empty when undeclared, except where
 absence carries meaning (`declaredServers`, `declaredSecurity`, schema `enum`).
 Operations, route views, and server views share object identity. Returned graph
 objects, collections, extensions, and original raw declarations are frozen.
-The graph contains cycles: project the fields needed by a template instead of
-passing or JSON-stringifying the whole graph.
+The graph contains cycles. It can be passed directly to templates for normal
+navigation and method calls. Project the required fields before JSON encoding
+or using recursive serialization filters.
 
 - `api.operations` contains ordinary routes; webhooks and callbacks have their
   own collections and ownership links. Recursive callbacks expose an explicit
