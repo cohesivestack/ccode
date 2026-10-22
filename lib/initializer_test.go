@@ -168,7 +168,6 @@ func assertInstalledSupportFiles(t *testing.T, hiddenLibPath string) {
 		"openapi/raw/v3_0.ts",
 		"openapi/raw/v3_1.ts",
 		"openapi/raw/v3_2.ts",
-		"openapi/reference.ts",
 		"openapi/types.ts",
 		"openapi/v3_0.ts",
 		"openapi/v3_1.ts",

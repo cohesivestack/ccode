@@ -23,14 +23,14 @@ ccode/
         index.ts
       internal/
         native.ts
+      path/
+        index.ts
       string/
         index.ts
       typescript/
         index.ts
       openapi/
         index.ts
-        path.ts
-        reference.ts
         types.ts
         v3_0.ts
         v3_1.ts

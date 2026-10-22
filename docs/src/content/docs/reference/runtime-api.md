@@ -75,7 +75,6 @@ The default `@ccode/openapi` entry point exposes the ergonomic `ApiModel`,
 `ApiModelByVersion`, and `Version` types. Independent class declarations live in
 `OpenAPI.V3_0`, `OpenAPI.V3_1`, and `OpenAPI.V3_2`. These are type contracts for
 Go-created objects, not JavaScript constructors; use `import type` for models.
-The reference helpers remain runtime exports from the default module.
 
 Specification-shaped types now live in `@ccode/openapi/raw`, with the same
 `V3_0`, `V3_1`, and `V3_2` namespaces and `Document<V>` selection alias.
@@ -372,48 +371,6 @@ if (countries?.$ref && countries.get) {
 ```
 
 Without `expectedVersion`, the return type is the union of supported OpenAPI document versions. With `expectedVersion`, the runtime verifies the document's `openapi` field and TypeScript returns the corresponding version-specific document type.
-
-## OpenAPI reference helpers
-
-`parseReference` extracts portable parts from a local OpenAPI reference
-without resolving or loading the referenced document:
-
-```ts
-export interface ReferenceLike {
-  readonly $ref: string;
-}
-
-export interface ReferenceParts {
-  readonly raw: string;
-  readonly document: string;
-  readonly directory: string;
-  readonly directorySegments: readonly string[];
-  readonly filename: string;
-  readonly documentName: string;
-  readonly fragment: string;
-}
-
-export function isReference(value: unknown): value is ReferenceLike;
-export function parseReference(input: string): ReferenceParts;
-```
-
-```ts
-import * as OpenAPI from "@ccode/openapi";
-
-const source = OpenAPI.parseReference(
-  "./paths/app/common/countries.yaml#/countries",
-);
-
-source.documentName; // "countries"
-source.directorySegments; // ["paths", "app", "common"]
-```
-
-Calculated path and fragment fields are percent-decoded, while `raw` and
-`document` preserve the original text. The helper accepts only the same local
-reference subset as file parsing: no URI scheme or host, protocol-relative
-remote reference, query string, malformed percent-encoding, or non-pointer
-fragment. It validates and describes the reference but does not resolve files
-or JSON Pointers. Pass a reference object's `$ref` field to parse it.
 
 ## inspectDatabase
 

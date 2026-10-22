@@ -35,7 +35,10 @@ Use this workflow for processes, templates, OpenAPI or database inputs, generate
 - Name runnable entry points `*.process.ts`. Keep ordinary `.ts` files as imported helpers.
 - Default-export the process function and import `Context` from `@ccode/context`.
 - Parse each input once and normalize it into plain template data in TypeScript.
-- Import `* as OpenAPI` from `@ccode/openapi` and use `OpenAPI.parseReference` when a process needs the document and fragment parts of a preserved `$ref`.
+- Import OpenAPI model types from `@ccode/openapi` with `import type`. Use
+  `element.reference` for reference URIs and source locations, and
+  `schema.reference.target` for resolved schema references after narrowing
+  `schema.kind` to `"schema"`.
 - Import `* as Path` from `@ccode/path` and use `Path.toCurlyBrackets`,
   `Path.toColon`, `Path.toSquareBrackets`, `Path.toAngleBrackets`, or
   `Path.toDollar` to convert route parameters between any supported syntaxes. Pass

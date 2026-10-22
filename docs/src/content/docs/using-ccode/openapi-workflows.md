@@ -73,10 +73,9 @@ from `@ccode/openapi/raw`. The existing file parser still materializes reference
 while preserving `$ref` fields. See [Runtime API](/reference/runtime-api/) for
 both loading contracts and migration details.
 
-Use `OpenAPI.isReference(value)` to narrow an unknown value with a string
-`$ref`, and `OpenAPI.parseReference(value.$ref)` to derive its decoded
-directory, filename, document name, and JSON Pointer fragment. This is a pure
-string helper; it does not load or resolve the referenced document.
+Model elements expose reference metadata through `element.reference`, including
+its original `uri`, `resolvedUri`, `source`, and `targetSource`. Schema references
+also expose their resolved `target`.
 
 Import `Path` from `@ccode/path` when a generated framework expects a
 different path parameter syntax:
