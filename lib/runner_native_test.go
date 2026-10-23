@@ -56,6 +56,7 @@ func TestInstallRunnerNativeUtilitiesCreatesCompleteInternalAPI(t *testing.T) {
 				"toExportedIdentifier",
 				"toUnexportedIdentifier",
 				"toPackageName",
+				"toType",
 			},
 		},
 		{

@@ -84,7 +84,7 @@ functions continue to return raw documents.
 ## Public utility modules
 
 General string transformations are exported from `@ccode/string`, Go-specific
-naming transformations are exported from `@ccode/go`, and TypeScript
+naming transformations and primitive type inference are exported from `@ccode/go`, and TypeScript
 declaration identifiers are exported from `@ccode/typescript`. Route path
 transformations are exported from `@ccode/path`:
 
@@ -110,6 +110,7 @@ Strings.normalizeSpace(" user   name "); // "user name"
 Go.toExportedIdentifier("user_id"); // "UserID"
 Go.toUnexportedIdentifier("user_id"); // "userID"
 Go.toPackageName("HTTP Utils"); // "httputils"
+Go.toType("integer", { format: "int64" }); // "int64"
 
 TypeScript.toTypeIdentifier("user id"); // "UserId"
 TypeScript.toValueIdentifier("user id"); // "userId"
@@ -185,6 +186,142 @@ a non-blank string; invalid inputs produce a runtime `TypeError`.
 These transformations are pure from the TypeScript caller's perspective: they
 return a new string and do not mutate their inputs or shared configuration.
 They are imported modules, not members of `Context`.
+
+## Go primitive type inference
+
+`Go.toType` maps a primitive metadata type name to a Go type expression. The
+Gonja `goType` filter uses the same implementation and options.
+
+```ts
+import * as Go from "@ccode/go";
+
+export interface TypeOptions {
+  readonly format?: string;
+  readonly unsigned?: boolean;
+  readonly source?: "openapi" | "postgresql" | "mysql" | "mariadb" | "sqlite";
+  readonly overrides?: Readonly<Record<string, string>>;
+  readonly fallback?: string | null;
+}
+
+// Exported as Go.TypeOptions and Go.toType:
+// toType(value: string, options?: TypeOptions): string
+
+Go.toType("boolean"); // "bool"
+Go.toType("integer", { source: "openapi", format: "int64" }); // "int64"
+Go.toType("bigint", { source: "mysql", unsigned: true }); // "uint64"
+Go.toType("string", { format: "date-time" }); // "time.Time"
+Go.toType("jsonb"); // "json.RawMessage"
+```
+
+Names, format annotations, source names, and override keys are matched
+case-insensitively after trimming and collapsing whitespace. Output expressions
+preserve their spelling. Numeric SQL size and precision modifiers are accepted,
+including `varchar(255)`, `numeric(10, 2)`, and `timestamp(6) with time zone`.
+A trailing SQL `UNSIGNED` selects the unsigned integer counterpart, except in
+the SQLite profile. Size modifiers do not infer booleans, narrow integer widths,
+or select a floating-point representation for exact decimals.
+
+The default matches, without a source profile, are:
+
+| Input names | Go expression |
+| --- | --- |
+| `bool`, `boolean` | `bool` |
+| `string`, `text`, `varchar`, `nvarchar`, `char`, `nchar`, `character`, `character varying`, `tinytext`, `mediumtext`, `longtext`, `clob`, `uuid` | `string` |
+| `int`, `integer` | `int` |
+| `int8` | `int8` |
+| `int16`, `short`, `smallint` | `int16` |
+| `int32` | `int32` |
+| `int64`, `long`, `bigint` | `int64` |
+| `uint`, `uint8`, `uint16`, `uint32`, `uint64`, `uintptr` | Same name |
+| `byte`, `rune`, `complex64`, `complex128`, `error` | Same name |
+| `float32`, `float`, `real` | `float32` |
+| `float64`, `double`, `double precision`, `number` | `float64` |
+| `any`, `interface{}`, `interface {}` | `any` |
+| `date`, `datetime`, `date-time`, `timestamp`, `timestamptz`, `time`, `time.Time`, `timetz`, `timestamp with time zone`, `timestamp without time zone`, `time with time zone`, `time without time zone` | `time.Time` |
+| `binary`, `varbinary`, `blob`, `bytea`, `tinyblob`, `mediumblob`, `longblob` | `[]byte` |
+| `json`, `jsonb` | `json.RawMessage` |
+
+Source profiles take precedence over those defaults:
+
+| Source | Input names | Go expression |
+| --- | --- | --- |
+| PostgreSQL | `smallint`, `int2`, `smallserial`, `serial2` | `int16` |
+| PostgreSQL | `integer`, `int`, `int4`, `serial`, `serial4` | `int32` |
+| PostgreSQL | `bigint`, `int8`, `bigserial`, `serial8` | `int64` |
+| PostgreSQL | `real`, `float4` | `float32` |
+| PostgreSQL | `float`, `float8`, `double precision` | `float64` |
+| PostgreSQL | `bpchar` | `string` |
+| MySQL / MariaDB | `tinyint` | `int8` |
+| MySQL / MariaDB | `smallint` | `int16` |
+| MySQL / MariaDB | `mediumint`, `int`, `integer` | `int32` |
+| MySQL / MariaDB | `bigint` | `int64` |
+| MySQL / MariaDB | `float` | `float32` |
+| MySQL / MariaDB | `double`, `double precision`, `real` | `float64` |
+| MySQL / MariaDB | `enum` | `string` |
+| SQLite | `integer`, `int`, `tinyint`, `smallint`, `mediumint`, `bigint`, `int2`, `int8`, `unsigned big int` | `int64` |
+| SQLite | `real`, `float`, `double`, `double precision` | `float64` |
+
+`source: "openapi"` uses the generic mappings with format refinements. Source
+profiles are inference conventions, not schema validators or database driver
+configuration. In particular, SQLite declarations do not guarantee runtime value
+types; MySQL/MariaDB `real` uses the double-precision convention, and
+`tinyint(1)` remains `int8`. Use overrides for different project conventions.
+
+Formats refine compatible base names:
+
+| Base name | Format | Go expression |
+| --- | --- | --- |
+| `integer`, `number` | `int32` | `int32` |
+| `integer`, `number` | `int64` | `int64` |
+| `number` | `float` | `float32` |
+| `number` | `double` | `float64` |
+| `string` | `date`, `date-time`, `time` | `time.Time` |
+| `string` | `byte`, `binary` | `[]byte` |
+
+Unknown or incompatible formats retain the recognized base mapping. Formats
+alone cannot make an unknown type recognizable. `unsigned: true` changes a
+resolved `int`, `int8`, `int16`, `int32`, or `int64` to its unsigned counterpart;
+other resolved types are unchanged.
+
+Overrides are applied before source, format, and unsigned rules. Keys match the
+normalized original input, then the base name after SQL modifiers are removed.
+Conflicting override keys that normalize to the same name are rejected. Overrides
+and fallback values must be non-blank strings; they are returned verbatim and
+are not checked against a Go package or compiler.
+
+```ts
+const options: Go.TypeOptions = {
+  source: "postgresql",
+  overrides: { numeric: "decimal.Decimal" },
+};
+
+Go.toType("NUMERIC(10, 2)", options); // "decimal.Decimal"
+Go.toType("long", { overrides: { long: "int" } }); // "int"
+Go.toType("custom", { fallback: "any" }); // "any"
+Go.toType("custom"); // throws TypeError
+Go.toType("custom", { fallback: null }); // throws TypeError
+```
+
+Omitted or `undefined` TypeScript options use defaults. `fallback: null` is the
+default strict behavior. Invalid inputs, option names, sources, and option value
+types produce a catchable `TypeError`; a fallback does not hide configuration
+errors or blank input names. Unsupported types such as exact `decimal`/`numeric`,
+`money`, `interval`, spatial types, and project-defined names need an override or
+an explicit fallback.
+
+The helper returns type expressions only. The generator manages imports,
+containers, named declarations, references, nullability, and field tags. Array, map, pointer, and union expressions are not parsed, and schemas are
+not traversed. Date/time and
+binary mappings do not install serialization or database codecs. The caller
+selects any required conversion for date-only values, time-only values, or
+engine-specific temporal encodings.
+
+For an ergonomic OpenAPI primitive schema, use `schema.types[0]` after narrowing
+`schema.kind` and verifying that it has one declared primitive type. Pass
+`schema.format` as the format option. For MySQL/MariaDB columns, use
+`column.type.name` and `column.type.unsigned`; for PostgreSQL use
+`column.type.name`; for SQLite use `column.type.declaredType`. The source profile
+is supplied explicitly by the caller.
 
 ## println
 

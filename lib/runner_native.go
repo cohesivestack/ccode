@@ -42,6 +42,7 @@ func installRunnerNativeUtilities(runtime *goja.Runtime) error {
 	goFunctions := []runnerNativeFunction{
 		{name: "toExportedIdentifier", transform: nativeInitialismTransformation(runtime, "go.toExportedIdentifier", stringToGoExported)},
 		{name: "toUnexportedIdentifier", transform: nativeInitialismTransformation(runtime, "go.toUnexportedIdentifier", stringToGoUnexported)},
+		{name: "toType", transform: nativeGoTypeTransformation(runtime)},
 		{name: "toPackageName", transform: nativeStringTransformation(runtime, "go.toPackageName", stringToGoPackage)},
 	}
 	for _, function := range goFunctions {

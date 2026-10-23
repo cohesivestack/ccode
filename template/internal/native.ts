@@ -22,10 +22,20 @@ export interface NativeStringUtilities {
   readonly normalizeSpace: StringTransformation;
 }
 
+export interface GoTypeOptions {
+  readonly format?: string;
+  readonly unsigned?: boolean;
+  readonly source?: "openapi" | "postgresql" | "mysql" | "mariadb" | "sqlite";
+  readonly overrides?: Readonly<Record<string, string>>;
+  /** Defaults to null: throw when the type cannot be inferred. */
+  readonly fallback?: string | null;
+}
+
 export interface NativeGoUtilities {
   readonly toExportedIdentifier: InitialismTransformation;
   readonly toUnexportedIdentifier: InitialismTransformation;
   readonly toPackageName: StringTransformation;
+  readonly toType: (value: string, options?: GoTypeOptions) => string;
 }
 
 export interface NativeTypeScriptUtilities {

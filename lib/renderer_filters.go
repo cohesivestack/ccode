@@ -30,6 +30,7 @@ var templateFilterSpecs = []templateFilterSpec{
 	{name: "normalizeSpace", filter: stringTemplateFilter("normalizeSpace", stringToNormalizeSpace)},
 	{name: "goExported", filter: initialismTemplateFilter("goExported", stringToGoExported)},
 	{name: "goUnexported", filter: initialismTemplateFilter("goUnexported", stringToGoUnexported)},
+	{name: "goType", filter: goTypeTemplateFilter},
 	{name: "goPackage", filter: stringTemplateFilter("goPackage", stringToGoPackage)},
 	{name: "typeScriptType", filter: initialismTemplateFilter("typeScriptType", stringToTypeScriptTypeIdentifier)},
 	{name: "typeScriptValue", filter: initialismTemplateFilter("typeScriptValue", stringToTypeScriptValueIdentifier)},

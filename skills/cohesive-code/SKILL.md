@@ -48,6 +48,12 @@ Use this workflow for processes, templates, OpenAPI or database inputs, generate
 - Import `* as Strings` from `@ccode/string` for general case and whitespace
   transformations. Import `* as Go` from `@ccode/go` for valid exported,
   unexported, or package names; do not recreate these transformations locally.
+- Use `Go.toType(value, options?)` or the Gonja `goType` filter to map primitive
+  metadata type names. Options are `format`, `source`, `unsigned`, `overrides`,
+  and `fallback`. The default fallback is null/none and fails on unknown types.
+  Supply the database source to resolve aliases such as PostgreSQL `int8`.
+  Keep schema references, containers, nullability, declarations, field tags,
+  imports, and serialization decisions in the generator.
 - Import `* as TypeScript` from `@ccode/typescript` and use
   `TypeScript.toTypeIdentifier` for PascalCase type, interface, class, enum,
   namespace, and type-alias names. Use `TypeScript.toValueIdentifier` for
@@ -74,7 +80,8 @@ Use this workflow for processes, templates, OpenAPI or database inputs, generate
   filters documented as initialism-aware accept `initialisms=[...]`. Use the
   TypeScript-specific filters for declaration identifiers instead of rebuilding
   sanitization in templates. Route path filters accept the keyword-only
-  boolean `omitLeadingSlash`.
+  boolean `omitLeadingSlash`. The `goType` filter accepts the keyword-only
+  options listed above.
 - Use `ctx.generate(...)` only for files the generator may overwrite.
 - Use `ctx.accelerate(...)` for proposals that must preserve later human or agent edits.
 - Use stable, workspace-unique artifact IDs that match their relative output paths.

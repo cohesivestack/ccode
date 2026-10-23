@@ -112,6 +112,7 @@ filters require a string input:
 | `normalizeSpace` | `"  user   account  "` → `"user account"` |
 | `goExported` | `"user id"` → `"UserID"` |
 | `goUnexported` | `"user id"` → `"userID"` |
+| `goType` | `"integer"` with `format="int64"` → `"int64"` |
 | `goPackage` | `"HTTP Utils"` → `"httputils"` |
 | `typeScriptType` | `"user id"` → `"UserId"` |
 | `typeScriptValue` | `"user id"` → `"userId"` |
@@ -154,14 +155,34 @@ TypeScript syntax rather than capitalization. Reserved value binding names
 receive a trailing underscore. Initialisms match case-insensitively and preserve
 safe characters from the supplied spelling. The list must contain only
 non-blank strings. The five route path filters accept the keyword-only boolean
-`omitLeadingSlash`, which defaults to `false`. Other filters do not accept
-arguments.
+`omitLeadingSlash`, which defaults to `false`. The `goType` filter accepts the
+options described below. Filters outside these groups do not accept arguments.
 
 Route path filters accept curly-bracket, colon, square-bracket, angle-bracket,
 and dollar parameters, including mixed syntax, and preserve malformed groups.
 They use the same parameter name rules as `@ccode/path`; see
 [Runtime API](/reference/runtime-api/). They only convert path syntax and do not
 resolve parameter values or validate declarations.
+
+The `goType` filter maps primitive metadata names to Go expressions. It accepts
+keyword-only `format`, `source`, `unsigned`, `overrides`, and `fallback`, using
+the same defaults and matching rules as `Go.toType`:
+
+```jinja
+{{ "boolean" | goType }}
+{{ "integer" | goType(source="openapi", format="int64") }}
+{{ column.type.name | goType(source="mysql", unsigned=column.type.unsigned) }}
+{{ "numeric" | goType(source="postgresql", overrides=data.typeOverrides) }}
+{{ "unrecognized" | goType(fallback="any") }}
+```
+
+`overrides` can be a dictionary literal or a mapping supplied in template data.
+Its keys and values must be non-blank strings. `fallback=none` is the default:
+an unsupported type fails rendering with the filter name in the error. An
+explicit non-blank fallback permits unknown names. Invalid options still fail
+rendering. The filter does not infer containers or field optionality and does
+not manage imports. See [Go primitive type inference](/reference/runtime-api/#go-primitive-type-inference)
+for the full default and source-specific mappings.
 
 ## Path rules
 
