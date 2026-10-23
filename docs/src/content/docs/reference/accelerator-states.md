@@ -31,11 +31,12 @@ Inspection responses include:
 {
   "artifact_id": "handlers.go",
   "guide_path": "guides/handlers.md",
-  "pending": true,
-  "state": "pending",
-  "message": ""
+  "state": "pending"
 }
 ```
+
+`message` is included when there is a problem to explain. The saved `pending`
+flag remains internal; inspection responses expose only the computed `state`.
 
 ## Listing behavior
 

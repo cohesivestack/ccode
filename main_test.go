@@ -159,7 +159,8 @@ func TestNewRootCmd_ListAccExcludesContent(t *testing.T) {
 	require.NoError(t, cmd.Execute())
 	output := stdout.String()
 	assert.Contains(t, output, `"artifact_id": "handlers.go"`)
-	assert.Contains(t, output, `"pending": true`)
+	assert.Contains(t, output, `"state": "pending"`)
+	assert.NotContains(t, output, `"pending":`)
 	assert.NotContains(t, output, `"artifact_id": "service.go"`)
 	assert.NotContains(t, output, `"content"`)
 	assert.NotContains(t, output, "package handlers")
@@ -178,6 +179,7 @@ func TestNewRootCmd_ListAcceleratedIncludeResolved(t *testing.T) {
 	assert.Contains(t, output, `"artifact_id": "handlers.go"`)
 	assert.Contains(t, output, `"artifact_id": "service.go"`)
 	assert.Contains(t, output, `"state": "resolved"`)
+	assert.NotContains(t, output, `"pending":`)
 }
 
 func TestNewRootCmd_ResolveMarksAcceleratorAsResolved(t *testing.T) {
@@ -204,7 +206,6 @@ func TestNewRootCmd_ResolveMarksAcceleratorAsResolved(t *testing.T) {
 		}
 	}
 	require.NotNil(t, resolved)
-	assert.False(t, resolved.Pending)
 	assert.Equal(t, "resolved", resolved.State)
 }
 
@@ -230,7 +231,8 @@ func TestNewRootCmd_GetAcceleratedExcludesContent(t *testing.T) {
 	require.NoError(t, cmd.Execute())
 	output := stdout.String()
 	assert.Contains(t, output, `"artifact_id": "handlers.go"`)
-	assert.Contains(t, output, `"pending": true`)
+	assert.Contains(t, output, `"state": "pending"`)
+	assert.NotContains(t, output, `"pending":`)
 	assert.NotContains(t, output, `"content"`)
 	assert.NotContains(t, output, "package handlers")
 }
@@ -264,7 +266,8 @@ func TestNewRootCmd_ListAndGetForAgentOutputValidJSON(t *testing.T) {
 	require.Len(t, listPayload, 1)
 	assert.Equal(t, "handlers.go", listPayload[0]["artifact_id"])
 	assert.Equal(t, "guides/handlers.md", listPayload[0]["guide_path"])
-	assert.Equal(t, true, listPayload[0]["pending"])
+	assert.Equal(t, "pending", listPayload[0]["state"])
+	assert.NotContains(t, listPayload[0], "pending")
 
 	getCmd := newRootCmd(nil, nil)
 	var getOut bytes.Buffer
@@ -276,6 +279,8 @@ func TestNewRootCmd_ListAndGetForAgentOutputValidJSON(t *testing.T) {
 	require.NoError(t, json.Unmarshal(getOut.Bytes(), &getPayload))
 	assert.Equal(t, "handlers.go", getPayload["artifact_id"])
 	assert.Equal(t, "guides/handlers.md", getPayload["guide_path"])
+	assert.Equal(t, "pending", getPayload["state"])
+	assert.NotContains(t, getPayload, "pending")
 	assert.Equal(t, "# Update handlers", getPayload["guide_markdown"])
 	assert.Equal(t, "package handlers", getPayload["accelerated_content"])
 	assert.Contains(t, getPayload["composed_markdown"], "New accelerated content")

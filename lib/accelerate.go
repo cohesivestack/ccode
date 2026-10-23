@@ -34,7 +34,7 @@ const (
 type AcceleratorArtifactMetadata struct {
 	ArtifactID string  `json:"artifact_id"`
 	GuidePath  *string `json:"guide_path"`
-	Pending    bool    `json:"pending"`
+	Pending    bool    `json:"-"`
 	State      string  `json:"state"`
 	Message    string  `json:"message,omitempty"`
 }
@@ -43,7 +43,7 @@ type AcceleratorArtifactState struct {
 	ArtifactID string  `json:"artifact_id"`
 	Content    string  `json:"content"`
 	GuidePath  *string `json:"guide_path"`
-	Pending    bool    `json:"pending"`
+	Pending    bool    `json:"-"`
 	State      string  `json:"state"`
 	Message    string  `json:"message,omitempty"`
 }
