@@ -1,21 +1,6 @@
 package ccode
 
-import (
-	"fmt"
-	"regexp"
-	"sort"
-	"strings"
-)
-
-type goTypeOptions struct {
-	format    string
-	source    string
-	unsigned  bool
-	overrides map[string]string
-	fallback  *string
-}
-
-var goTypeOptionNames = []string{"format", "source", "unsigned", "overrides", "fallback"}
+import "fmt"
 
 // The tables are read-only. Per-call overrides never modify shared defaults.
 var defaultGoTypes = map[string]string{
@@ -61,85 +46,8 @@ var sqliteGoTypes = map[string]string{
 	"real": "float64", "float": "float64", "double": "float64", "double precision": "float64",
 }
 
-// Only numeric SQL size/precision modifiers are removed; arrays, unions,
-// pointers and arbitrary expressions are never reduced to a primitive name.
-var goTypeSQLParameters = regexp.MustCompile(`^([a-z][a-z0-9]*(?: [a-z][a-z0-9]*)*)\s*\(\s*[0-9]+(?:\s*,\s*[0-9]+)?\s*\)(.*)$`)
-
-func normalizeGoTypeName(name string) string {
-	return strings.ToLower(strings.Join(strings.Fields(name), " "))
-}
-
-func parseGoTypeOptions(values map[string]any) (goTypeOptions, error) {
-	options := goTypeOptions{}
-	keys := make([]string, 0, len(values))
-	for key := range values {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		value := values[key]
-		switch key {
-		case "format", "source":
-			text, ok := value.(string)
-			if !ok {
-				return options, fmt.Errorf("%s must be a string", key)
-			}
-			text = normalizeGoTypeName(text)
-			if key == "format" {
-				options.format = text
-			} else {
-				switch text {
-				case "openapi", "postgresql", "mysql", "mariadb", "sqlite":
-					options.source = text
-				default:
-					return options, fmt.Errorf("unsupported source %q", text)
-				}
-			}
-		case "unsigned":
-			var ok bool
-			if options.unsigned, ok = value.(bool); !ok {
-				return options, fmt.Errorf("unsigned must be a boolean")
-			}
-		case "fallback":
-			if value == nil {
-				continue
-			}
-			text, ok := value.(string)
-			if !ok || isStringBlank(text) {
-				return options, fmt.Errorf("fallback must be a non-blank string or null")
-			}
-			options.fallback = &text
-		case "overrides":
-			overrides, ok := value.(map[string]any)
-			if !ok {
-				return options, fmt.Errorf("overrides must be a mapping of non-blank strings to non-blank strings")
-			}
-			options.overrides = make(map[string]string, len(overrides))
-			names := make([]string, 0, len(overrides))
-			for name := range overrides {
-				names = append(names, name)
-			}
-			sort.Strings(names)
-			for _, name := range names {
-				text, ok := overrides[name].(string)
-				normalized := normalizeGoTypeName(name)
-				if normalized == "" || !ok || isStringBlank(text) {
-					return options, fmt.Errorf("override %q must have a non-blank string key and value", name)
-				}
-				if previous, exists := options.overrides[normalized]; exists && previous != text {
-					return options, fmt.Errorf("conflicting overrides for %q", normalized)
-				}
-				options.overrides[normalized] = text
-			}
-		default:
-			return options, fmt.Errorf("unexpected option %q", key)
-		}
-	}
-	return options, nil
-}
-
-func stringToGoType(input string, options goTypeOptions) (string, error) {
-	name := normalizeGoTypeName(input)
+func stringToGoType(input string, options typeMappingOptions) (string, error) {
+	name := normalizeTypeName(input)
 	if name == "" {
 		return "", fmt.Errorf("type name must not be blank")
 	}
@@ -147,17 +55,7 @@ func stringToGoType(input string, options goTypeOptions) (string, error) {
 		return override, nil
 	}
 
-	// Accept common SQL declarations in addition to inspection Type.name values.
-	if parts := goTypeSQLParameters.FindStringSubmatch(name); parts != nil {
-		name = normalizeGoTypeName(parts[1] + parts[2])
-	}
-	unsigned := options.unsigned
-	if strings.HasSuffix(name, " unsigned") {
-		name = strings.TrimSuffix(name, " unsigned")
-		if options.source != "sqlite" {
-			unsigned = true
-		}
-	}
+	name, unsigned := normalizeSQLTypeName(name, options)
 	if override, ok := options.overrides[name]; ok {
 		return override, nil
 	}

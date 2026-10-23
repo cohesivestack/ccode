@@ -7,7 +7,7 @@ import (
 )
 
 func goTypeTemplateFilter(_ *exec.Evaluator, in *exec.Value, params *exec.VarArgs) *exec.Value {
-	if err := validateTemplateFilterArguments(params, goTypeOptionNames...); err != nil {
+	if err := validateTemplateFilterArguments(params, typeMappingOptionNames...); err != nil {
 		return templateFilterError("goType", err)
 	}
 	input, err := templateFilterString(in)
@@ -16,7 +16,7 @@ func goTypeTemplateFilter(_ *exec.Evaluator, in *exec.Value, params *exec.VarArg
 	}
 	values := make(map[string]any)
 	if params != nil {
-		for _, key := range goTypeOptionNames {
+		for _, key := range typeMappingOptionNames {
 			value, supplied := params.KwArgs[key]
 			if !supplied {
 				continue
@@ -38,7 +38,7 @@ func goTypeTemplateFilter(_ *exec.Evaluator, in *exec.Value, params *exec.VarArg
 			}
 		}
 	}
-	options, err := parseGoTypeOptions(values)
+	options, err := parseTypeMappingOptions(values)
 	if err != nil {
 		return templateFilterError("goType", err)
 	}

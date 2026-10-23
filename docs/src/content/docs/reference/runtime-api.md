@@ -85,7 +85,7 @@ functions continue to return raw documents.
 
 General string transformations are exported from `@ccode/string`, Go-specific
 naming transformations and primitive type inference are exported from `@ccode/go`, and TypeScript
-declaration identifiers are exported from `@ccode/typescript`. Route path
+declaration identifiers and primitive type inference are exported from `@ccode/typescript`. Route path
 transformations are exported from `@ccode/path`:
 
 ```ts
@@ -115,6 +115,7 @@ Go.toType("integer", { format: "int64" }); // "int64"
 TypeScript.toTypeIdentifier("user id"); // "UserId"
 TypeScript.toValueIdentifier("user id"); // "userId"
 TypeScript.toValueIdentifier("class"); // "class_"
+TypeScript.toType("integer", { format: "int64" }); // "bigint"
 
 Path.toCurlyBrackets("/users/:userId"); // "/users/{userId}"
 Path.toCurlyBrackets("/users/[userId]"); // "/users/{userId}"
@@ -322,6 +323,93 @@ For an ergonomic OpenAPI primitive schema, use `schema.types[0]` after narrowing
 `column.type.name` and `column.type.unsigned`; for PostgreSQL use
 `column.type.name`; for SQLite use `column.type.declaredType`. The source profile
 is supplied explicitly by the caller.
+
+## TypeScript primitive type inference
+
+`TypeScript.toType` maps a primitive metadata name to a TypeScript type
+expression. Its exported `TypeScript.TypeOptions` has the same fields as
+`Go.TypeOptions`: `format`, `source`, `unsigned`, `overrides`, and `fallback`.
+
+```ts
+import * as TypeScript from "@ccode/typescript";
+
+TypeScript.toType("boolean"); // "boolean"
+TypeScript.toType("integer", { source: "openapi", format: "int64" }); // "bigint"
+TypeScript.toType("string", { format: "date-time" }); // "Date"
+TypeScript.toType("string", { format: "binary" }); // "Uint8Array"
+TypeScript.toType("jsonb"); // "unknown"
+
+const options: TypeScript.TypeOptions = {
+  source: "postgresql",
+  overrides: { numeric: "Decimal" },
+};
+TypeScript.toType("NUMERIC(10, 2)", options); // "Decimal"
+TypeScript.toType("long", { overrides: { long: "number" } }); // "number"
+TypeScript.toType("custom", { fallback: "unknown" }); // "unknown"
+TypeScript.toType("custom"); // throws TypeError
+TypeScript.toType("custom", { fallback: null }); // throws TypeError
+```
+
+The default mappings, without a source profile, are:
+
+| Input names | TypeScript expression |
+| --- | --- |
+| `bool`, `boolean` | `boolean` |
+| `string`, `text`, `varchar`, `nvarchar`, `char`, `nchar`, `character`, `character varying`, `tinytext`, `mediumtext`, `longtext`, `clob`, `uuid` | `string` |
+| `int`, `integer`, `short`, `smallint`, `int8`, `int16`, `int32`, `uint`, `uint8`, `uint16`, `uint32`, `byte` | `number` |
+| `long`, `bigint`, `int64`, `uint64` | `bigint` |
+| `number`, `float`, `double`, `real`, `float32`, `float64`, `double precision` | `number` |
+| `date`, `datetime`, `date-time`, `timestamp`, `timestamptz`, `time`, `timetz`, `timestamp with time zone`, `timestamp without time zone`, `time with time zone`, `time without time zone` | `Date` |
+| `binary`, `varbinary`, `blob`, `bytea`, `tinyblob`, `mediumblob`, `longblob`, `Uint8Array` | `Uint8Array` |
+| `json`, `jsonb` | `unknown` |
+| `any`, `unknown`, `never`, `void`, `null`, `undefined`, `symbol` | Same name |
+
+Source profiles take precedence over those defaults:
+
+| Source | Input names | TypeScript expression |
+| --- | --- | --- |
+| PostgreSQL | `smallint`, `int2`, `smallserial`, `serial2`, `integer`, `int`, `int4`, `serial`, `serial4` | `number` |
+| PostgreSQL | `bigint`, `int8`, `bigserial`, `serial8` | `bigint` |
+| PostgreSQL | `real`, `float`, `float4`, `float8`, `double precision` | `number` |
+| PostgreSQL | `bpchar` | `string` |
+| MySQL / MariaDB | `tinyint`, `smallint`, `mediumint`, `int`, `integer`, `float`, `double`, `double precision`, `real` | `number` |
+| MySQL / MariaDB | `bigint` | `bigint` |
+| MySQL / MariaDB | `enum` | `string` |
+| SQLite | `integer`, `int`, `tinyint`, `smallint`, `mediumint`, `bigint`, `int2`, `int8`, `unsigned big int` | `bigint` |
+| SQLite | `real`, `float`, `double`, `double precision` | `number` |
+
+SQLite integer declarations use `bigint` to cover their 64-bit range. MySQL
+`tinyint(1)` stays `number`; boolean inference requires an explicit override.
+`unsigned` is accepted but does not change TypeScript output: signed and unsigned
+64-bit integers both map to `bigint`. `source: "openapi"` uses the generic
+mappings with format refinements:
+
+| Base name | Format | TypeScript expression |
+| --- | --- | --- |
+| `integer`, `number` | `int32` | `number` |
+| `integer`, `number` | `int64` | `bigint` |
+| `number` | `float`, `double` | `number` |
+| `string` | `date`, `date-time`, `time` | `Date` |
+| `string` | `byte`, `binary` | `Uint8Array` |
+
+Matching follows the same normalization and precedence as `Go.toType`: trim and
+collapse whitespace, match case-insensitively, strip numeric SQL parameters and
+trailing `UNSIGNED`, and apply overrides before source and format rules. An
+override first matches the normalized original name, then the SQL base name.
+Unknown or incompatible formats retain the recognized base mapping.
+
+Unknown types throw a catchable `TypeError` by default (`fallback: null`). Exact
+decimal, money, interval, spatial, and custom types require an override or an
+explicit fallback. Invalid inputs and options still throw when a fallback is
+configured. Omitted or `undefined` options use defaults. Override and fallback
+expressions must be non-blank strings and are returned verbatim.
+
+The result is a type expression. The generator handles schema traversal,
+references, containers, optional properties, nullability, imports, and
+serialization. Literal `null` and `undefined` inputs map to those type names;
+they do not infer nullability for another type. `Date`, `bigint`, and
+`Uint8Array` mappings do not decode transport values or install codecs. Use
+overrides when your runtime represents these values differently.
 
 ## println
 

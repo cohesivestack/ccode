@@ -40,7 +40,7 @@ func TestStringToGoTypeDefaults(t *testing.T) {
 	for _, group := range groups {
 		for _, name := range group.names {
 			t.Run(name, func(t *testing.T) {
-				actual, err := stringToGoType(name, goTypeOptions{})
+				actual, err := stringToGoType(name, typeMappingOptions{})
 				require.NoError(t, err)
 				assert.Equal(t, group.expected, actual)
 			})
@@ -116,7 +116,7 @@ func TestStringToGoTypeMetadata(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			options, err := parseGoTypeOptions(test.options)
+			options, err := parseTypeMappingOptions(test.options)
 			require.NoError(t, err)
 			actual, err := stringToGoType(test.input, options)
 			require.NoError(t, err)
@@ -128,11 +128,11 @@ func TestStringToGoTypeMetadata(t *testing.T) {
 func TestStringToGoTypeStrictFailures(t *testing.T) {
 	for _, input := range []string{"", " \n ", "custom", "decimal", "numeric(10,2)", "money", "interval", "geometry", "array", "object", "null", "integer[]", "[]int", "int|string", "map[string]int", "varchar(255)[]", "uint64_t", "u64", "i32"} {
 		t.Run(input, func(t *testing.T) {
-			_, err := stringToGoType(input, goTypeOptions{})
+			_, err := stringToGoType(input, typeMappingOptions{})
 			require.Error(t, err)
 		})
 	}
-	options, err := parseGoTypeOptions(map[string]any{"fallback": nil})
+	options, err := parseTypeMappingOptions(map[string]any{"fallback": nil})
 	require.NoError(t, err)
 	_, err = stringToGoType("unrecognized", options)
 	require.EqualError(t, err, `cannot infer Go type from "unrecognized"`)
@@ -161,7 +161,7 @@ func TestGoTypeOptionsValidation(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.error, func(t *testing.T) {
-			_, err := parseGoTypeOptions(test.options)
+			_, err := parseTypeMappingOptions(test.options)
 			require.ErrorContains(t, err, test.error)
 		})
 	}

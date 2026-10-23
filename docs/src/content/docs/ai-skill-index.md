@@ -126,6 +126,7 @@ Go.toExportedIdentifier(value, initialisms?)
 Go.toUnexportedIdentifier(value, initialisms?)
 Go.toPackageName(value)
 Go.toType(value, options?)
+TypeScript.toType(value, options?)
 TypeScript.toTypeIdentifier(value, initialisms?)
 TypeScript.toValueIdentifier(value, initialisms?)
 ```

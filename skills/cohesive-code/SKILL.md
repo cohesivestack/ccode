@@ -54,6 +54,11 @@ Use this workflow for processes, templates, OpenAPI or database inputs, generate
   Supply the database source to resolve aliases such as PostgreSQL `int8`.
   Keep schema references, containers, nullability, declarations, field tags,
   imports, and serialization decisions in the generator.
+- Use `TypeScript.toType(value, options?)` from `@ccode/typescript` for primitive
+  TypeScript type expressions with the same options and strict fallback as
+  `Go.toType`. It maps 64-bit integers to `bigint`, temporal names to `Date`,
+  binary names to `Uint8Array`, and JSON to `unknown`. Use overrides for project
+  conventions and handle transport conversion in the generator.
 - Import `* as TypeScript` from `@ccode/typescript` and use
   `TypeScript.toTypeIdentifier` for PascalCase type, interface, class, enum,
   namespace, and type-alias names. Use `TypeScript.toValueIdentifier` for

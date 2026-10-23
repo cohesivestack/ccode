@@ -22,7 +22,7 @@ export interface NativeStringUtilities {
   readonly normalizeSpace: StringTransformation;
 }
 
-export interface GoTypeOptions {
+export interface PrimitiveTypeOptions {
   readonly format?: string;
   readonly unsigned?: boolean;
   readonly source?: "openapi" | "postgresql" | "mysql" | "mariadb" | "sqlite";
@@ -30,6 +30,9 @@ export interface GoTypeOptions {
   /** Defaults to null: throw when the type cannot be inferred. */
   readonly fallback?: string | null;
 }
+
+export type GoTypeOptions = PrimitiveTypeOptions;
+export type TypeScriptTypeOptions = PrimitiveTypeOptions;
 
 export interface NativeGoUtilities {
   readonly toExportedIdentifier: InitialismTransformation;
@@ -39,6 +42,7 @@ export interface NativeGoUtilities {
 }
 
 export interface NativeTypeScriptUtilities {
+  readonly toType: (value: string, options?: TypeScriptTypeOptions) => string;
   readonly toTypeIdentifier: InitialismTransformation;
   readonly toValueIdentifier: InitialismTransformation;
 }

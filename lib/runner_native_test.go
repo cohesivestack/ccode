@@ -63,6 +63,7 @@ func TestInstallRunnerNativeUtilitiesCreatesCompleteInternalAPI(t *testing.T) {
 			name:      "TypeScript namespace",
 			namespace: "typescript",
 			expected: []string{
+				"toType",
 				"toTypeIdentifier",
 				"toValueIdentifier",
 			},
