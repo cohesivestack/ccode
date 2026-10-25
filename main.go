@@ -170,7 +170,7 @@ Syntax:
 	}
 	initCmd.Flags().String("version", "", "ccode version to write to ccode.yaml")
 
-	resolveCmd := &cobra.Command{
+	accResolveCmd := &cobra.Command{
 		Use:   "resolve <artifactId>",
 		Short: "Mark an accelerated artifact as resolved",
 		Args:  cobra.ExactArgs(1),
@@ -185,13 +185,18 @@ Syntax:
 		},
 	}
 
-	listCmd := &cobra.Command{
-		Use:   "list",
-		Short: "List processes and accelerator metadata",
+	procCmd := &cobra.Command{
+		Use:   "proc",
+		Short: "Inspect processes",
 	}
 
-	listProcessesCmd := &cobra.Command{
-		Use:   "processes",
+	accCmd := &cobra.Command{
+		Use:   "acc",
+		Short: "Inspect and resolve accelerated artifacts",
+	}
+
+	procListCmd := &cobra.Command{
+		Use:   "list",
 		Short: "List runnable processes",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -209,8 +214,8 @@ Syntax:
 		},
 	}
 
-	listAccCmd := &cobra.Command{
-		Use:   "acc",
+	accListCmd := &cobra.Command{
+		Use:   "list",
 		Short: "List pending accelerated artifacts",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -232,17 +237,12 @@ Syntax:
 			return writeJSON(cmd, items)
 		},
 	}
-	listAccCmd.Flags().Bool("include-resolved", false, "Include resolved accelerator artifacts")
-	listAccCmd.Flags().Bool("for-agent", false, "Output machine-readable JSON")
+	accListCmd.Flags().Bool("include-resolved", false, "Include resolved accelerator artifacts")
+	accListCmd.Flags().Bool("for-agent", false, "Output machine-readable JSON")
 
-	getCmd := &cobra.Command{
-		Use:   "get",
-		Short: "Get accelerator details and guides",
-	}
-
-	getAcceleratedCmd := &cobra.Command{
-		Use:   "accelerated <artifactId>",
-		Short: "Get accelerated artifact metadata",
+	accShowCmd := &cobra.Command{
+		Use:   "show <artifactId>",
+		Short: "Show accelerated artifact metadata",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := loadConfig(cmd)
@@ -308,12 +308,12 @@ Syntax:
 			return err
 		},
 	}
-	getAcceleratedCmd.Flags().Bool("guide", false, "Include guide markdown with decoded accelerated content")
-	getAcceleratedCmd.Flags().Bool("for-agent", false, "Output machine-readable JSON")
+	accShowCmd.Flags().Bool("guide", false, "Include guide markdown with decoded accelerated content")
+	accShowCmd.Flags().Bool("for-agent", false, "Output machine-readable JSON")
 
-	getGuideCmd := &cobra.Command{
-		Use:   "guide <path>",
-		Short: "Get raw accelerator guide markdown",
+	accGuideCmd := &cobra.Command{
+		Use:   "guide <artifactId>",
+		Short: "Show an accelerated artifact's guide markdown",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := loadConfig(cmd)
@@ -322,7 +322,14 @@ Syntax:
 			}
 
 			context := ccode.NewContext(cfg)
-			markdown, err := context.GetAcceleratorGuide(args[0])
+			state, err := context.GetAcceleratorState(args[0])
+			if err != nil {
+				return err
+			}
+			if state.GuidePath == nil || isStringBlank(*state.GuidePath) {
+				return fmt.Errorf("accelerator artifact %q has no attached guide", state.ArtifactID)
+			}
+			markdown, err := context.GetAcceleratorGuide(*state.GuidePath)
 			if err != nil {
 				return err
 			}
@@ -333,7 +340,7 @@ Syntax:
 			}
 			if forAgent {
 				return writeJSON(cmd, guideContentAgentResult{
-					Path:     args[0],
+					Path:     *state.GuidePath,
 					Markdown: markdown,
 				})
 			}
@@ -342,17 +349,17 @@ Syntax:
 			return err
 		},
 	}
-	getGuideCmd.Flags().Bool("for-agent", false, "Output machine-readable JSON")
+	accGuideCmd.Flags().Bool("for-agent", false, "Output machine-readable JSON")
 
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(initCmd)
-	rootCmd.AddCommand(resolveCmd)
-	rootCmd.AddCommand(listCmd)
-	rootCmd.AddCommand(getCmd)
-	listCmd.AddCommand(listProcessesCmd)
-	listCmd.AddCommand(listAccCmd)
-	getCmd.AddCommand(getAcceleratedCmd)
-	getCmd.AddCommand(getGuideCmd)
+	rootCmd.AddCommand(procCmd)
+	rootCmd.AddCommand(accCmd)
+	procCmd.AddCommand(procListCmd)
+	accCmd.AddCommand(accListCmd)
+	accCmd.AddCommand(accShowCmd)
+	accCmd.AddCommand(accResolveCmd)
+	accCmd.AddCommand(accGuideCmd)
 
 	return rootCmd
 }

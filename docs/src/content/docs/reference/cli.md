@@ -32,7 +32,7 @@ Runs a `*.process.ts` TypeScript process under `ccode_path`. The process path is
 ## List runnable processes
 
 ```bash
-ccode list processes
+ccode proc list
 ```
 
 Recursively lists runnable `*.process.ts` files under `ccode_path` as process identifiers without the common suffix. Results are sorted and emitted as a JSON array. Dot-prefixed directories and the configured `hidden_path` are not inspected.
@@ -40,7 +40,7 @@ Recursively lists runnable `*.process.ts` files under `ccode_path` as process id
 ## Resolve an accelerated artifact
 
 ```bash
-ccode resolve <artifactId>
+ccode acc resolve <artifactId>
 ```
 
 Resolves a pending accelerated artifact without changing its output file. Use this when the generated proposal requires no edits and can be accepted as-is. A later run marks it pending again if the generated content or attached guide changes.
@@ -48,28 +48,28 @@ Resolves a pending accelerated artifact without changing its output file. Use th
 ## List accelerated artifacts
 
 ```bash
-ccode list acc
-ccode list acc --include-resolved
-ccode list acc --for-agent
+ccode acc list
+ccode acc list --include-resolved
+ccode acc list --for-agent
 ```
 
 Lists unresolved accelerated artifacts by default. Use `--include-resolved` to include resolved artifacts.
 
-## Get an accelerated artifact
+## Show an accelerated artifact
 
 ```bash
-ccode get accelerated <artifactId>
-ccode get accelerated <artifactId> --guide
-ccode get accelerated <artifactId> --guide --for-agent
+ccode acc show <artifactId>
+ccode acc show <artifactId> --guide
+ccode acc show <artifactId> --guide --for-agent
 ```
 
 Without `--guide`, the command returns metadata. With `--guide`, it returns a composed resolvement bundle containing guide markdown and decoded accelerated content.
 
-## Get a guide file
+## Show an artifact’s guide
 
 ```bash
-ccode get guide <path>
-ccode get guide <path> --for-agent
+ccode acc guide <artifactId>
+ccode acc guide <artifactId> --for-agent
 ```
 
-Reads raw guide markdown. The path is resolved using Cohesive Code's accelerator guide rules.
+Looks up the accelerated artifact by ID and reads its attached guide as raw Markdown. With `--for-agent`, returns JSON containing the guide’s `path` and `markdown`. Returns an error if the artifact does not exist, has no attached guide, or its guide file is missing.

@@ -96,7 +96,7 @@ func TestNewRootCmd_DefaultConfigWhenNoFile(t *testing.T) {
 	assert.Equal(t, ".", captured.OutputPath)
 }
 
-func TestNewRootCmd_ListProcesses(t *testing.T) {
+func TestNewRootCmd_ProcList(t *testing.T) {
 	tmp := t.TempDir()
 	projectPath := filepath.Join(tmp, "ccode")
 	configPath := filepath.Join(tmp, "ccode.yaml")
@@ -123,7 +123,7 @@ version: v1.2.3
 	cmd := newRootCmd(nil, nil)
 	var stdout bytes.Buffer
 	cmd.SetOut(&stdout)
-	cmd.SetArgs([]string{"--config", configPath, "list", "processes"})
+	cmd.SetArgs([]string{"--config", configPath, "proc", "list"})
 
 	require.NoError(t, cmd.Execute())
 	assert.JSONEq(t, `["api/client", "generate"]`, stdout.String())
@@ -148,13 +148,13 @@ func TestNewRootCmd_InitUsesArgsAndConfigFlag(t *testing.T) {
 	assert.Equal(t, "v1.2.3", capturedVersion)
 }
 
-func TestNewRootCmd_ListAccExcludesContent(t *testing.T) {
+func TestNewRootCmd_AccListExcludesContent(t *testing.T) {
 	configPath, _ := setupAcceleratorCLIProject(t)
 
 	cmd := newRootCmd(nil, nil)
 	var stdout bytes.Buffer
 	cmd.SetOut(&stdout)
-	cmd.SetArgs([]string{"--config", configPath, "list", "acc"})
+	cmd.SetArgs([]string{"--config", configPath, "acc", "list"})
 
 	require.NoError(t, cmd.Execute())
 	output := stdout.String()
@@ -166,13 +166,13 @@ func TestNewRootCmd_ListAccExcludesContent(t *testing.T) {
 	assert.NotContains(t, output, "package handlers")
 }
 
-func TestNewRootCmd_ListAcceleratedIncludeResolved(t *testing.T) {
+func TestNewRootCmd_AccListIncludeResolved(t *testing.T) {
 	configPath, _ := setupAcceleratorCLIProject(t)
 
 	cmd := newRootCmd(nil, nil)
 	var stdout bytes.Buffer
 	cmd.SetOut(&stdout)
-	cmd.SetArgs([]string{"--config", configPath, "list", "acc", "--include-resolved"})
+	cmd.SetArgs([]string{"--config", configPath, "acc", "list", "--include-resolved"})
 
 	require.NoError(t, cmd.Execute())
 	output := stdout.String()
@@ -182,17 +182,17 @@ func TestNewRootCmd_ListAcceleratedIncludeResolved(t *testing.T) {
 	assert.NotContains(t, output, `"pending":`)
 }
 
-func TestNewRootCmd_ResolveMarksAcceleratorAsResolved(t *testing.T) {
+func TestNewRootCmd_AccResolveMarksAcceleratorAsResolved(t *testing.T) {
 	configPath, _ := setupAcceleratorCLIProject(t)
 
 	resolveCmd := newRootCmd(nil, nil)
-	resolveCmd.SetArgs([]string{"--config", configPath, "resolve", "handlers.go"})
+	resolveCmd.SetArgs([]string{"--config", configPath, "acc", "resolve", "handlers.go"})
 	require.NoError(t, resolveCmd.Execute())
 
 	listCmd := newRootCmd(nil, nil)
 	var stdout bytes.Buffer
 	listCmd.SetOut(&stdout)
-	listCmd.SetArgs([]string{"--config", configPath, "list", "acc", "--include-resolved"})
+	listCmd.SetArgs([]string{"--config", configPath, "acc", "list", "--include-resolved"})
 	require.NoError(t, listCmd.Execute())
 
 	var items []ccode.AcceleratorArtifactMetadata
@@ -209,24 +209,24 @@ func TestNewRootCmd_ResolveMarksAcceleratorAsResolved(t *testing.T) {
 	assert.Equal(t, "resolved", resolved.State)
 }
 
-func TestNewRootCmd_ResolveReturnsErrorWhenAcceleratorDoesNotExist(t *testing.T) {
+func TestNewRootCmd_AccResolveReturnsErrorWhenAcceleratorDoesNotExist(t *testing.T) {
 	configPath, _ := setupAcceleratorCLIProject(t)
 
 	cmd := newRootCmd(nil, nil)
-	cmd.SetArgs([]string{"--config", configPath, "resolve", "missing.go"})
+	cmd.SetArgs([]string{"--config", configPath, "acc", "resolve", "missing.go"})
 
 	err := cmd.Execute()
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), `accelerator artifact "missing.go" not found`)
 }
 
-func TestNewRootCmd_GetAcceleratedExcludesContent(t *testing.T) {
+func TestNewRootCmd_AccShowExcludesContent(t *testing.T) {
 	configPath, _ := setupAcceleratorCLIProject(t)
 
 	cmd := newRootCmd(nil, nil)
 	var stdout bytes.Buffer
 	cmd.SetOut(&stdout)
-	cmd.SetArgs([]string{"--config", configPath, "get", "accelerated", "handlers.go"})
+	cmd.SetArgs([]string{"--config", configPath, "acc", "show", "handlers.go"})
 
 	require.NoError(t, cmd.Execute())
 	output := stdout.String()
@@ -237,13 +237,13 @@ func TestNewRootCmd_GetAcceleratedExcludesContent(t *testing.T) {
 	assert.NotContains(t, output, "package handlers")
 }
 
-func TestNewRootCmd_GetAcceleratedGuideReturnsComposedMarkdown(t *testing.T) {
+func TestNewRootCmd_AccShowGuideReturnsComposedMarkdown(t *testing.T) {
 	configPath, _ := setupAcceleratorCLIProject(t)
 
 	cmd := newRootCmd(nil, nil)
 	var stdout bytes.Buffer
 	cmd.SetOut(&stdout)
-	cmd.SetArgs([]string{"--config", configPath, "get", "accelerated", "handlers.go", "--guide"})
+	cmd.SetArgs([]string{"--config", configPath, "acc", "show", "handlers.go", "--guide"})
 
 	require.NoError(t, cmd.Execute())
 	output := stdout.String()
@@ -252,13 +252,13 @@ func TestNewRootCmd_GetAcceleratedGuideReturnsComposedMarkdown(t *testing.T) {
 	assert.Contains(t, output, "```go\npackage handlers")
 }
 
-func TestNewRootCmd_ListAndGetForAgentOutputValidJSON(t *testing.T) {
+func TestNewRootCmd_AccListAndShowForAgentOutputValidJSON(t *testing.T) {
 	configPath, _ := setupAcceleratorCLIProject(t)
 
 	listCmd := newRootCmd(nil, nil)
 	var listOut bytes.Buffer
 	listCmd.SetOut(&listOut)
-	listCmd.SetArgs([]string{"--config", configPath, "list", "acc", "--for-agent"})
+	listCmd.SetArgs([]string{"--config", configPath, "acc", "list", "--for-agent"})
 	require.NoError(t, listCmd.Execute())
 
 	var listPayload []map[string]any
@@ -272,7 +272,7 @@ func TestNewRootCmd_ListAndGetForAgentOutputValidJSON(t *testing.T) {
 	getCmd := newRootCmd(nil, nil)
 	var getOut bytes.Buffer
 	getCmd.SetOut(&getOut)
-	getCmd.SetArgs([]string{"--config", configPath, "get", "accelerated", "handlers.go", "--guide", "--for-agent"})
+	getCmd.SetArgs([]string{"--config", configPath, "acc", "show", "handlers.go", "--guide", "--for-agent"})
 	require.NoError(t, getCmd.Execute())
 
 	var getPayload map[string]any
@@ -286,15 +286,89 @@ func TestNewRootCmd_ListAndGetForAgentOutputValidJSON(t *testing.T) {
 	assert.Contains(t, getPayload["composed_markdown"], "New accelerated content")
 }
 
-func TestNewRootCmd_GetGuide(t *testing.T) {
+func TestNewRootCmd_AccGuide(t *testing.T) {
 	configPath, _ := setupAcceleratorCLIProject(t)
 
-	getCmd := newRootCmd(nil, nil)
-	var getOut bytes.Buffer
-	getCmd.SetOut(&getOut)
-	getCmd.SetArgs([]string{"--config", configPath, "get", "guide", "guides/handlers.md"})
-	require.NoError(t, getCmd.Execute())
-	assert.Equal(t, "# Update handlers", getOut.String())
+	for _, artifact := range []struct {
+		id       string
+		path     string
+		markdown string
+	}{
+		{"handlers.go", "guides/handlers.md", "# Update handlers"},
+		{"service.go", "guides/service.md", "# Update service"},
+	} {
+		for _, forAgent := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/for-agent=%t", artifact.id, forAgent), func(t *testing.T) {
+				cmd := newRootCmd(nil, nil)
+				var stdout bytes.Buffer
+				cmd.SetOut(&stdout)
+				args := []string{"--config", configPath, "acc", "guide", artifact.id}
+				if forAgent {
+					args = append(args, "--for-agent")
+				}
+				cmd.SetArgs(args)
+				require.NoError(t, cmd.Execute())
+
+				if forAgent {
+					var payload map[string]any
+					require.NoError(t, json.Unmarshal(stdout.Bytes(), &payload))
+					assert.Equal(t, map[string]any{"path": artifact.path, "markdown": artifact.markdown}, payload)
+				} else {
+					assert.Equal(t, artifact.markdown, stdout.String())
+				}
+			})
+		}
+	}
+}
+
+func TestNewRootCmd_AccGuideErrors(t *testing.T) {
+	for _, test := range []struct {
+		name       string
+		artifactID string
+		guidePath  string
+		wantError  string
+	}{
+		{"unknown artifact", "missing.go", "guides/handlers.md", `accelerator artifact "missing.go" not found`},
+		{"guide path is not an artifact ID", "guides/handlers.md", "guides/handlers.md", `accelerator artifact "guides/handlers.md" not found`},
+		{"no attached guide", "handlers.go", "", `accelerator artifact "handlers.go" has no attached guide`},
+		{"missing guide file", "handlers.go", "guides/missing.md", "guide file not found: guides/missing.md"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			configPath, ccodePath := setupAcceleratorCLIProject(t)
+			statePath := filepath.Join(ccodePath, ".ccode", "accelerators", "handlers.go.accelerated.json")
+			writeAcceleratorStateFileForCLITest(t, statePath, true, test.guidePath, "package handlers", "")
+
+			cmd := newRootCmd(nil, nil)
+			var stdout, stderr bytes.Buffer
+			cmd.SetOut(&stdout)
+			cmd.SetErr(&stderr)
+			cmd.SetArgs([]string{"--config", configPath, "acc", "guide", test.artifactID})
+			require.ErrorContains(t, cmd.Execute(), test.wantError)
+			assert.NotContains(t, stdout.String(), "# Update handlers")
+		})
+	}
+}
+
+func TestNewRootCmd_RejectsReplacedCommands(t *testing.T) {
+	for _, args := range [][]string{
+		{"list", "processes"},
+		{"list", "acc"},
+		{"get", "accelerated", "handlers.go"},
+		{"get", "guide", "guides/handlers.md"},
+		{"resolve", "handlers.go"},
+	} {
+		t.Run(fmt.Sprint(args), func(t *testing.T) {
+			cmd := newRootCmd(nil, nil)
+			var output bytes.Buffer
+			cmd.SetOut(&output)
+			cmd.SetErr(&output)
+			cmd.SetArgs(args)
+
+			err := cmd.Execute()
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "unknown command")
+		})
+	}
 }
 
 func setupAcceleratorCLIProject(t *testing.T) (string, string) {

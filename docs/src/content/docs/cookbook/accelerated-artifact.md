@@ -53,9 +53,9 @@ Review the generated handler file, keep package naming stable, and add endpoint-
 
 ```bash
 ccode run api/generate
-ccode list acc --for-agent
-ccode get accelerated handlers.go --guide --for-agent
-ccode resolve handlers.go
+ccode acc list --for-agent
+ccode acc show handlers.go --guide --for-agent
+ccode acc resolve handlers.go
 ```
 
-The target file is `output_path/handlers.go`. If it is edited after generation, the next run will not overwrite it unless the file still matches the stored generated snapshot. Use `ccode resolve` when the proposal requires no edits and should be accepted as-is.
+The target file is `output_path/handlers.go`. If it is edited after generation, the next run will not overwrite it unless the file still matches the stored generated snapshot. Use `ccode acc resolve` when the proposal requires no edits and should be accepted as-is.

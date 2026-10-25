@@ -56,9 +56,9 @@ Guide paths are normalized under `ccode_path`.
 ## Inspecting work
 
 ```bash
-ccode list acc
-ccode get accelerated handlers.go
-ccode get accelerated handlers.go --guide
+ccode acc list
+ccode acc show handlers.go
+ccode acc show handlers.go --guide
 ```
 
 Use `--for-agent` for JSON output.
@@ -66,7 +66,7 @@ Use `--for-agent` for JSON output.
 If the generated proposal is already acceptable and needs no edits, mark it resolved explicitly:
 
 ```bash
-ccode resolve handlers.go
+ccode acc resolve handlers.go
 ```
 
 This updates only accelerator state. A later change to the generated content or guide makes the artifact pending again.

@@ -100,7 +100,7 @@ After changing generation inputs, run the exact process when safe, inspect every
 1. Confirm the requested process path relative to `ccode_path`. When the process is not specified, inspect the available entry points first:
 
    ```bash
-   ccode list processes
+   ccode proc list
    ```
 
    Then run the selected process:
@@ -113,26 +113,26 @@ After changing generation inputs, run the exact process when safe, inspect every
 3. List unresolved artifacts:
 
    ```bash
-   ccode list acc --for-agent
+   ccode acc list --for-agent
    ```
 
 4. Handle `pending` items; skip `resolved` unless the request includes resolved items. Diagnose `corrupt`, `ambiguous`, `missing_artifact`, or `missing_guide` before editing.
 5. Fetch each required bundle:
 
    ```bash
-   ccode get accelerated <artifactId> --guide --for-agent
+   ccode acc show <artifactId> --guide --for-agent
    ```
 
 6. Treat `composed_markdown` as the primary bundle when present. Apply it to `output_path/<artifactId>` while preserving compatible human edits and repository conventions.
 7. If the generated proposal requires no edits, accept it explicitly:
 
    ```bash
-   ccode resolve <artifactId>
+   ccode acc resolve <artifactId>
    ```
 
 8. Run checks named by the bundle and target project, then rerun both list commands and report remaining state.
 
-Do not hand-edit accelerator state during normal generation work or force `pending: false`; use `ccode resolve` for that transition. Use `--include-resolved` only for a requested complete inventory. Stop before guessing when guides are missing, state is ambiguous, or proposed content conflicts with intentional local edits.
+Do not hand-edit accelerator state during normal generation work or force `pending: false`; use `ccode acc resolve` for that transition. Use `--include-resolved` only for a requested complete inventory. Stop before guessing when guides are missing, state is ambiguous, or proposed content conflicts with intentional local edits.
 
 ## Resolve accelerator-state Git conflicts
 
