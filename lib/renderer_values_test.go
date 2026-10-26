@@ -195,7 +195,7 @@ func TestRunner_TemplateBridgeAcrossOutputFunctions(t *testing.T) {
 	templateDir := filepath.Join(projectDir, "templates")
 	require.NoError(t, os.MkdirAll(templateDir, 0755))
 	require.NoError(t, os.WriteFile(filepath.Join(templateDir, "api.tpl"), []byte(`{{ data.info.title }}:{{ data.servers[0].expandUrl() }}:{{ data.getOperation("get", "/users").method }}`), 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(projectDir, "model.process.ts"), []byte(`import type { Context } from "@ccode/context";
+	require.NoError(t, os.WriteFile(filepath.Join(projectDir, "model.proc.ts"), []byte(`import type { Context } from "@ccode/context";
 export default function main(ctx: Context) {
  const api = ctx.loadOpenAPIFromString('{"openapi":"3.1.0","info":{"title":"Users","version":"1"},"paths":{"/users":{"get":{"responses":{}}}}}');
  ctx.println(ctx.renderTemplate("templates/api.tpl",api));

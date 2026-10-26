@@ -368,7 +368,7 @@ export default function main(ctx: Context) {
     rawMethod: OpenAPIRaw.V3_0.HttpMethods.GET, frozen: Object.isFrozen(api.raw)}));
 }`
 	script = strings.Replace(script, "SPEC", fmt.Sprintf("%q", spec), 1)
-	require.NoError(t, os.WriteFile(filepath.Join(projectDir, "model.process.ts"), []byte(script), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(projectDir, "model.proc.ts"), []byte(script), 0644))
 	var output bytes.Buffer
 	ctx.stdout = &output
 	require.NoError(t, ctx.Run("model"))

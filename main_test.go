@@ -108,11 +108,12 @@ version: v1.2.3
 	require.NoError(t, os.WriteFile(configPath, []byte(configYAML), 0644))
 
 	paths := []string{
-		"generate.process.ts",
-		"api/client.process.ts",
+		"generate.proc.ts",
+		"api/client.proc.ts",
 		"api/helper.ts",
-		".hidden/ignored.process.ts",
-		"internal-support/ignored.process.ts",
+		"api/legacy.process.ts",
+		".hidden/ignored.proc.ts",
+		"internal-support/ignored.proc.ts",
 	}
 	for _, path := range paths {
 		fullPath := filepath.Join(projectPath, filepath.FromSlash(path))

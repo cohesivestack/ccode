@@ -12,7 +12,7 @@ MySQL, and MariaDB; only the returned model shape changes.
 ```text
 ccode/
   database/
-    schema-report.process.ts
+    schema-report.proc.ts
   templates/
     schema-report.tpl
 ```

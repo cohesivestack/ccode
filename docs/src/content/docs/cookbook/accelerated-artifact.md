@@ -9,7 +9,7 @@ description: Create a generated proposal with attached resolvement guides.
 ccode.yaml
 ccode/
   api/
-    generate.process.ts
+    generate.proc.ts
   guides/
     handlers.md
   templates/

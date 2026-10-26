@@ -8,7 +8,7 @@ It is designed for deterministic generation where generator authors control the 
 
 ## Quick example
 
-Create `ccode/api/generate.process.ts`:
+Create `ccode/api/generate.proc.ts`:
 
 ```ts
 import type { Context } from "@ccode/context";

@@ -27,7 +27,7 @@ Initializes a workspace, writes or updates `ccode.yaml`, refreshes generated sup
 ccode run <process>
 ```
 
-Runs a `*.process.ts` TypeScript process under `ccode_path`. The process path is relative and may omit `.process.ts`.
+Runs a `*.proc.ts` TypeScript process under `ccode_path`. The process path is relative and may omit `.proc.ts`.
 
 ## List runnable processes
 
@@ -35,7 +35,7 @@ Runs a `*.process.ts` TypeScript process under `ccode_path`. The process path is
 ccode proc list
 ```
 
-Recursively lists runnable `*.process.ts` files under `ccode_path` as process identifiers without the common suffix. Results are sorted and emitted as a JSON array. Dot-prefixed directories and the configured `hidden_path` are not inspected.
+Recursively lists runnable `*.proc.ts` files under `ccode_path` as process identifiers without the common suffix. Results are sorted and emitted as a JSON array. Dot-prefixed directories and the configured `hidden_path` are not inspected.
 
 ## Resolve an accelerated artifact
 

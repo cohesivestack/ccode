@@ -297,7 +297,7 @@ func TestAccelerator_AccelerateResetsStateWhenStateFileIsCorrupt(t *testing.T) {
 
 func TestAccelerator_RunStoresStateByArtifactID(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestAccelerator_RunStoresStateByArtifactID")
-	processFile := filepath.Join(projectDir, "x", "generate-api.process.ts")
+	processFile := filepath.Join(projectDir, "x", "generate-api.proc.ts")
 
 	require.NoError(t, os.MkdirAll(filepath.Dir(processFile), 0755))
 	require.NoError(t, os.MkdirAll(filepath.Join(projectDir, "templates"), 0755))
@@ -320,7 +320,7 @@ func TestAccelerator_RunStoresStateByArtifactID(t *testing.T) {
 
 func TestAccelerator_RunPreservesStateForArtifactsNotEmittedByProcess(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestAccelerator_RunPreservesStateForArtifactsNotEmittedByProcess")
-	processFile := filepath.Join(projectDir, "generate.process.ts")
+	processFile := filepath.Join(projectDir, "generate.proc.ts")
 	require.NoError(t, os.WriteFile(processFile, []byte("export default function main() {}\n"), 0644))
 
 	stateFilePath := acceleratorArtifactStateFilePath(ctx.acceleratorStateFilePath(), "existing")

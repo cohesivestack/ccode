@@ -32,7 +32,7 @@ If local docs are unavailable, retrieve the matching Markdown from `https://raw.
 Use this workflow for processes, templates, OpenAPI or database inputs, generated outputs, accelerators, and accelerator guides.
 
 - Keep process source, templates, specs, seed data, and guides under `ccode_path`.
-- Name runnable entry points `*.process.ts`. Keep ordinary `.ts` files as imported helpers.
+- Name runnable entry points `*.proc.ts`. Keep ordinary `.ts` files as imported helpers.
 - Default-export the process function and import `Context` from `@ccode/context`.
 - Parse each input once and normalize it into plain template data in TypeScript.
 - Import OpenAPI model types from `@ccode/openapi` with `import type`. Use

@@ -51,7 +51,7 @@ catch (error) { error instanceof TypeError ? error.message : "wrong error type";
 
 func TestRunnerTypeScriptToTypePublicAPI(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestRunnerTypeScriptToTypePublicAPI")
-	processFile := filepath.Join(projectDir, "types.process.ts")
+	processFile := filepath.Join(projectDir, "types.proc.ts")
 	require.NoError(t, os.WriteFile(processFile, []byte(`
 import type { Context } from "@ccode/context";
 import * as Go from "@ccode/go";

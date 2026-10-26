@@ -76,7 +76,7 @@ func TestRendererGoTypeValidation(t *testing.T) {
 
 func TestRunnerGoTypePublicAPIAndFilterParity(t *testing.T) {
 	ctx, projectDir := setupRunnerTestProject(t, "TestRunnerGoTypePublicAPIAndFilterParity")
-	processFile := filepath.Join(projectDir, "types.process.ts")
+	processFile := filepath.Join(projectDir, "types.proc.ts")
 	templateFile := filepath.Join(projectDir, "templates", "types.tpl")
 	require.NoError(t, os.MkdirAll(filepath.Dir(templateFile), 0755))
 	require.NoError(t, os.WriteFile(templateFile, []byte(`{{ "boolean" | goType }}|{{ "integer" | goType(source="openapi", format="int64") }}|{{ "string" | goType(format="date-time") }}|{{ "bigint" | goType(source="mysql", unsigned=true) }}|{{ "numeric" | goType(source="postgresql", overrides=data.overrides) }}|{{ "custom" | goType(fallback="any") }}|{{ "long" | goType }}`), 0644))

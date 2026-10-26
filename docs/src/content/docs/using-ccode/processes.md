@@ -7,7 +7,7 @@ A process is a TypeScript file that Cohesive Code compiles and runs. It should o
 
 ## Contract
 
-Every runnable process must be under `ccode_path`, end in `.process.ts`, and default-export a function. The runtime passes a `Context` value as the function's first argument. The function may be named or anonymous.
+Every runnable process must be under `ccode_path`, end in `.proc.ts`, and default-export a function. The runtime passes a `Context` value as the function's first argument. The function may be named or anonymous.
 
 ```ts
 import type { Context } from "@ccode/context";

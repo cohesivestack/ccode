@@ -70,7 +70,7 @@ The runtime does not require a deep structure. This layout keeps larger projects
 ```text
 ccode/
   api/
-    generate.process.ts
+    generate.proc.ts
   data/
     seed.json
   guides/
@@ -89,7 +89,7 @@ Use stable folders for process entrypoints, templates, input specs, and resolvem
 ## Process paths
 
 `ccode run <process>` resolves `<process>` relative to `ccode_path`.
-Runnable entry points must end in `.process.ts`. Ordinary `.ts` files remain available as imported helper modules.
+Runnable entry points must end in `.proc.ts`. Ordinary `.ts` files remain available as imported helper modules.
 
 Valid:
 
@@ -105,7 +105,7 @@ ccode run /absolute/path
 ccode run .
 ```
 
-The CLI appends `.process.ts` when the process argument does not include it. You may also pass the complete filename, such as `ccode run api/generate.process.ts`.
+The CLI appends `.proc.ts` when the process argument does not include it. You may also pass the complete filename, such as `ccode run api/generate.proc.ts`.
 
 ## Path resolution summary
 

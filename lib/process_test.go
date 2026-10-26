@@ -17,14 +17,15 @@ func TestContext_ListProcessesRecursively(t *testing.T) {
 	})
 
 	paths := []string{
-		"generate.process.ts",
-		"api/client.process.ts",
-		"api/nested/server.process.ts",
+		"generate.proc.ts",
+		"api/client.proc.ts",
+		"api/nested/server.proc.ts",
 		"api/helper.ts",
-		"templates/example.process.ts.tpl",
-		".hidden/ignored.process.ts",
-		"api/.cache/ignored.process.ts",
-		"internal-support/ignored.process.ts",
+		"api/legacy.process.ts",
+		"templates/example.proc.ts.tpl",
+		".hidden/ignored.proc.ts",
+		"api/.cache/ignored.proc.ts",
+		"internal-support/ignored.proc.ts",
 	}
 	for _, path := range paths {
 		fullPath := filepath.Join(projectPath, filepath.FromSlash(path))
