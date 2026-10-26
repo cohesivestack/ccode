@@ -89,21 +89,9 @@ func (ctx *Context) validateWorkspaceSupportFiles() error {
 }
 
 func (ctx *Context) resolveProcessEntryPoint(process string) (string, string, error) {
-	if isStringBlank(process) {
-		return "", "", fmt.Errorf("process name cannot be blank")
-	}
-
-	cleaned := filepath.Clean(filepath.FromSlash(process))
-	if filepath.IsAbs(cleaned) || cleaned == "." || cleaned == ".." || strings.HasPrefix(cleaned, ".."+string(filepath.Separator)) {
-		return "", "", fmt.Errorf("invalid process path %q", process)
-	}
-
-	entryPointPath := cleaned
-	if strings.HasSuffix(entryPointPath, ".ts") && !strings.HasSuffix(entryPointPath, ProcessFileSuffix) {
-		return "", "", fmt.Errorf("invalid process path %q: process files must end in %s or omit the suffix", process, ProcessFileSuffix)
-	}
-	if !strings.HasSuffix(entryPointPath, ProcessFileSuffix) {
-		entryPointPath += ProcessFileSuffix
+	entryPointPath, err := processEntryPointPath(process)
+	if err != nil {
+		return "", "", err
 	}
 
 	sourcePath := filepath.Join(ctx.config.CCodePath, entryPointPath)

@@ -187,7 +187,20 @@ Syntax:
 
 	procCmd := &cobra.Command{
 		Use:   "proc",
-		Short: "Inspect processes",
+		Short: "Manage processes",
+	}
+
+	procAddCmd := &cobra.Command{
+		Use:   "add <proc>",
+		Short: "Create a process",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := loadConfig(cmd)
+			if err != nil {
+				return err
+			}
+			return ccode.NewContext(cfg).AddProcess(args[0])
+		},
 	}
 
 	accCmd := &cobra.Command{
@@ -356,6 +369,7 @@ Syntax:
 	rootCmd.AddCommand(procCmd)
 	rootCmd.AddCommand(accCmd)
 	procCmd.AddCommand(procListCmd)
+	procCmd.AddCommand(procAddCmd)
 	accCmd.AddCommand(accListCmd)
 	accCmd.AddCommand(accShowCmd)
 	accCmd.AddCommand(accResolveCmd)

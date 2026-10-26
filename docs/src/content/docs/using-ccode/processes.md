@@ -5,6 +5,8 @@ description: The TypeScript process contract and authoring style.
 
 A process is a TypeScript file that Cohesive Code compiles and runs. It should orchestrate input parsing, model shaping, template rendering, generation, and acceleration.
 
+Create a process with `ccode proc add handlers/generator`. This writes an empty `run(ctx: Context)` function to `handlers/generator.proc.ts` under the configured `ccode_path`, creating directories as needed. The command returns an error if the file already exists.
+
 ## Contract
 
 Every runnable process must be under `ccode_path`, end in `.proc.ts`, and default-export a function. The runtime passes a `Context` value as the function's first argument. The function may be named or anonymous.

@@ -96,6 +96,43 @@ func TestNewRootCmd_DefaultConfigWhenNoFile(t *testing.T) {
 	assert.Equal(t, ".", captured.OutputPath)
 }
 
+func TestNewRootCmd_ProcAdd(t *testing.T) {
+	for _, override := range []string{"", "flag", "env"} {
+		t.Run("config-override-"+override, func(t *testing.T) {
+			tmp := t.TempDir()
+			configPath := filepath.Join(tmp, "ccode.yaml")
+			require.NoError(t, os.WriteFile(configPath, []byte("ccode_path: custom-ccode\nversion: v1.2.3\n"), 0644))
+			t.Setenv("CCODE_CCODE_PATH", "")
+			require.NoError(t, os.Unsetenv("CCODE_CCODE_PATH"))
+			projectPath := filepath.Join(tmp, "custom-ccode")
+			args := []string{"--config", configPath}
+			switch override {
+			case "flag":
+				projectPath = filepath.Join(tmp, "flag-ccode")
+				args = append(args, "--ccode-path", projectPath)
+			case "env":
+				projectPath = filepath.Join(tmp, "env-ccode")
+				t.Setenv("CCODE_CCODE_PATH", projectPath)
+			}
+			cmd := newRootCmd(nil, nil)
+			cmd.SetArgs(append(args, "proc", "add", "handlers/generator"))
+			require.NoError(t, cmd.Execute())
+
+			content, err := os.ReadFile(filepath.Join(projectPath, "handlers", "generator.proc.ts"))
+			require.NoError(t, err)
+			assert.Equal(t, "import type { Context } from \"@ccode/context\";\n\nexport default function run(ctx: Context) {\n\n}\n", string(content))
+		})
+	}
+}
+
+func TestNewRootCmd_ProcAddRequiresOneArgument(t *testing.T) {
+	for _, args := range [][]string{{"proc", "add"}, {"proc", "add", "one", "two"}} {
+		cmd := newRootCmd(nil, nil)
+		cmd.SetArgs(args)
+		require.Error(t, cmd.Execute())
+	}
+}
+
 func TestNewRootCmd_ProcList(t *testing.T) {
 	tmp := t.TempDir()
 	projectPath := filepath.Join(tmp, "ccode")

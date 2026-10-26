@@ -29,6 +29,25 @@ ccode run <process>
 
 Runs a `*.proc.ts` TypeScript process under `ccode_path`. The process path is relative and may omit `.proc.ts`.
 
+## Add a process
+
+```bash
+ccode proc add <proc>
+ccode proc add handlers/generator
+```
+
+Creates `<ccode_path>/handlers/generator.proc.ts`, including missing directories, with this starter code:
+
+```ts
+import type { Context } from "@ccode/context";
+
+export default function run(ctx: Context) {
+
+}
+```
+
+The process path is relative to `ccode_path` and may include the `.proc.ts` suffix. Existing files are never overwritten.
+
 ## List runnable processes
 
 ```bash
