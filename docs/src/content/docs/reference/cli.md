@@ -84,6 +84,14 @@ ccode acc show <artifactId> --guide --for-agent
 
 Without `--guide`, the command returns metadata. With `--guide`, it returns a composed resolvement bundle containing guide markdown and decoded accelerated content.
 
+## Show original accelerated content
+
+```bash
+ccode acc content <artifactId>
+```
+
+Prints the decoded generated snapshot saved in accelerator state, preserving its whitespace without adding a newline. This is the original accelerated content from the latest generation, even if the output file has since been edited or removed. An attached guide is not required.
+
 ## Show an artifact’s guide
 
 ```bash

@@ -63,6 +63,14 @@ ccode acc show handlers.acc.go --guide
 
 Use `--for-agent` for JSON output.
 
+To print only the original generated content saved in accelerator state:
+
+```bash
+ccode acc content handlers.acc.go
+```
+
+This returns the saved snapshot from the latest generation, including when the output file has been edited.
+
 If the generated proposal is already acceptable and needs no edits, mark it resolved explicitly:
 
 ```bash

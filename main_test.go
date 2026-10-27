@@ -324,6 +324,83 @@ func TestNewRootCmd_AccListAndShowForAgentOutputValidJSON(t *testing.T) {
 	assert.Contains(t, getPayload["composed_markdown"], "New accelerated content")
 }
 
+func TestNewRootCmd_AccContentReturnsSavedSnapshot(t *testing.T) {
+	for _, test := range []struct {
+		name         string
+		artifactID   string
+		content      string
+		pending      bool
+		guidePath    string
+		removeOutput bool
+	}{
+		{"pending", "handlers.go", "package handlers", true, "guides/handlers.md", false},
+		{"resolved", "service.go", "package service", false, "", false},
+		{"whitespace and unicode", "handlers.go", "\t// café\r\npackage handlers\n\n", true, "guides/handlers.md", false},
+		{"empty content", "handlers.go", "", true, "guides/handlers.md", false},
+		{"no guide", "handlers.go", "package handlers", true, "", false},
+		{"missing guide", "handlers.go", "package handlers", true, "guides/missing.md", false},
+		{"missing output", "handlers.go", "package handlers", true, "guides/handlers.md", true},
+		{"nested artifact", "nested/handlers.go", "package handlers", true, "", true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			configPath, ccodePath := setupAcceleratorCLIProject(t)
+			statePath := filepath.Join(ccodePath, ".ccode", "accelerators", filepath.FromSlash(test.artifactID)+".accelerated.json")
+			require.NoError(t, os.MkdirAll(filepath.Dir(statePath), 0755))
+			writeAcceleratorStateFileForCLITest(t, statePath, test.pending, test.guidePath, test.content, "")
+			outputPath := filepath.Join(filepath.Dir(configPath), "out", filepath.FromSlash(test.artifactID))
+			if test.removeOutput {
+				if err := os.Remove(outputPath); err != nil {
+					require.True(t, os.IsNotExist(err))
+				}
+			} else {
+				require.NoError(t, os.WriteFile(outputPath, []byte("// edited output"), 0644))
+			}
+
+			cmd := newRootCmd(nil, nil)
+			var stdout bytes.Buffer
+			cmd.SetOut(&stdout)
+			cmd.SetArgs([]string{"--config", configPath, "acc", "content", test.artifactID})
+
+			require.NoError(t, cmd.Execute())
+			assert.Equal(t, test.content, stdout.String())
+		})
+	}
+}
+
+func TestNewRootCmd_AccContentErrors(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		args      []string
+		state     string
+		wantError string
+	}{
+		{"unknown artifact", []string{"missing.go"}, "", `accelerator artifact "missing.go" not found`},
+		{"missing argument", nil, "", "accepts 1 arg(s), received 0"},
+		{"extra argument", []string{"handlers.go", "service.go"}, "", "accepts 1 arg(s), received 2"},
+		{"corrupt state", []string{"handlers.go"}, "invalid json\n", "corrupt"},
+		{"ambiguous state", []string{"handlers.go"}, "{\"pending\":true}\n{\"pending\":false}\n", "ambiguous"},
+		{"invalid snapshot", []string{"handlers.go"}, "{\"code\":\"not base64!\"}\n", "decode content snapshot payload"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			configPath, ccodePath := setupAcceleratorCLIProject(t)
+			if test.state != "" {
+				statePath := filepath.Join(ccodePath, ".ccode", "accelerators", "handlers.go.accelerated.json")
+				require.NoError(t, os.WriteFile(statePath, []byte(test.state), 0644))
+			}
+
+			cmd := newRootCmd(nil, nil)
+			var stdout, stderr bytes.Buffer
+			cmd.SetOut(&stdout)
+			cmd.SetErr(&stderr)
+			cmd.SetArgs(append([]string{"--config", configPath, "acc", "content"}, test.args...))
+			cmd.SilenceUsage = true
+
+			require.ErrorContains(t, cmd.Execute(), test.wantError)
+			assert.Empty(t, stdout.String())
+		})
+	}
+}
+
 func TestNewRootCmd_AccGuide(t *testing.T) {
 	configPath, _ := setupAcceleratorCLIProject(t)
 

@@ -324,6 +324,37 @@ Syntax:
 	accShowCmd.Flags().Bool("guide", false, "Include guide markdown with decoded accelerated content")
 	accShowCmd.Flags().Bool("for-agent", false, "Output machine-readable JSON")
 
+	accContentCmd := &cobra.Command{
+		Use:   "content <artifactId>",
+		Short: "Show the original accelerated content",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := loadConfig(cmd)
+			if err != nil {
+				return err
+			}
+
+			state, err := ccode.NewContext(cfg).GetAcceleratorState(args[0])
+			if err != nil {
+				return err
+			}
+			if state.State == "corrupt" || state.State == "ambiguous" {
+				return fmt.Errorf("accelerator artifact %q: %s", state.ArtifactID, state.Message)
+			}
+
+			content := ""
+			if state.Content != "" {
+				content, err = ccode.DecodeAcceleratorContentSnapshot(state.Content)
+				if err != nil {
+					return err
+				}
+			}
+
+			_, err = cmd.OutOrStdout().Write([]byte(content))
+			return err
+		},
+	}
+
 	accGuideCmd := &cobra.Command{
 		Use:   "guide <artifactId>",
 		Short: "Show an accelerated artifact's guide markdown",
@@ -372,6 +403,7 @@ Syntax:
 	procCmd.AddCommand(procAddCmd)
 	accCmd.AddCommand(accListCmd)
 	accCmd.AddCommand(accShowCmd)
+	accCmd.AddCommand(accContentCmd)
 	accCmd.AddCommand(accResolveCmd)
 	accCmd.AddCommand(accGuideCmd)
 

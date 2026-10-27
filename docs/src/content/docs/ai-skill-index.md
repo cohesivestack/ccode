@@ -85,6 +85,7 @@ ccode acc list
 ccode acc list --include-resolved
 ccode acc show <artifactId>
 ccode acc show <artifactId> --guide
+ccode acc content <artifactId>
 ccode acc guide <artifactId>
 ```
 
