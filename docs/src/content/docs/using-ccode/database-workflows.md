@@ -43,7 +43,7 @@ export default function main(ctx: Context) {
     })),
   }));
 
-  ctx.generate("templates/schema-summary.tpl", "generated/schema.json", {
+  ctx.generate("templates/schema-summary.tpl", "generated/schema.gen.json", {
     database: database.name,
     tables,
   });

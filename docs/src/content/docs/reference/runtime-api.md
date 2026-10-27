@@ -27,6 +27,7 @@ interface Context {
     data: any,
     guidePath?: string,
   ): void;
+  prune(pathPatterns: string[]): void;
   parseJSONFromBytes(jsonBytes: number[]): Record<string, any>;
   parseJSONFromString(jsonString: string): Record<string, any>;
   parseJSONFromFile(filePath: string): Record<string, any>;
@@ -435,7 +436,7 @@ serialization is involved.
 
 ```ts
 const api = ctx.loadOpenAPIFromFile("specs/api.yaml", { expectedVersion: "3.1" });
-ctx.generate("templates/api.tpl", "generated/api.md", api);
+ctx.generate("templates/api.tpl", "generated/api.gen.md", api);
 ```
 
 ```jinja
@@ -475,7 +476,7 @@ models when a template only needs a small portion of their data.
 Renders a template and writes it to an output file.
 
 ```ts
-ctx.generate("templates/readme.tpl", "README.generated.md", model);
+ctx.generate("templates/readme.tpl", "README.gen.md", model);
 ```
 
 ## accelerate
@@ -483,8 +484,23 @@ ctx.generate("templates/readme.tpl", "README.generated.md", model);
 Renders a template, tracks generated state, and writes safely to `output_path/<id>`.
 
 ```ts
-ctx.accelerate("src/handlers.ts", "templates/handlers.tpl", model, "guides/handlers.md");
+ctx.accelerate("src/handlers.acc.ts", "templates/handlers.tpl", model, "guides/handlers.md");
 ```
+
+## prune
+
+Removes files matching any regex under `output_path`, preserving outputs emitted
+so far by `generate` and `accelerate` in the current run and its child processes.
+Matching stale files are removed even when manually edited, along with their
+corresponding accelerator state.
+
+```ts
+ctx.prune(["\\.gen\\.go$", "\\.acc\\.go$"]);
+```
+
+Patterns match `/`-separated relative paths using Go regular expression syntax.
+Call this after generation and child processes. See [Pruning](/using-ccode/prune/)
+for examples and details.
 
 ## parseJSONFrom*
 

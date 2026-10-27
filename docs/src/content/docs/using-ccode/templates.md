@@ -10,7 +10,7 @@ Cohesive Code uses Gonja templates for text rendering. A template receives a sin
 Process:
 
 ```ts
-ctx.generate("templates/greeting.tpl", "generated/greeting.txt", {
+ctx.generate("templates/greeting.tpl", "generated/greeting.gen.txt", {
   name: "Cohesive Code",
 });
 ```
@@ -35,7 +35,7 @@ navigation methods:
 
 ```ts
 const api = ctx.loadOpenAPIFromFile("specs/api.yaml", { expectedVersion: "3.1" });
-ctx.generate("templates/operations.tpl", "generated/operations.md", api);
+ctx.generate("templates/operations.tpl", "generated/operations.gen.md", api);
 ```
 
 ```jinja
@@ -190,8 +190,8 @@ Template paths resolve relative to `ccode_path`.
 
 ```ts
 ctx.renderTemplate("templates/readme.tpl", model);
-ctx.generate("templates/readme.tpl", "README.generated.md", model);
-ctx.accelerate("src/handlers.ts", "templates/handlers.tpl", model);
+ctx.generate("templates/readme.tpl", "README.gen.md", model);
+ctx.accelerate("src/handlers.acc.ts", "templates/handlers.tpl", model);
 ```
 
 ## Data rules

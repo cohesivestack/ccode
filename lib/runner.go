@@ -40,6 +40,10 @@ func (ctx *Context) Run(process string) error {
 	if _, running := ctx.activeProcesses[processKey]; running {
 		return fmt.Errorf("circular process execution detected: %s is already running", entryPointPath)
 	}
+	if len(ctx.activeProcesses) == 0 {
+		ctx.runArtifacts = map[string]struct{}{}
+		defer func() { ctx.runArtifacts = nil }()
+	}
 	ctx.activeProcesses[processKey] = struct{}{}
 	defer delete(ctx.activeProcesses, processKey)
 
@@ -188,6 +192,9 @@ func (ctx *RunnerContext) toValue(runtime *goja.Runtime) (goja.Value, error) {
 		return nil, fmt.Errorf("set runner context functions: %w", err)
 	}
 	if err := object.Set("accelerate", ctx.Accelerate); err != nil {
+		return nil, fmt.Errorf("set runner context functions: %w", err)
+	}
+	if err := object.Set("prune", ctx.Prune); err != nil {
 		return nil, fmt.Errorf("set runner context functions: %w", err)
 	}
 	if err := object.Set("parseJSONFromBytes", ctx.ParseJSONFromBytes); err != nil {

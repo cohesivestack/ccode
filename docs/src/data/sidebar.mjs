@@ -15,6 +15,7 @@ export const docsSidebar = [
       { label: 'Templates', link: '/using-ccode/templates/' },
       { label: 'Generation', link: '/using-ccode/generation/' },
       { label: 'Accelerators', link: '/using-ccode/accelerators/' },
+      { label: 'Pruning', link: '/using-ccode/prune/' },
       { label: 'OpenAPI Workflows', link: '/using-ccode/openapi-workflows/' },
       { label: 'Database Workflows', link: '/using-ccode/database-workflows/' },
       { label: 'Wrapper & Versions', link: '/using-ccode/wrapper-and-versions/' },

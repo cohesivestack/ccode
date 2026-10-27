@@ -115,4 +115,5 @@ The CLI appends `.proc.ts` when the process argument does not include it. You ma
 - Database connection URLs are passed directly to `inspectDatabase`; they do not resolve through `ccode_path`.
 - Relative `generate` output paths resolve under `output_path`.
 - `accelerate` targets `output_path/<artifact-id>`.
+- `prune` matches regular expressions against paths relative to `output_path`.
 - Relative `hidden_path` resolves under `ccode_path`.

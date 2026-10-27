@@ -29,7 +29,7 @@ Inspection responses include:
 
 ```json
 {
-  "artifact_id": "handlers.go",
+  "artifact_id": "handlers.acc.go",
   "guide_path": "guides/handlers.md",
   "state": "pending"
 }

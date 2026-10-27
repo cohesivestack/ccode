@@ -26,7 +26,7 @@ export default function main(ctx: Context) {
 
   const preview = ctx.renderTemplate("templates/greeting.tpl", model);
   ctx.println(preview);
-  ctx.generate("templates/greeting.tpl", "generated/greeting.txt", model);
+  ctx.generate("templates/greeting.tpl", "generated/greeting.gen.txt", model);
 }
 ```
 
@@ -45,6 +45,6 @@ ccode run hello/generate
 Expected result:
 
 - stdout prints `Hello Cohesive Code!`
-- `output_path/generated/greeting.txt` is created
+- `output_path/generated/greeting.gen.txt` is created
 
 This pattern is useful because the process handles orchestration, the template handles formatting, and the output path is explicit.

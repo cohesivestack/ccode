@@ -44,7 +44,7 @@ An optional guide file can be attached to an artifact:
 
 ```ts
 ctx.accelerate(
-  "handlers.go",
+  "handlers.acc.go",
   "templates/handlers.tpl",
   model,
   "guides/handlers.md",
@@ -57,8 +57,8 @@ Guide paths are normalized under `ccode_path`.
 
 ```bash
 ccode acc list
-ccode acc show handlers.go
-ccode acc show handlers.go --guide
+ccode acc show handlers.acc.go
+ccode acc show handlers.acc.go --guide
 ```
 
 Use `--for-agent` for JSON output.
@@ -66,7 +66,13 @@ Use `--for-agent` for JSON output.
 If the generated proposal is already acceptable and needs no edits, mark it resolved explicitly:
 
 ```bash
-ccode acc resolve handlers.go
+ccode acc resolve handlers.acc.go
 ```
 
 This updates only accelerator state. A later change to the generated content or guide makes the artifact pending again.
+
+## Removing obsolete artifacts
+
+Use [Pruning](/using-ccode/prune/) after acceleration to remove obsolete `.acc.*`
+outputs and their state. Artifacts emitted during the current run stay protected,
+including edited files that `accelerate` leaves in place.

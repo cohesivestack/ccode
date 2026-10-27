@@ -71,7 +71,7 @@ export default function main(ctx: Context) {
 
   const preview = ctx.renderTemplate("templates/greeting.tpl", model);
   ctx.println(preview);
-  ctx.generate("templates/greeting.tpl", "generated/greeting.txt", model);
+  ctx.generate("templates/greeting.tpl", "generated/greeting.gen.txt", model);
 }
 ```
 
@@ -99,7 +99,7 @@ Invoke the process without the `.proc.ts` suffix:
 ccode run hello/generate
 ```
 
-The runtime compiles the TypeScript process, executes it inside the Go runner, prints the rendered preview, and writes `generated/greeting.txt` under `output_path`.
+The runtime compiles the TypeScript process, executes it inside the Go runner, prints the rendered preview, and writes `generated/greeting.gen.txt` under `output_path`.
 
 ## Next steps
 

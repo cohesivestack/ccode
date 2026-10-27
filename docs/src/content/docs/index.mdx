@@ -62,9 +62,9 @@ import { docsSidebar } from '../../data/sidebar.mjs';
   export default function main(ctx: Context) {
     const spec = ctx.parseOpenAPIFromFile("specs/api.yaml");
 
-    ctx.generate("templates/summary.tpl", "generated/summary.md", { spec });
+    ctx.generate("templates/summary.tpl", "generated/summary.gen.md", { spec });
     ctx.accelerate(
-      "handlers.ts",
+      "handlers.acc.ts",
       "templates/handlers.tpl",
       { spec },
       "guides/handlers.md",

@@ -58,7 +58,7 @@ export default function main(ctx: Context) {
     slug: page.slug,
   }));
 
-  ctx.generate("templates/pages.tpl", "generated/pages.md", { pages });
+  ctx.generate("templates/pages.tpl", "generated/pages.gen.md", { pages });
 }
 ```
 
@@ -77,6 +77,11 @@ The child process gets its own JavaScript runtime and runner context. If it
 fails, the error stops the calling process unless it is caught.
 Circular executions, such as `a` running `b` and `b` running `a`, return an
 error.
+
+Artifact tracking is shared across the entire top-level run. A parent's
+`ctx.prune(...)` protects outputs emitted by its children, and a child's pruning
+protects outputs already emitted by its parent. Call [Pruning](/using-ccode/prune/)
+after the relevant processes have finished.
 
 ## Error handling
 

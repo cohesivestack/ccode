@@ -16,10 +16,10 @@ import type { Context } from "@ccode/context";
 export default function main(ctx: Context) {
   const spec = ctx.parseOpenAPIFromFile("specs/api.yaml");
 
-  ctx.generate("templates/summary.tpl", "generated/summary.md", { spec });
+  ctx.generate("templates/summary.tpl", "generated/summary.gen.md", { spec });
 
   ctx.accelerate(
-    "handlers.ts",
+    "handlers.acc.ts",
     "templates/handlers.tpl",
     { spec },
     "guides/handlers.md",
@@ -32,7 +32,7 @@ Run the process and inspect accelerator work:
 ```bash
 ccode run api/generate
 ccode acc list --for-agent
-ccode acc show handlers.ts --guide --for-agent
+ccode acc show handlers.acc.ts --guide --for-agent
 ```
 
 ## Website and documentation

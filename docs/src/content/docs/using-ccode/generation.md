@@ -25,7 +25,7 @@ The runtime:
 import type { Context } from "@ccode/context";
 
 export default function main(ctx: Context) {
-  ctx.generate("templates/status.tpl", "generated/status.md", {
+  ctx.generate("templates/status.tpl", "generated/status.gen.md", {
     status: "alpha",
   });
 }
@@ -42,7 +42,7 @@ Template:
 Result:
 
 ```text
-generated/status.md
+generated/status.gen.md
 ```
 
 ## When generate is the right choice
@@ -56,3 +56,6 @@ Use `generate` for:
 - code that should never be hand-edited
 
 Do not use `generate` for files that are expected to receive manual changes. Use [Accelerators](/using-ccode/accelerators/) instead.
+
+Use [Pruning](/using-ccode/prune/) after generation to remove obsolete `.gen.*`
+outputs while preserving files generated during the current run.

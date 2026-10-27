@@ -34,7 +34,7 @@ export default function main(ctx: Context) {
     throw new Error("database has no schema");
   }
 
-  ctx.generate("templates/schema-report.tpl", "generated/schema.md", {
+  ctx.generate("templates/schema-report.tpl", "generated/schema.gen.md", {
     database,
   });
 }

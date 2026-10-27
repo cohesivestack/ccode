@@ -41,5 +41,5 @@ func (ctx *RunnerContext) Generate(templatePath string, filePath string, data go
 		return fmt.Errorf("write rendered template to %q: %w", outputFilePath, err)
 	}
 
-	return nil
+	return ctx.ccodeContext.trackRunArtifact(outputFilePath)
 }

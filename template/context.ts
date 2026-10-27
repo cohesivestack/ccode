@@ -13,6 +13,8 @@ export interface Context {
     data: any,
     guidePath?: string,
   ) => void;
+  /** Removes matching files under output_path, preserving artifacts emitted so far in this run. */
+  prune: (pathPatterns: string[]) => void;
   parseJSONFromBytes: (jsonBytes: number[]) => Record<string, any>;
   parseJSONFromString: (jsonString: string) => Record<string, any>;
   parseJSONFromFile: (filePath: string) => Record<string, any>;

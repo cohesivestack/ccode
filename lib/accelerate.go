@@ -121,7 +121,7 @@ func (ctx *RunnerContext) Accelerate(id string, templatePath string, data goja.V
 		return err
 	}
 	if !shouldWrite {
-		return nil
+		return ctx.trackAcceleratedArtifact(outputFilePath, stateFilePath)
 	}
 
 	if err := os.MkdirAll(filepath.Dir(outputFilePath), 0755); err != nil {
@@ -131,7 +131,14 @@ func (ctx *RunnerContext) Accelerate(id string, templatePath string, data goja.V
 		return fmt.Errorf("write accelerated artifact to %q: %w", outputFilePath, err)
 	}
 
-	return nil
+	return ctx.trackAcceleratedArtifact(outputFilePath, stateFilePath)
+}
+
+func (ctx *RunnerContext) trackAcceleratedArtifact(outputFilePath, stateFilePath string) error {
+	if err := ctx.ccodeContext.trackRunArtifact(outputFilePath); err != nil {
+		return err
+	}
+	return ctx.ccodeContext.trackRunArtifact(stateFilePath)
 }
 
 func (ctx *RunnerContext) shouldWriteAcceleratedArtifact(outputFilePath string, artifactID string, rendered string, artifact *acceleratorStateArtifact) (bool, error) {

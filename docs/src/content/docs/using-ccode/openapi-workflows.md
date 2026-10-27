@@ -52,7 +52,7 @@ export default function main(ctx: Context) {
     }
   }
 
-  ctx.generate("templates/docs/operations.tpl", "generated/operations.md", {
+  ctx.generate("templates/docs/operations.tpl", "generated/operations.gen.md", {
     title: api.info.title,
     operations,
   });

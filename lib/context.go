@@ -12,6 +12,7 @@ type Context struct {
 	logger          *log.Logger
 	stdout          io.Writer
 	activeProcesses map[string]struct{}
+	runArtifacts    map[string]struct{}
 }
 
 func NewContext(config *Config) *Context {
