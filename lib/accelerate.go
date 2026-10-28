@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aymanbagabas/go-udiff"
 	"github.com/dop251/goja"
 )
 
@@ -776,6 +777,33 @@ func (ctx *Context) GetAcceleratorState(artifactID string) (*AcceleratorArtifact
 	}
 
 	return nil, fmt.Errorf("accelerator artifact %q not found", normalizedArtifactID)
+}
+
+// GetAcceleratorDiff compares the saved generated snapshot with the current output artifact.
+func (ctx *Context) GetAcceleratorDiff(artifactID string) (string, error) {
+	state, err := ctx.GetAcceleratorState(artifactID)
+	if err != nil {
+		return "", err
+	}
+	if state.State == acceleratorReportStateCorrupt || state.State == acceleratorReportStateAmbiguous {
+		return "", fmt.Errorf("accelerator artifact %q: %s", state.ArtifactID, state.Message)
+	}
+
+	original := ""
+	if state.Content != "" {
+		original, err = decodeAcceleratorContentSnapshot(state.Content)
+		if err != nil {
+			return "", fmt.Errorf("decode accelerator artifact %q: %w", state.ArtifactID, err)
+		}
+	}
+
+	outputPath := filepath.Join(ctx.config.OutputPath, filepath.FromSlash(state.ArtifactID))
+	current, err := os.ReadFile(outputPath)
+	if err != nil {
+		return "", fmt.Errorf("read accelerator artifact %q: %w", state.ArtifactID, err)
+	}
+
+	return udiff.Unified("a/"+state.ArtifactID, "b/"+state.ArtifactID, original, string(current)), nil
 }
 
 func (ctx *Context) ListAcceleratorGuides() ([]AcceleratorGuideReference, error) {

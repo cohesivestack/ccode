@@ -71,6 +71,14 @@ ccode acc content handlers.acc.go
 
 This returns the saved snapshot from the latest generation, including when the output file has been edited.
 
+To compare that snapshot with the current output file:
+
+```bash
+ccode acc diff handlers.acc.go
+```
+
+The unified diff shows the saved snapshot as `a/handlers.acc.go` and the current output as `b/handlers.acc.go`. It prints nothing when they match.
+
 If the generated proposal is already acceptable and needs no edits, mark it resolved explicitly:
 
 ```bash

@@ -401,6 +401,58 @@ func TestNewRootCmd_AccContentErrors(t *testing.T) {
 	}
 }
 
+func TestNewRootCmd_AccDiff(t *testing.T) {
+	configPath, ccodePath := setupAcceleratorCLIProject(t)
+	statePath := filepath.Join(ccodePath, ".ccode", "accelerators", "handlers.go.accelerated.json")
+	writeAcceleratorStateFileForCLITest(t, statePath, true, "", "package original\n", "")
+	outputPath := filepath.Join(filepath.Dir(configPath), "out", "handlers.go")
+	require.NoError(t, os.WriteFile(outputPath, []byte("package edited\n"), 0644))
+
+	cmd := newRootCmd(nil, nil)
+	var stdout bytes.Buffer
+	cmd.SetOut(&stdout)
+	cmd.SetArgs([]string{"--config", configPath, "acc", "diff", "handlers.go"})
+
+	require.NoError(t, cmd.Execute())
+	assert.Equal(t, "--- a/handlers.go\n+++ b/handlers.go\n@@ -1 +1 @@\n-package original\n+package edited\n", stdout.String())
+}
+
+func TestNewRootCmd_AccDiffUnchanged(t *testing.T) {
+	configPath, _ := setupAcceleratorCLIProject(t)
+	cmd := newRootCmd(nil, nil)
+	var stdout bytes.Buffer
+	cmd.SetOut(&stdout)
+	cmd.SetArgs([]string{"--config", configPath, "acc", "diff", "service.go"})
+
+	require.NoError(t, cmd.Execute())
+	assert.Empty(t, stdout.String())
+}
+
+func TestNewRootCmd_AccDiffErrors(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		args      []string
+		wantError string
+	}{
+		{"unknown artifact", []string{"missing.go"}, `accelerator artifact "missing.go" not found`},
+		{"missing argument", nil, "accepts 1 arg(s), received 0"},
+		{"extra argument", []string{"handlers.go", "service.go"}, "accepts 1 arg(s), received 2"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			configPath, _ := setupAcceleratorCLIProject(t)
+			cmd := newRootCmd(nil, nil)
+			var stdout, stderr bytes.Buffer
+			cmd.SetOut(&stdout)
+			cmd.SetErr(&stderr)
+			cmd.SilenceUsage = true
+			cmd.SetArgs(append([]string{"--config", configPath, "acc", "diff"}, test.args...))
+
+			require.ErrorContains(t, cmd.Execute(), test.wantError)
+			assert.Empty(t, stdout.String())
+		})
+	}
+}
+
 func TestNewRootCmd_AccGuide(t *testing.T) {
 	configPath, _ := setupAcceleratorCLIProject(t)
 

@@ -92,6 +92,16 @@ ccode acc content <artifactId>
 
 Prints the decoded generated snapshot saved in accelerator state, preserving its whitespace without adding a newline. This is the original accelerated content from the latest generation, even if the output file has since been edited or removed. An attached guide is not required.
 
+## Diff an accelerated artifact
+
+```bash
+ccode acc diff <artifactId>
+```
+
+Prints a unified diff from the saved generated snapshot (`a/<artifactId>`) to the current file under `output_path` (`b/<artifactId>`). Lines prefixed with `-` come from the snapshot; lines prefixed with `+` come from the current output. Identical content produces no output. The command succeeds whether or not differences exist.
+
+Works for pending and resolved artifacts without requiring a guide. Returns an error if the artifact is unknown, its saved state is corrupt or ambiguous, its snapshot cannot be decoded, or its output file cannot be read.
+
 ## Show an artifact’s guide
 
 ```bash

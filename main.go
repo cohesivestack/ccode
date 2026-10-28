@@ -355,6 +355,26 @@ Syntax:
 		},
 	}
 
+	accDiffCmd := &cobra.Command{
+		Use:   "diff <artifactId>",
+		Short: "Show differences between accelerated content and the current output",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := loadConfig(cmd)
+			if err != nil {
+				return err
+			}
+
+			diff, err := ccode.NewContext(cfg).GetAcceleratorDiff(args[0])
+			if err != nil {
+				return err
+			}
+
+			_, err = cmd.OutOrStdout().Write([]byte(diff))
+			return err
+		},
+	}
+
 	accGuideCmd := &cobra.Command{
 		Use:   "guide <artifactId>",
 		Short: "Show an accelerated artifact's guide markdown",
@@ -404,6 +424,7 @@ Syntax:
 	accCmd.AddCommand(accListCmd)
 	accCmd.AddCommand(accShowCmd)
 	accCmd.AddCommand(accContentCmd)
+	accCmd.AddCommand(accDiffCmd)
 	accCmd.AddCommand(accResolveCmd)
 	accCmd.AddCommand(accGuideCmd)
 

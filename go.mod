@@ -4,6 +4,7 @@ go 1.26.0
 
 require (
 	ariga.io/atlas v0.36.1
+	github.com/aymanbagabas/go-udiff v0.4.1
 	github.com/cohesivestack/valgo v0.7.0
 	github.com/dop251/goja v0.0.0-20260305124333-6a7976c22267
 	github.com/evanw/esbuild v0.27.3

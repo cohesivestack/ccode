@@ -123,7 +123,7 @@ After changing generation inputs, run the exact process when safe, inspect every
    ccode acc show <artifactId> --guide --for-agent
    ```
 
-6. Treat `composed_markdown` as the primary bundle when present. Apply it to `output_path/<artifactId>` while preserving compatible human edits and repository conventions.
+6. Treat `composed_markdown` as the primary bundle when present. Use `ccode acc content <artifactId>` to inspect only the saved generated snapshot, or `ccode acc diff <artifactId>` to compare it with the current output (snapshot removals are `-`, current additions are `+`). Apply the bundle to `output_path/<artifactId>` while preserving compatible human edits and repository conventions.
 7. If the generated proposal requires no edits, accept it explicitly:
 
    ```bash
