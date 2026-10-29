@@ -109,4 +109,4 @@ ccode acc guide <artifactId>
 ccode acc guide <artifactId> --for-agent
 ```
 
-Looks up the accelerated artifact by ID and reads its attached guide as raw Markdown. With `--for-agent`, returns JSON containing the guide’s `path` and `markdown`. Returns an error if the artifact does not exist, has no attached guide, or its guide file is missing.
+Looks up the accelerated artifact by ID and reads its attached guide as raw Markdown. With `--for-agent`, returns JSON containing the guide’s `path` and `markdown`. Returns an error if the artifact does not exist, its state is corrupt or ambiguous, it has no attached guide, or its guide file is missing.

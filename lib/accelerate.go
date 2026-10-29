@@ -49,6 +49,17 @@ type AcceleratorArtifactState struct {
 	Message    string  `json:"message,omitempty"`
 }
 
+type AcceleratorBundle struct {
+	AcceleratorArtifactMetadata
+	GuideMarkdown      string `json:"guide_markdown"`
+	AcceleratedContent string `json:"accelerated_content"`
+}
+
+type AcceleratorGuideContent struct {
+	Path     string `json:"path"`
+	Markdown string `json:"markdown"`
+}
+
 type AcceleratorGuideReference struct {
 	ArtifactID string  `json:"artifact_id"`
 	GuidePath  *string `json:"guide_path"`
@@ -779,22 +790,103 @@ func (ctx *Context) GetAcceleratorState(artifactID string) (*AcceleratorArtifact
 	return nil, fmt.Errorf("accelerator artifact %q not found", normalizedArtifactID)
 }
 
-// GetAcceleratorDiff compares the saved generated snapshot with the current output artifact.
-func (ctx *Context) GetAcceleratorDiff(artifactID string) (string, error) {
+func acceleratorMetadataFromState(state *AcceleratorArtifactState) AcceleratorArtifactMetadata {
+	return AcceleratorArtifactMetadata{
+		ArtifactID: state.ArtifactID,
+		GuidePath:  state.GuidePath,
+		Pending:    state.Pending,
+		State:      state.State,
+		Message:    state.Message,
+	}
+}
+
+func (ctx *Context) GetAcceleratorMetadata(artifactID string) (*AcceleratorArtifactMetadata, error) {
 	state, err := ctx.GetAcceleratorState(artifactID)
+	if err != nil {
+		return nil, err
+	}
+	metadata := acceleratorMetadataFromState(state)
+	return &metadata, nil
+}
+
+func (ctx *Context) getReadableAcceleratorState(artifactID string) (*AcceleratorArtifactState, error) {
+	state, err := ctx.GetAcceleratorState(artifactID)
+	if err != nil {
+		return nil, err
+	}
+	if state.State == acceleratorReportStateCorrupt || state.State == acceleratorReportStateAmbiguous {
+		return nil, fmt.Errorf("accelerator artifact %q: %s", state.ArtifactID, state.Message)
+	}
+	return state, nil
+}
+
+func acceleratorContentFromState(state *AcceleratorArtifactState) (string, error) {
+	if state.Content == "" {
+		return "", nil
+	}
+	content, err := decodeAcceleratorContentSnapshot(state.Content)
+	if err != nil {
+		return "", fmt.Errorf("decode accelerator artifact %q: %w", state.ArtifactID, err)
+	}
+	return content, nil
+}
+
+func (ctx *Context) GetAcceleratorContent(artifactID string) (string, error) {
+	state, err := ctx.getReadableAcceleratorState(artifactID)
 	if err != nil {
 		return "", err
 	}
-	if state.State == acceleratorReportStateCorrupt || state.State == acceleratorReportStateAmbiguous {
-		return "", fmt.Errorf("accelerator artifact %q: %s", state.ArtifactID, state.Message)
-	}
+	return acceleratorContentFromState(state)
+}
 
-	original := ""
-	if state.Content != "" {
-		original, err = decodeAcceleratorContentSnapshot(state.Content)
-		if err != nil {
-			return "", fmt.Errorf("decode accelerator artifact %q: %w", state.ArtifactID, err)
+func (ctx *Context) GetAcceleratorArtifactGuide(artifactID string) (*AcceleratorGuideContent, error) {
+	state, err := ctx.getReadableAcceleratorState(artifactID)
+	if err != nil {
+		return nil, err
+	}
+	if state.GuidePath == nil || isStringBlank(*state.GuidePath) {
+		return nil, fmt.Errorf("accelerator artifact %q has no attached guide", state.ArtifactID)
+	}
+	markdown, err := ctx.GetAcceleratorGuide(*state.GuidePath)
+	if err != nil {
+		return nil, err
+	}
+	return &AcceleratorGuideContent{Path: *state.GuidePath, Markdown: markdown}, nil
+}
+
+// GetAcceleratorBundle includes available content and guides alongside state diagnostics.
+func (ctx *Context) GetAcceleratorBundle(artifactID string) (*AcceleratorBundle, error) {
+	state, err := ctx.GetAcceleratorState(artifactID)
+	if err != nil {
+		return nil, err
+	}
+	content, err := acceleratorContentFromState(state)
+	if err != nil {
+		return nil, err
+	}
+	guideMarkdown := ""
+	if state.GuidePath != nil && !isStringBlank(*state.GuidePath) {
+		guideMarkdown, err = ctx.GetAcceleratorGuide(*state.GuidePath)
+		if err != nil && state.Message == "" {
+			return nil, err
 		}
+	}
+	return &AcceleratorBundle{
+		AcceleratorArtifactMetadata: acceleratorMetadataFromState(state),
+		GuideMarkdown:               guideMarkdown,
+		AcceleratedContent:          content,
+	}, nil
+}
+
+// GetAcceleratorDiff compares the saved generated snapshot with the current output artifact.
+func (ctx *Context) GetAcceleratorDiff(artifactID string) (string, error) {
+	state, err := ctx.getReadableAcceleratorState(artifactID)
+	if err != nil {
+		return "", err
+	}
+	original, err := acceleratorContentFromState(state)
+	if err != nil {
+		return "", err
 	}
 
 	outputPath := filepath.Join(ctx.config.OutputPath, filepath.FromSlash(state.ArtifactID))

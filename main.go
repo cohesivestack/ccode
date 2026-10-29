@@ -23,11 +23,6 @@ type acceleratorGuideAgentResult struct {
 	ComposedMarkdown   string  `json:"composed_markdown"`
 }
 
-type guideContentAgentResult struct {
-	Path     string `json:"path"`
-	Markdown string `json:"markdown"`
-}
-
 func main() {
 	if err := newRootCmd(ccode.Run, ccode.Init).Execute(); err != nil {
 		panic(err)
@@ -264,11 +259,6 @@ Syntax:
 			}
 
 			context := ccode.NewContext(cfg)
-			state, err := context.GetAcceleratorState(args[0])
-			if err != nil {
-				return err
-			}
-
 			emitGuide, err := cmd.Flags().GetBool("guide")
 			if err != nil {
 				return err
@@ -279,40 +269,27 @@ Syntax:
 			}
 
 			if !emitGuide {
-				return writeJSON(cmd, ccode.AcceleratorArtifactMetadata{
-					ArtifactID: state.ArtifactID,
-					GuidePath:  state.GuidePath,
-					Pending:    state.Pending,
-					State:      state.State,
-					Message:    state.Message,
-				})
-			}
-
-			acceleratedContent := ""
-			if !isStringBlank(state.Content) {
-				acceleratedContent, err = ccode.DecodeAcceleratorContentSnapshot(state.Content)
+				metadata, err := context.GetAcceleratorMetadata(args[0])
 				if err != nil {
 					return err
 				}
+				return writeJSON(cmd, metadata)
 			}
 
-			guideMarkdown := ""
-			if state.GuidePath != nil && !isStringBlank(*state.GuidePath) {
-				guideMarkdown, err = context.GetAcceleratorGuide(*state.GuidePath)
-				if err != nil && state.Message == "" {
-					return err
-				}
+			bundle, err := context.GetAcceleratorBundle(args[0])
+			if err != nil {
+				return err
 			}
 
-			composedMarkdown := composeAcceleratedGuideMarkdown(guideMarkdown, acceleratedContent, state.ArtifactID, state.Message)
+			composedMarkdown := composeAcceleratedGuideMarkdown(bundle.GuideMarkdown, bundle.AcceleratedContent, bundle.ArtifactID, bundle.Message)
 			if forAgent {
 				return writeJSON(cmd, acceleratorGuideAgentResult{
-					ArtifactID:         state.ArtifactID,
-					GuidePath:          state.GuidePath,
-					State:              state.State,
-					Message:            state.Message,
-					GuideMarkdown:      guideMarkdown,
-					AcceleratedContent: acceleratedContent,
+					ArtifactID:         bundle.ArtifactID,
+					GuidePath:          bundle.GuidePath,
+					State:              bundle.State,
+					Message:            bundle.Message,
+					GuideMarkdown:      bundle.GuideMarkdown,
+					AcceleratedContent: bundle.AcceleratedContent,
 					ComposedMarkdown:   composedMarkdown,
 				})
 			}
@@ -334,20 +311,9 @@ Syntax:
 				return err
 			}
 
-			state, err := ccode.NewContext(cfg).GetAcceleratorState(args[0])
+			content, err := ccode.NewContext(cfg).GetAcceleratorContent(args[0])
 			if err != nil {
 				return err
-			}
-			if state.State == "corrupt" || state.State == "ambiguous" {
-				return fmt.Errorf("accelerator artifact %q: %s", state.ArtifactID, state.Message)
-			}
-
-			content := ""
-			if state.Content != "" {
-				content, err = ccode.DecodeAcceleratorContentSnapshot(state.Content)
-				if err != nil {
-					return err
-				}
 			}
 
 			_, err = cmd.OutOrStdout().Write([]byte(content))
@@ -385,15 +351,7 @@ Syntax:
 				return err
 			}
 
-			context := ccode.NewContext(cfg)
-			state, err := context.GetAcceleratorState(args[0])
-			if err != nil {
-				return err
-			}
-			if state.GuidePath == nil || isStringBlank(*state.GuidePath) {
-				return fmt.Errorf("accelerator artifact %q has no attached guide", state.ArtifactID)
-			}
-			markdown, err := context.GetAcceleratorGuide(*state.GuidePath)
+			guide, err := ccode.NewContext(cfg).GetAcceleratorArtifactGuide(args[0])
 			if err != nil {
 				return err
 			}
@@ -403,13 +361,10 @@ Syntax:
 				return err
 			}
 			if forAgent {
-				return writeJSON(cmd, guideContentAgentResult{
-					Path:     *state.GuidePath,
-					Markdown: markdown,
-				})
+				return writeJSON(cmd, guide)
 			}
 
-			_, err = cmd.OutOrStdout().Write([]byte(markdown))
+			_, err = cmd.OutOrStdout().Write([]byte(guide.Markdown))
 			return err
 		},
 	}
