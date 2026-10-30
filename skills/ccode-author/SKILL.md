@@ -1,6 +1,6 @@
 ---
 name: ccode-author
-description: Initialize Cohesive Code (ccode) projects and author or modify their configuration, TypeScript processes, Gonja templates, input models, and accelerator guides. Use for creating or maintaining generation inputs; use ccode-produce for running existing processes and applying accelerated artifacts.
+description: Initialize Cohesive Code (ccode) projects and author or modify their configuration, TypeScript processes, Gonja templates, input models, and accelerator guides. Use for creating or maintaining generation inputs; use ccode-produce to run existing processes and ccode-resolve for existing pending accelerated artifacts.
 ---
 
 # Author Cohesive Code
@@ -111,11 +111,13 @@ Inspect the completed source and relevant `tsconfig.json` settings, then rerun
 The helper's inventory does not type-check TypeScript or render templates.
 
 When execution is needed to verify the requested authoring work, use
-`ccode-produce` with the **exact changed process**. That skill owns generation,
-guide-driven output changes, validation, and artifact resolution. If it is not
-installed, use `ccode run <process>` with the same path options/environment,
-inspect the resulting outputs and `ccode acc list --json`, and report pending artifacts
-for production follow-up. Do not resolve them as part of authoring alone.
+`ccode-produce` with the **exact changed process**. It runs generation and then
+hands off guide-driven output changes, validation, and artifact resolution to
+`ccode-resolve`. If the producer is unavailable, run `ccode run <process>` with
+the same path options/environment and inspect the resulting outputs. After a
+successful run, use `ccode-resolve` with those same settings if installed; otherwise
+report pending artifacts from `ccode acc list --json` for resolution follow-up.
+Do not resolve artifacts as part of authoring alone.
 
 When inspecting individual accelerator metadata, explicitly use
 `ccode acc show <artifactId> --json` so the response is JSON rather than the

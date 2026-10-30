@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Collect ccode production work; guide-driven edits and resolution belong to the agent."""
+"""Run a ccode process and hand off pending artifact resolution to ccode-resolve."""
 
 import argparse
 import json
@@ -67,77 +67,35 @@ class Producer:
                 "project separately. Missing: " + ", ".join(missing)
             )
 
-    def collect(self):
-        metadata = self.json_command("acc", "list", "--json")
-        if not isinstance(metadata, list) or any(
-            not isinstance(item, dict)
-            or not isinstance(item.get("artifact_id"), str)
-            or not item["artifact_id"].strip()
-            or not isinstance(item.get("state"), str)
-            or (item.get("guide_path") is not None
-                and not isinstance(item["guide_path"], str))
-            for item in metadata
-        ):
-            raise WorkflowError("Expected artifact metadata array from ccode acc list")
-        artifacts = []
-        for item in sorted(metadata, key=lambda entry: entry["artifact_id"]):
-            artifact = dict(item)
-            artifact_id = item["artifact_id"]
-            state = item["state"]
-            if state == "resolved":
-                continue
-            if state == "missing_guide" or (
-                state == "pending" and not (item.get("guide_path") or "").strip()
-            ):
-                artifact.update(status="needs_guide", reason="No readable guide is attached.")
-            elif state != "pending":
-                artifact.update(status="blocked", reason=item.get("message") or state)
-            else:
-                try:
-                    guide = self.command("acc", "guide", artifact_id)
-                    if not guide.strip():
-                        artifact.update(status="needs_guide", reason="The attached guide is empty.")
-                    else:
-                        artifact.update(
-                            guide=guide,
-                            diff=self.command("acc", "diff", artifact_id),
-                            generated_content=self.command("acc", "content", artifact_id),
-                            status="ready",
-                        )
-                except (WorkflowError, OSError) as error:
-                    artifact.update(status="blocked", reason=str(error))
-            artifacts.append(artifact)
-        return artifacts
-
     def run(self):
         self.preflight()
         report = {
+            "config": str(self.config),
+            "ccode_path": str(self.source),
+            "hidden_path": str(self.hidden),
+            "output_path": str(self.output),
             "command_prefix": self.prefix,
             "environment": {"CCODE_HIDDEN_PATH": str(self.hidden)},
-            "output_path": str(self.output),
             "process": None,
         }
-        if not self.args.inspect_only:
-            process = self.args.process
-            if process is None:
-                processes = self.json_command("proc", "list")
-                if not isinstance(processes, list) or any(
-                    not isinstance(value, str) or not value.strip() for value in processes
-                ):
-                    raise WorkflowError("Expected process name array from ccode proc list")
-                report["available_processes"] = sorted(processes)
-                if "main" not in processes:
-                    report["status"] = "selection_required" if processes else "no_processes"
-                    return report
-                process = "main"
-            if not process.strip() or process.startswith("-"):
-                raise WorkflowError("Process must be a nonblank name, not a CLI option")
-            output = self.command("run", process)
-            if output:
-                print(output, file=sys.stderr, end="", flush=True)
-            report["process"] = process
-        report["artifacts"] = self.collect()
-        report["status"] = "artifacts_pending" if report["artifacts"] else "no_pending_artifacts"
+        process = self.args.process
+        if process is None:
+            processes = self.json_command("proc", "list")
+            if not isinstance(processes, list) or any(
+                not isinstance(value, str) or not value.strip() for value in processes
+            ):
+                raise WorkflowError("Expected process name array from ccode proc list")
+            report["available_processes"] = sorted(processes)
+            if "main" not in processes:
+                report["status"] = "selection_required" if processes else "no_processes"
+                return report
+            process = "main"
+        if not process.strip() or process.startswith("-"):
+            raise WorkflowError("Process must be a nonblank name, not a CLI option")
+        output = self.command("run", process)
+        if output:
+            print(output, file=sys.stderr, end="", flush=True)
+        report.update(process=process, status="generated", next_skill="ccode-resolve")
         return report
 
 
@@ -147,9 +105,7 @@ def main():
     parser.add_argument("--ccode-path", required=True, help="Effective source directory")
     parser.add_argument("--output-path", default=".")
     parser.add_argument("--hidden-path", default=".ccode", help="Absolute or relative to ccode-path")
-    mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("--process", help="Explicit process; otherwise select main or request a selection")
-    mode.add_argument("--inspect-only", action="store_true", help="Collect without running a process")
+    parser.add_argument("--process", help="Explicit process; otherwise select main or request a selection")
     args = parser.parse_args()
     try:
         report = Producer(args).run()

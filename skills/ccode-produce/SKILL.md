@@ -1,12 +1,12 @@
 ---
 name: ccode-produce
-description: Run an existing Cohesive Code (ccode) process, apply pending accelerated artifacts using their guides and diffs, validate changes, and resolve completed artifacts. Use for production runs in initialized projects; initialization and template or process authoring are outside this skill.
+description: Run an existing Cohesive Code (ccode) process in an initialized project, review generated outputs, then hand off pending accelerated artifacts to ccode-resolve. Use ccode-resolve directly when generation has already completed.
 ---
 
 # Produce Cohesive Code
 
-Use the bundled Python 3 helper for preflight checks, process selection, execution,
-and collecting accelerator work. Use the agent to interpret guides and edit files.
+Use the bundled Python 3 helper for preflight checks, process selection, and
+execution, then hand off guide-driven edits and artifact resolution to `ccode-resolve`.
 The helper uses only the standard library and invokes `ccode` without a shell.
 On Windows use `python` or `py -3` if `python3` is unavailable; `ccode` must be
 installed and runnable on that platform.
@@ -33,7 +33,7 @@ directory, `tsconfig.json`, and `<hidden_path>/lib/context.ts` as initialization
 evidence. If these are missing, stop and report what is missing; do not run `init`.
 The CLI validates the config (including its required version) when invoked.
 
-## Produce and collect
+## Run generation
 
 Replace `SKILL_DIR` with this skill's actual directory:
 
@@ -51,57 +51,35 @@ when present. If it returns `selection_required`, show **all** available process
 and ask the user to select one, even if there is only one. Resume with `--process`
 after their answer. If no processes exist, report that and stop.
 
-The helper stops immediately on a process execution error; do not apply or resolve
-accelerators after a failed run. After success it calls `ccode acc list --json`, then
-collects each usable pending artifact's guide, diff, and generated snapshot via:
+The helper stops immediately on a process execution error. Report the error;
+do not invoke `ccode-resolve`, retry the process, or change generation inputs as
+part of handling that failure.
+
+stdout is a JSON report; command logs go to stderr. Exit code 1 means failure.
+Exit code 0 requires checking `status`: only `generated` means the process ran
+successfully. The report includes `process`, `next_skill: "ccode-resolve"`, and
+the absolute `config`, `ccode_path`, `hidden_path`, and `output_path` needed by the
+resolver. Its `command_prefix` and `environment` preserve follow-up CLI settings.
+
+## Hand off resolution
+
+After `generated`, inspect command output and the changed generated targets, then
+use the installed `ccode-resolve` skill with the **same working directory, config,
+and effective paths** from the report. That skill collects existing pending
+artifacts, applies their guides, validates edits, and resolves completed work.
+Do not rerun generation to refresh accelerator status; the resolver owns that
+inspection. Resolution instructions live in that skill rather than this one.
+
+If `ccode-resolve` is unavailable, report that generation completed and resolution
+is still needed. Identify the missing companion skill and its installation command:
 
 ```bash
-ccode acc guide <artifactId>
-ccode acc diff <artifactId>
-ccode acc content <artifactId>
+npx skills add cohesivestack/ccode --skill ccode-resolve
 ```
 
-The current guide command is `acc guide`, not `get guide`. The report's
-`command_prefix` and `environment` carry the same configuration for follow-up CLI
-calls. Set the reported environment for each call; do not change the parent shell
-permanently. stdout is a JSON report; command logs go to stderr. Exit code 1 means
-failure, while exit code 0 requires checking the report's `status` and artifacts.
+Do not treat a successful generation report as evidence that artifacts were
+resolved. Finish by reporting the process, generated changes, checks, and the
+resolver's completed and remaining work, or the missing-skill handoff.
 
-For individual artifact metadata, always request JSON explicitly with
-`ccode acc show <artifactId> --json`; the default output is YAML. Always use
-`ccode acc list --json` when parsing an artifact list. Read guides separately with
-`ccode acc guide <artifactId>`; it returns only Markdown, without a path or JSON
-wrapper. Use the content and diff commands above to inspect the generated snapshot.
-
-## Apply, validate, and resolve
-
-1. Process every artifact marked `ready` in the report. Read its current file under
-   `output_path` and its complete guide, diff, and generated snapshot. If tool output
-   was truncated, retrieve the individual fields with the CLI before editing.
-2. Apply the changes required by the guide, preserving compatible human edits and
-   repository conventions. The diff runs **from generated snapshot to current
-   file**: `-` is generated content and `+` is current content. Do not blindly apply
-   it as a patch. An empty diff does not mean the guide requires no work.
-3. For `needs_guide`, leave the artifact pending, record its ID and guide path when
-   available, and continue with other artifacts. Do not invent a guide. For
-   `blocked` (including corrupt or ambiguous state, missing output, or inspection
-   failure), leave it unresolved, record the reason, and continue independent work.
-4. Run the guide's applicable validation and relevant project checks. Resolve only
-   artifacts whose required edits and checks succeeded, including proposals that
-   need no changes. If a shared check fails and its impact cannot be isolated, keep
-   the affected artifacts pending and report the failure.
-
-   ```bash
-   ccode acc resolve <artifactId>
-   ```
-
-   Use the report's command prefix and environment. Do not edit accelerator state
-   by hand or resolve skipped, failed, or unvalidated artifacts.
-5. Invoke the helper with the same path options plus `--inspect-only` to refresh
-   remaining work **without rerunning the process**. Report the process executed,
-   changes, checks, resolved artifacts, and remaining blockers. Explicitly list
-   every artifact that requires a guide, even if others were completed.
-
-Preserve pre-existing changes and generated support files. Do not rerun a failing
-process, change generation inputs, or repair accelerator state automatically.
-
+Preserve pre-existing work and generated support files. Initialization and changes
+to generation inputs belong to `ccode-author`.
