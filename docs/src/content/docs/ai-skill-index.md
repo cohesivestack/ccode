@@ -1,9 +1,12 @@
 ---
 title: AI Skill Index
-description: The documentation map used by the installable Cohesive Code agent skill.
+description: The documentation map used by the installable Cohesive Code agent skills.
 ---
 
-This page is the stable documentation map for the installable `cohesive-code` skill. It indexes the concepts, files, commands, and pages an agent should read before acting in a Cohesive Code workspace; the skill itself lives at `skills/cohesive-code/SKILL.md` in the repository.
+This page is the stable documentation map for the installable `ccode-author` and `ccode-produce` skills. It indexes the concepts, files, commands, and pages an agent should read before acting in a Cohesive Code workspace. The skills live at `skills/ccode-author/SKILL.md` and `skills/ccode-produce/SKILL.md` in the repository.
+
+- Use `ccode-author` to initialize projects and create or modify processes, templates, inputs, and accelerator guides.
+- Use `ccode-produce` to run existing processes, apply guided accelerated changes, validate, and resolve artifacts.
 
 ## Detection
 
@@ -11,7 +14,7 @@ A Cohesive Code workspace usually has:
 
 - `ccode.yaml` at or near the project root
 - a `ccode_path` directory, defaulting to `ccode`
-- generated support files under `<ccode_path>/.ccode/lib/`
+- generated support files under `<hidden_path>/lib/` (default: `<ccode_path>/.ccode/lib/`)
 - optional accelerator state under `<hidden_path>/accelerators/`
 
 If `ccode.yaml` exists, read it before editing files.
@@ -20,7 +23,7 @@ If `ccode.yaml` exists, read it before editing files.
 
 Use this order when references disagree:
 
-1. The generated local `Context` type at `<ccode_path>/.ccode/lib/context.ts`
+1. The generated local `Context` type at `<hidden_path>/lib/context.ts`
 2. The current CLI implementation and command output
 3. This documentation
 4. Older README examples
@@ -66,13 +69,14 @@ For accelerated artifacts:
 
 - Treat `ccode.yaml` as the workspace contract.
 - Keep source files, templates, specs, and guides under `ccode_path`.
-- Do not hand-edit `.ccode/build/`.
-- Do not edit `.ccode/lib/` in an application workspace; rerun `ccode init` to refresh it.
-- Run the exact process you changed when validation is possible.
+- Do not hand-edit `<hidden_path>/build/`.
+- Do not edit `<hidden_path>/lib/` in an application workspace; use `ccode-author` to refresh it through `ccode init`.
+- Use `ccode-produce` with the exact changed process when execution is needed for authoring validation.
 - Use `ctx.generate(...)` only for files that should be regenerated.
 - Use `ctx.accelerate(...)` for files that may need human or agent resolvement.
 - Inspect unresolved accelerator work with `ccode acc list --for-agent`.
-- Fetch one resolvement bundle with `ccode acc show <artifactId> --guide --for-agent`.
+- Read each pending artifact's guide with `ccode acc guide <artifactId>`, compare its saved snapshot to the current output with `ccode acc diff <artifactId>`, and retrieve the snapshot with `ccode acc content <artifactId>`.
+- Leave artifacts without guides pending and report them. Resolve completed artifacts with `ccode acc resolve <artifactId>` only after validation succeeds.
 
 ## Command index
 
@@ -81,6 +85,7 @@ ccode init [path] --version <version>
 ccode run <process>
 ccode acc resolve <artifactId>
 ccode proc list
+ccode proc add <process>
 ccode acc list
 ccode acc list --include-resolved
 ccode acc show <artifactId>

@@ -1,6 +1,9 @@
-# Cohesive Code Skill
+# Cohesive Code Skills
 
-This repository provides one installable Agent Skill containing the complete Cohesive Code workflow.
+This repository provides two complementary Agent Skills:
+
+- [`ccode-author`](ccode-author/SKILL.md): initialize projects and create or modify processes, templates, inputs, and accelerator guides.
+- [`ccode-produce`](ccode-produce/SKILL.md): run existing processes, apply guided accelerated changes, validate, and resolve artifacts.
 
 ## Install
 
@@ -8,9 +11,14 @@ This repository provides one installable Agent Skill containing the complete Coh
 npx skills add cohesivestack/ccode
 ```
 
-The installed skill is `cohesive-code`. It covers workspace setup and diagnosis, generator authoring, process execution, accelerator application, validation, and accelerator-state conflict resolution.
+Select either skill explicitly:
 
-To preview the repository's installable skill without installing it:
+```bash
+npx skills add cohesivestack/ccode --skill ccode-author
+npx skills add cohesivestack/ccode --skill ccode-produce
+```
+
+To preview the repository's installable skills without installing them:
 
 ```bash
 npx skills add cohesivestack/ccode --list
