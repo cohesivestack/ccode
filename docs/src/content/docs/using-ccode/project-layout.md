@@ -7,7 +7,7 @@ Cohesive Code separates authored sources, generated outputs, and internal state.
 
 ## Default layout
 
-Running `ccode init ccode --version v0.1.0` creates:
+Running `ccode init ccode --version v0.0.5` creates:
 
 ```text
 ccode.yaml

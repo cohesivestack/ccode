@@ -28,7 +28,7 @@ The wrapper resolves the binary version for each workspace and caches release bi
 Create the project support files with an explicit version:
 
 ```bash
-ccode init ccode --version v0.1.0
+ccode init ccode --version v0.0.5
 ```
 
 The default layout is:

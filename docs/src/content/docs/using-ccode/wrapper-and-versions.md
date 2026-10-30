@@ -21,7 +21,7 @@ For normal execution, the wrapper does not modify `ccode.yaml` or the global ver
 `ccode.yaml` must include a version:
 
 ```yaml
-version: v0.1.0
+version: v0.0.5
 ```
 
 `ccode init` writes or updates the version entry and refreshes generated support files for that version.
@@ -32,7 +32,7 @@ The wrapper supports:
 
 ```bash
 ccode pin
-ccode pin v0.1.0
+ccode pin v0.0.5
 ccode pin latest
 ```
 

@@ -9,7 +9,7 @@ description: ccode.yaml keys, defaults, and override precedence.
 
 ```yaml
 ccode_path: ccode
-version: v0.1.0
+version: v0.0.5
 output_path: .
 hidden_path: .ccode
 ```
