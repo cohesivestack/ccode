@@ -66,20 +66,22 @@ The wrapper resolves the binary version for each workspace and caches release bi
 
 ## Agent skills
 
-This repository includes two complementary Cohesive Code Agent Skills installable with [`npx skills`](https://github.com/vercel-labs/skills):
+This repository includes three complementary Cohesive Code Agent Skills installable with [`npx skills`](https://github.com/vercel-labs/skills):
 
 ```bash
 npx skills add cohesivestack/ccode
 ```
 
 - [`ccode-author`](skills/ccode-author/SKILL.md) initializes projects and creates or modifies processes, templates, inputs, and accelerator guides.
-- [`ccode-produce`](skills/ccode-produce/SKILL.md) runs existing processes, applies guided accelerated changes, validates, and resolves artifacts.
+- [`ccode-produce`](skills/ccode-produce/SKILL.md) runs existing processes, then hands off pending artifacts to `ccode-resolve`.
+- [`ccode-resolve`](skills/ccode-resolve/SKILL.md) applies guides to existing pending artifacts, validates, and resolves them without running generation.
 
-You can also select either skill explicitly:
+You can also select individual skills explicitly. Install both `ccode-produce` and `ccode-resolve` for generation followed by resolution:
 
 ```bash
 npx skills add cohesivestack/ccode --skill ccode-author
 npx skills add cohesivestack/ccode --skill ccode-produce
+npx skills add cohesivestack/ccode --skill ccode-resolve
 ```
 
 ## Docs

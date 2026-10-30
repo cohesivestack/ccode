@@ -3,10 +3,11 @@ title: AI Skill Index
 description: The documentation map used by the installable Cohesive Code agent skills.
 ---
 
-This page is the stable documentation map for the installable `ccode-author` and `ccode-produce` skills. It indexes the concepts, files, commands, and pages an agent should read before acting in a Cohesive Code workspace. The skills live at `skills/ccode-author/SKILL.md` and `skills/ccode-produce/SKILL.md` in the repository.
+This page is the stable documentation map for the installable `ccode-author`, `ccode-produce`, and `ccode-resolve` skills. It indexes the concepts, files, commands, and pages an agent should read before acting in a Cohesive Code workspace. Each skill lives at `skills/<skill-name>/SKILL.md` in the repository.
 
 - Use `ccode-author` to initialize projects and create or modify processes, templates, inputs, and accelerator guides.
-- Use `ccode-produce` to run existing processes, apply guided accelerated changes, validate, and resolve artifacts.
+- Use `ccode-produce` to run existing processes and then hand off to `ccode-resolve` after successful generation.
+- Use `ccode-resolve` to apply guides to existing pending artifacts, validate, and resolve them without running generation.
 
 ## Detection
 
@@ -72,6 +73,8 @@ For accelerated artifacts:
 - Do not hand-edit `<hidden_path>/build/`.
 - Do not edit `<hidden_path>/lib/` in an application workspace; use `ccode-author` to refresh it through `ccode init`.
 - Use `ccode-produce` with the exact changed process when execution is needed for authoring validation.
+- After successful generation, `ccode-produce` invokes `ccode-resolve` with the same working directory, config, and effective paths. Install both skills for this workflow.
+- Use `ccode-resolve` directly for existing pending work; its inspection helper never runs a process or requires generated TypeScript support files.
 - Use `ctx.generate(...)` only for files that should be regenerated.
 - Use `ctx.accelerate(...)` for files that may need human or agent resolvement.
 - Inspect unresolved accelerator work with `ccode acc list --json`.
