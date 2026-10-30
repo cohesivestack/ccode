@@ -57,11 +57,16 @@ Guide paths are normalized under `ccode_path`.
 
 ```bash
 ccode acc list
+ccode acc list --json
 ccode acc show handlers.acc.go
-ccode acc show handlers.acc.go --guide
+ccode acc show handlers.acc.go --json
+ccode acc guide handlers.acc.go
 ```
 
-Use `--for-agent` for JSON output.
+`acc list` returns a YAML sequence of metadata records and `acc show` returns one
+YAML metadata record. Add `--json` to either command for JSON output.
+`acc guide` prints only the attached guide's Markdown, without a path or metadata
+wrapper. It has no JSON output option.
 
 To print only the original generated content saved in accelerator state:
 

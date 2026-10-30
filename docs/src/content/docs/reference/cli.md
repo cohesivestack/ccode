@@ -69,20 +69,54 @@ Resolves a pending accelerated artifact without changing its output file. Use th
 ```bash
 ccode acc list
 ccode acc list --include-resolved
-ccode acc list --for-agent
+ccode acc list --json
+ccode acc list --include-resolved --json
 ```
 
-Lists unresolved accelerated artifacts by default. Use `--include-resolved` to include resolved artifacts.
+Lists unresolved accelerated artifacts as a YAML sequence by default:
+
+```yaml
+- artifact_id: handlers.go
+  guide_path: guides/handlers.md
+  state: pending
+- artifact_id: models/user.go
+  guide_path: null
+  state: pending
+```
+
+Use `--json` to return the same records as a JSON array. Use `--include-resolved`
+to include resolved artifacts in either format. An empty list prints `[]`.
 
 ## Show an accelerated artifact
 
 ```bash
 ccode acc show <artifactId>
-ccode acc show <artifactId> --guide
-ccode acc show <artifactId> --guide --for-agent
+ccode acc show <artifactId> --json
 ```
 
-Without `--guide`, the command returns metadata. With `--guide`, it returns a composed resolvement bundle containing guide markdown and decoded accelerated content.
+The command returns metadata as YAML:
+
+```yaml
+artifact_id: handlers.go
+guide_path: guides/handlers.md
+state: pending
+```
+
+Add `--json` to return the same metadata as JSON:
+
+```json
+{
+  "artifact_id": "handlers.go",
+  "guide_path": "guides/handlers.md",
+  "state": "pending"
+}
+```
+
+An absent guide is represented as `guide_path: null`. Problem states also include
+a `message` field.
+
+Use `ccode acc guide <artifactId>` to read the guide and `ccode acc content
+<artifactId>` to read the saved generated snapshot.
 
 ## Show original accelerated content
 
@@ -106,7 +140,10 @@ Works for pending and resolved artifacts without requiring a guide. Returns an e
 
 ```bash
 ccode acc guide <artifactId>
-ccode acc guide <artifactId> --for-agent
 ```
 
-Looks up the accelerated artifact by ID and reads its attached guide as raw Markdown. With `--for-agent`, returns JSON containing the guide’s `path` and `markdown`. Returns an error if the artifact does not exist, its state is corrupt or ambiguous, it has no attached guide, or its guide file is missing.
+Looks up the accelerated artifact by ID and prints only its attached guide's raw
+Markdown, preserving its contents without adding a path, metadata, or a wrapper.
+This command has no JSON output option. Returns an error if the artifact does not
+exist, its state is corrupt or ambiguous, it has no attached guide, or its guide
+file is missing.

@@ -38,9 +38,9 @@ Accelerator inspection commands expose exactly the information an agent needs:
 - current state
 - optional guide markdown
 - decoded proposed content
-- machine-readable JSON via `--for-agent`
+- machine-readable JSON via `--json` on `acc list` and `acc show`, with YAML metadata by default
 
-List commands intentionally do not dump generated content or guide bodies. Agents can first discover work, then request a focused bundle for one artifact.
+List commands intentionally do not dump generated content or guide bodies. Agents can first discover work, then request one artifact's guide with `acc guide`, snapshot with `acc content`, and differences with `acc diff`.
 
 ## Cohesion over automation
 

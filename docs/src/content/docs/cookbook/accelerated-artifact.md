@@ -53,8 +53,11 @@ Review the generated handler file, keep package naming stable, and add endpoint-
 
 ```bash
 ccode run api/generate
-ccode acc list --for-agent
-ccode acc show handlers.acc.go --guide --for-agent
+ccode acc list --json
+ccode acc show handlers.acc.go --json
+ccode acc guide handlers.acc.go
+ccode acc diff handlers.acc.go
+ccode acc content handlers.acc.go
 ccode acc resolve handlers.acc.go
 ```
 

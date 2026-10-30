@@ -74,7 +74,8 @@ For accelerated artifacts:
 - Use `ccode-produce` with the exact changed process when execution is needed for authoring validation.
 - Use `ctx.generate(...)` only for files that should be regenerated.
 - Use `ctx.accelerate(...)` for files that may need human or agent resolvement.
-- Inspect unresolved accelerator work with `ccode acc list --for-agent`.
+- Inspect unresolved accelerator work with `ccode acc list --json`.
+- Request individual artifact metadata with `ccode acc show <artifactId> --json`; the default show output is YAML.
 - Read each pending artifact's guide with `ccode acc guide <artifactId>`, compare its saved snapshot to the current output with `ccode acc diff <artifactId>`, and retrieve the snapshot with `ccode acc content <artifactId>`.
 - Leave artifacts without guides pending and report them. Resolve completed artifacts with `ccode acc resolve <artifactId>` only after validation succeeds.
 
@@ -87,15 +88,19 @@ ccode acc resolve <artifactId>
 ccode proc list
 ccode proc add <process>
 ccode acc list
+ccode acc list --json
 ccode acc list --include-resolved
 ccode acc show <artifactId>
-ccode acc show <artifactId> --guide
+ccode acc show <artifactId> --json
 ccode acc content <artifactId>
 ccode acc diff <artifactId>
 ccode acc guide <artifactId>
 ```
 
-`ccode proc list` always returns machine-readable JSON. Add `--for-agent` to accelerator list and show commands when the caller needs structured output.
+`ccode proc list` always returns machine-readable JSON. `ccode acc list` and
+`ccode acc show` return YAML metadata by default; use `--json` explicitly when
+parsing their output. `ccode acc guide` returns only raw Markdown without a path
+or JSON wrapper. Retrieve snapshots and diffs with the separate commands above.
 
 ## Runtime API index
 
