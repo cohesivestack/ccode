@@ -33,11 +33,11 @@ const (
 )
 
 type AcceleratorArtifactMetadata struct {
-	ArtifactID string  `json:"artifact_id"`
-	GuidePath  *string `json:"guide_path"`
-	Pending    bool    `json:"-"`
-	State      string  `json:"state"`
-	Message    string  `json:"message,omitempty"`
+	ArtifactID string  `json:"artifact_id" yaml:"artifact_id"`
+	GuidePath  *string `json:"guide_path" yaml:"guide_path"`
+	Pending    bool    `json:"-" yaml:"-"`
+	State      string  `json:"state" yaml:"state"`
+	Message    string  `json:"message,omitempty" yaml:"message,omitempty"`
 }
 
 type AcceleratorArtifactState struct {

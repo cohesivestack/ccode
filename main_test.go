@@ -13,6 +13,7 @@ import (
 	ccode "github.com/cohesivestack/ccode/lib"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestNewRootCmd_LoadsConfigFile(t *testing.T) {
@@ -196,28 +197,53 @@ func TestNewRootCmd_AccListExcludesContent(t *testing.T) {
 
 	require.NoError(t, cmd.Execute())
 	output := stdout.String()
-	assert.Contains(t, output, `"artifact_id": "handlers.go"`)
-	assert.Contains(t, output, `"state": "pending"`)
-	assert.NotContains(t, output, `"pending":`)
-	assert.NotContains(t, output, `"artifact_id": "service.go"`)
-	assert.NotContains(t, output, `"content"`)
-	assert.NotContains(t, output, "package handlers")
+	assert.Equal(t, "- artifact_id: handlers.go\n  guide_path: guides/handlers.md\n  state: pending\n", output)
 }
 
 func TestNewRootCmd_AccListIncludeResolved(t *testing.T) {
-	configPath, _ := setupAcceleratorCLIProject(t)
+	for _, asJSON := range []bool{false, true} {
+		t.Run(fmt.Sprintf("json=%t", asJSON), func(t *testing.T) {
+			configPath, _ := setupAcceleratorCLIProject(t)
+			cmd := newRootCmd(nil, nil)
+			var stdout bytes.Buffer
+			cmd.SetOut(&stdout)
+			args := []string{"--config", configPath, "acc", "list", "--include-resolved"}
+			if asJSON {
+				args = append(args, "--json")
+			}
+			cmd.SetArgs(args)
+			require.NoError(t, cmd.Execute())
+			var items []map[string]any
+			if asJSON {
+				require.NoError(t, json.Unmarshal(stdout.Bytes(), &items))
+			} else {
+				require.NoError(t, yaml.Unmarshal(stdout.Bytes(), &items))
+			}
+			assert.Equal(t, []map[string]any{
+				{"artifact_id": "handlers.go", "guide_path": "guides/handlers.md", "state": "pending"},
+				{"artifact_id": "service.go", "guide_path": "guides/service.md", "state": "resolved"},
+			}, items)
+		})
+	}
+}
 
-	cmd := newRootCmd(nil, nil)
-	var stdout bytes.Buffer
-	cmd.SetOut(&stdout)
-	cmd.SetArgs([]string{"--config", configPath, "acc", "list", "--include-resolved"})
-
-	require.NoError(t, cmd.Execute())
-	output := stdout.String()
-	assert.Contains(t, output, `"artifact_id": "handlers.go"`)
-	assert.Contains(t, output, `"artifact_id": "service.go"`)
-	assert.Contains(t, output, `"state": "resolved"`)
-	assert.NotContains(t, output, `"pending":`)
+func TestNewRootCmd_AccListEmpty(t *testing.T) {
+	for _, asJSON := range []bool{false, true} {
+		t.Run(fmt.Sprintf("json=%t", asJSON), func(t *testing.T) {
+			configPath, ccodePath := setupAcceleratorCLIProject(t)
+			require.NoError(t, os.RemoveAll(filepath.Join(ccodePath, ".ccode", "accelerators")))
+			cmd := newRootCmd(nil, nil)
+			var stdout bytes.Buffer
+			cmd.SetOut(&stdout)
+			args := []string{"--config", configPath, "acc", "list"}
+			if asJSON {
+				args = append(args, "--json")
+			}
+			cmd.SetArgs(args)
+			require.NoError(t, cmd.Execute())
+			assert.Equal(t, "[]\n", stdout.String())
+		})
+	}
 }
 
 func TestNewRootCmd_AccResolveMarksAcceleratorAsResolved(t *testing.T) {
@@ -230,7 +256,7 @@ func TestNewRootCmd_AccResolveMarksAcceleratorAsResolved(t *testing.T) {
 	listCmd := newRootCmd(nil, nil)
 	var stdout bytes.Buffer
 	listCmd.SetOut(&stdout)
-	listCmd.SetArgs([]string{"--config", configPath, "acc", "list", "--include-resolved"})
+	listCmd.SetArgs([]string{"--config", configPath, "acc", "list", "--include-resolved", "--json"})
 	require.NoError(t, listCmd.Execute())
 
 	var items []ccode.AcceleratorArtifactMetadata
@@ -268,60 +294,76 @@ func TestNewRootCmd_AccShowExcludesContent(t *testing.T) {
 
 	require.NoError(t, cmd.Execute())
 	output := stdout.String()
-	assert.Contains(t, output, `"artifact_id": "handlers.go"`)
-	assert.Contains(t, output, `"state": "pending"`)
-	assert.NotContains(t, output, `"pending":`)
-	assert.NotContains(t, output, `"content"`)
-	assert.NotContains(t, output, "package handlers")
+	assert.Equal(t, "artifact_id: handlers.go\nguide_path: guides/handlers.md\nstate: pending\n", output)
 }
 
-func TestNewRootCmd_AccShowGuideReturnsComposedMarkdown(t *testing.T) {
+func TestNewRootCmd_AccShowJSON(t *testing.T) {
 	configPath, _ := setupAcceleratorCLIProject(t)
-
 	cmd := newRootCmd(nil, nil)
 	var stdout bytes.Buffer
 	cmd.SetOut(&stdout)
-	cmd.SetArgs([]string{"--config", configPath, "acc", "show", "handlers.go", "--guide"})
-
+	cmd.SetArgs([]string{"--config", configPath, "acc", "show", "handlers.go", "--json"})
 	require.NoError(t, cmd.Execute())
-	output := stdout.String()
-	assert.Contains(t, output, "# Update handlers")
-	assert.Contains(t, output, "---\nNew accelerated content:")
-	assert.Contains(t, output, "```go\npackage handlers")
+	var metadata map[string]any
+	require.NoError(t, json.Unmarshal(stdout.Bytes(), &metadata))
+	assert.Equal(t, map[string]any{
+		"artifact_id": "handlers.go", "guide_path": "guides/handlers.md", "state": "pending",
+	}, metadata)
 }
 
-func TestNewRootCmd_AccListAndShowForAgentOutputValidJSON(t *testing.T) {
+func TestNewRootCmd_AccShowYAMLPreservesDiagnostics(t *testing.T) {
+	configPath, ccodePath := setupAcceleratorCLIProject(t)
+	statePath := filepath.Join(ccodePath, ".ccode", "accelerators", "handlers.go.accelerated.json")
+	require.NoError(t, os.WriteFile(statePath, []byte("invalid json\n"), 0644))
+	cmd := newRootCmd(nil, nil)
+	var stdout bytes.Buffer
+	cmd.SetOut(&stdout)
+	cmd.SetArgs([]string{"--config", configPath, "acc", "show", "handlers.go"})
+	require.NoError(t, cmd.Execute())
+	var metadata map[string]any
+	require.NoError(t, yaml.Unmarshal(stdout.Bytes(), &metadata))
+	assert.Equal(t, "handlers.go", metadata["artifact_id"])
+	assert.Contains(t, metadata, "guide_path")
+	assert.Nil(t, metadata["guide_path"])
+	assert.Equal(t, "corrupt", metadata["state"])
+	assert.NotEmpty(t, metadata["message"])
+	assert.NotContains(t, metadata, "pending")
+	assert.NotContains(t, metadata, "content")
+}
+
+func TestNewRootCmd_AccListJSON(t *testing.T) {
 	configPath, _ := setupAcceleratorCLIProject(t)
+	cmd := newRootCmd(nil, nil)
+	var stdout bytes.Buffer
+	cmd.SetOut(&stdout)
+	cmd.SetArgs([]string{"--config", configPath, "acc", "list", "--json"})
+	require.NoError(t, cmd.Execute())
+	var items []map[string]any
+	require.NoError(t, json.Unmarshal(stdout.Bytes(), &items))
+	assert.Equal(t, []map[string]any{
+		{"artifact_id": "handlers.go", "guide_path": "guides/handlers.md", "state": "pending"},
+	}, items)
+}
 
-	listCmd := newRootCmd(nil, nil)
-	var listOut bytes.Buffer
-	listCmd.SetOut(&listOut)
-	listCmd.SetArgs([]string{"--config", configPath, "acc", "list", "--for-agent"})
-	require.NoError(t, listCmd.Execute())
-
-	var listPayload []map[string]any
-	require.NoError(t, json.Unmarshal(listOut.Bytes(), &listPayload))
-	require.Len(t, listPayload, 1)
-	assert.Equal(t, "handlers.go", listPayload[0]["artifact_id"])
-	assert.Equal(t, "guides/handlers.md", listPayload[0]["guide_path"])
-	assert.Equal(t, "pending", listPayload[0]["state"])
-	assert.NotContains(t, listPayload[0], "pending")
-
-	getCmd := newRootCmd(nil, nil)
-	var getOut bytes.Buffer
-	getCmd.SetOut(&getOut)
-	getCmd.SetArgs([]string{"--config", configPath, "acc", "show", "handlers.go", "--guide", "--for-agent"})
-	require.NoError(t, getCmd.Execute())
-
-	var getPayload map[string]any
-	require.NoError(t, json.Unmarshal(getOut.Bytes(), &getPayload))
-	assert.Equal(t, "handlers.go", getPayload["artifact_id"])
-	assert.Equal(t, "guides/handlers.md", getPayload["guide_path"])
-	assert.Equal(t, "pending", getPayload["state"])
-	assert.NotContains(t, getPayload, "pending")
-	assert.Equal(t, "# Update handlers", getPayload["guide_markdown"])
-	assert.Equal(t, "package handlers", getPayload["accelerated_content"])
-	assert.Contains(t, getPayload["composed_markdown"], "New accelerated content")
+func TestNewRootCmd_AccRejectsRemovedOutputFlags(t *testing.T) {
+	for _, args := range [][]string{
+		{"acc", "list", "--for-agent"},
+		{"acc", "show", "handlers.go", "--for-agent"},
+		{"acc", "guide", "handlers.go", "--for-agent"},
+		{"acc", "show", "handlers.go", "--guide"},
+		{"acc", "guide", "handlers.go", "--json"},
+	} {
+		t.Run(fmt.Sprint(args), func(t *testing.T) {
+			cmd := newRootCmd(nil, nil)
+			var stdout, stderr bytes.Buffer
+			cmd.SetOut(&stdout)
+			cmd.SetErr(&stderr)
+			cmd.SilenceUsage = true
+			cmd.SetArgs(args)
+			require.ErrorContains(t, cmd.Execute(), "unknown flag: "+args[len(args)-1])
+			assert.Empty(t, stdout.String())
+		})
+	}
 }
 
 func TestNewRootCmd_AccContentReturnsSavedSnapshot(t *testing.T) {
@@ -454,37 +496,24 @@ func TestNewRootCmd_AccDiffErrors(t *testing.T) {
 }
 
 func TestNewRootCmd_AccGuide(t *testing.T) {
-	configPath, _ := setupAcceleratorCLIProject(t)
-
+	configPath, ccodePath := setupAcceleratorCLIProject(t)
 	for _, artifact := range []struct {
 		id       string
 		path     string
 		markdown string
 	}{
 		{"handlers.go", "guides/handlers.md", "# Update handlers"},
-		{"service.go", "guides/service.md", "# Update service"},
+		{"service.go", "guides/service.md", "# Update service\r\n\r\nPreserve café naming.\r\n"},
 	} {
-		for _, forAgent := range []bool{false, true} {
-			t.Run(fmt.Sprintf("%s/for-agent=%t", artifact.id, forAgent), func(t *testing.T) {
-				cmd := newRootCmd(nil, nil)
-				var stdout bytes.Buffer
-				cmd.SetOut(&stdout)
-				args := []string{"--config", configPath, "acc", "guide", artifact.id}
-				if forAgent {
-					args = append(args, "--for-agent")
-				}
-				cmd.SetArgs(args)
-				require.NoError(t, cmd.Execute())
-
-				if forAgent {
-					var payload map[string]any
-					require.NoError(t, json.Unmarshal(stdout.Bytes(), &payload))
-					assert.Equal(t, map[string]any{"path": artifact.path, "markdown": artifact.markdown}, payload)
-				} else {
-					assert.Equal(t, artifact.markdown, stdout.String())
-				}
-			})
-		}
+		t.Run(artifact.id, func(t *testing.T) {
+			require.NoError(t, os.WriteFile(filepath.Join(ccodePath, artifact.path), []byte(artifact.markdown), 0644))
+			cmd := newRootCmd(nil, nil)
+			var stdout bytes.Buffer
+			cmd.SetOut(&stdout)
+			cmd.SetArgs([]string{"--config", configPath, "acc", "guide", artifact.id})
+			require.NoError(t, cmd.Execute())
+			assert.Equal(t, artifact.markdown, stdout.String())
+		})
 	}
 }
 

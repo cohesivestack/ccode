@@ -5,23 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
 
 	ccode "github.com/cohesivestack/ccode/lib"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"gopkg.in/yaml.v3"
 )
-
-type acceleratorGuideAgentResult struct {
-	ArtifactID         string  `json:"artifact_id"`
-	GuidePath          *string `json:"guide_path"`
-	State              string  `json:"state"`
-	Message            string  `json:"message,omitempty"`
-	GuideMarkdown      string  `json:"guide_markdown"`
-	AcceleratedContent string  `json:"accelerated_content"`
-	ComposedMarkdown   string  `json:"composed_markdown"`
-}
 
 func main() {
 	if err := newRootCmd(ccode.Run, ccode.Init).Execute(); err != nil {
@@ -242,11 +231,11 @@ Syntax:
 				return err
 			}
 
-			return writeJSON(cmd, items)
+			return writeMetadata(cmd, items)
 		},
 	}
 	accListCmd.Flags().Bool("include-resolved", false, "Include resolved accelerator artifacts")
-	accListCmd.Flags().Bool("for-agent", false, "Output machine-readable JSON")
+	accListCmd.Flags().Bool("json", false, "Output JSON instead of YAML metadata")
 
 	accShowCmd := &cobra.Command{
 		Use:   "show <artifactId>",
@@ -258,48 +247,14 @@ Syntax:
 				return err
 			}
 
-			context := ccode.NewContext(cfg)
-			emitGuide, err := cmd.Flags().GetBool("guide")
+			metadata, err := ccode.NewContext(cfg).GetAcceleratorMetadata(args[0])
 			if err != nil {
 				return err
 			}
-			forAgent, err := cmd.Flags().GetBool("for-agent")
-			if err != nil {
-				return err
-			}
-
-			if !emitGuide {
-				metadata, err := context.GetAcceleratorMetadata(args[0])
-				if err != nil {
-					return err
-				}
-				return writeJSON(cmd, metadata)
-			}
-
-			bundle, err := context.GetAcceleratorBundle(args[0])
-			if err != nil {
-				return err
-			}
-
-			composedMarkdown := composeAcceleratedGuideMarkdown(bundle.GuideMarkdown, bundle.AcceleratedContent, bundle.ArtifactID, bundle.Message)
-			if forAgent {
-				return writeJSON(cmd, acceleratorGuideAgentResult{
-					ArtifactID:         bundle.ArtifactID,
-					GuidePath:          bundle.GuidePath,
-					State:              bundle.State,
-					Message:            bundle.Message,
-					GuideMarkdown:      bundle.GuideMarkdown,
-					AcceleratedContent: bundle.AcceleratedContent,
-					ComposedMarkdown:   composedMarkdown,
-				})
-			}
-
-			_, err = cmd.OutOrStdout().Write([]byte(composedMarkdown))
-			return err
+			return writeMetadata(cmd, metadata)
 		},
 	}
-	accShowCmd.Flags().Bool("guide", false, "Include guide markdown with decoded accelerated content")
-	accShowCmd.Flags().Bool("for-agent", false, "Output machine-readable JSON")
+	accShowCmd.Flags().Bool("json", false, "Output JSON instead of YAML metadata")
 
 	accContentCmd := &cobra.Command{
 		Use:   "content <artifactId>",
@@ -356,19 +311,10 @@ Syntax:
 				return err
 			}
 
-			forAgent, err := cmd.Flags().GetBool("for-agent")
-			if err != nil {
-				return err
-			}
-			if forAgent {
-				return writeJSON(cmd, guide)
-			}
-
 			_, err = cmd.OutOrStdout().Write([]byte(guide.Markdown))
 			return err
 		},
 	}
-	accGuideCmd.Flags().Bool("for-agent", false, "Output machine-readable JSON")
 
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(initCmd)
@@ -392,79 +338,16 @@ func writeJSON(cmd *cobra.Command, payload any) error {
 	return encoder.Encode(payload)
 }
 
-func composeAcceleratedGuideMarkdown(guideMarkdown string, acceleratedContent string, artifactID string, stateMessage string) string {
-	builder := &strings.Builder{}
-
-	if !isStringBlank(guideMarkdown) {
-		builder.WriteString(strings.TrimRight(guideMarkdown, "\n"))
-		builder.WriteString("\n")
+func writeMetadata(cmd *cobra.Command, payload any) error {
+	asJSON, err := cmd.Flags().GetBool("json")
+	if err != nil {
+		return err
 	}
-
-	builder.WriteString("---\n")
-	builder.WriteString("New accelerated content:\n")
-
-	language := inferCodeFenceLanguageFromArtifactID(artifactID)
-	if language == "" {
-		builder.WriteString("```\n")
-	} else {
-		builder.WriteString("```")
-		builder.WriteString(language)
-		builder.WriteString("\n")
+	if asJSON {
+		return writeJSON(cmd, payload)
 	}
-
-	builder.WriteString(acceleratedContent)
-	if !strings.HasSuffix(acceleratedContent, "\n") {
-		builder.WriteString("\n")
-	}
-	builder.WriteString("```\n")
-	if !isStringBlank(stateMessage) {
-		builder.WriteString("\n")
-		builder.WriteString(strings.TrimSpace(stateMessage))
-		builder.WriteString("\n")
-	}
-
-	return builder.String()
-}
-
-func inferCodeFenceLanguageFromArtifactID(artifactID string) string {
-	switch strings.ToLower(filepath.Ext(artifactID)) {
-	case ".go":
-		return "go"
-	case ".ts":
-		return "typescript"
-	case ".tsx":
-		return "tsx"
-	case ".js":
-		return "javascript"
-	case ".jsx":
-		return "jsx"
-	case ".json":
-		return "json"
-	case ".yaml", ".yml":
-		return "yaml"
-	case ".md":
-		return "markdown"
-	case ".sql":
-		return "sql"
-	case ".py":
-		return "python"
-	case ".java":
-		return "java"
-	case ".rb":
-		return "ruby"
-	case ".sh":
-		return "bash"
-	case ".html":
-		return "html"
-	case ".css":
-		return "css"
-	case ".xml":
-		return "xml"
-	default:
-		return ""
-	}
-}
-
-func isStringBlank(value string) bool {
-	return strings.TrimSpace(value) == ""
+	encoder := yaml.NewEncoder(cmd.OutOrStdout())
+	defer encoder.Close()
+	encoder.SetIndent(2)
+	return encoder.Encode(payload)
 }
