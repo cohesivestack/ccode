@@ -68,7 +68,7 @@ class Producer:
             )
 
     def collect(self):
-        metadata = self.json_command("acc", "list")
+        metadata = self.json_command("acc", "list", "--json")
         if not isinstance(metadata, list) or any(
             not isinstance(item, dict)
             or not isinstance(item.get("artifact_id"), str)

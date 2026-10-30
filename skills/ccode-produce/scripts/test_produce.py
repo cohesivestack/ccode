@@ -32,7 +32,7 @@ class ProducerTests(unittest.TestCase):
         )
         self.calls = []
         self.responses = {("proc", "list"): ["main"], ("run", "main"): "produced\n",
-                          ("acc", "list"): []}
+                          ("acc", "list", "--json"): []}
         self.addCleanup(patch.stopall)
         patch("produce.subprocess.run", side_effect=self.ccode).start()
         self.stderr = io.StringIO()
@@ -76,14 +76,14 @@ class ProducerTests(unittest.TestCase):
         report = Producer(self.args).run()
         self.assertEqual(report["process"], "main")
         self.assertEqual(report["status"], "no_pending_artifacts")
-        self.assertEqual(self.calls, [("proc", "list"), ("run", "main"), ("acc", "list")])
+        self.assertEqual(self.calls, [("proc", "list"), ("run", "main"), ("acc", "list", "--json")])
         self.assertIn("produced", self.stderr.getvalue())
 
     def test_explicit_process_skips_discovery(self):
         self.args.process = "nested/chosen.proc.ts"
         self.responses[("run", self.args.process)] = ""
         Producer(self.args).run()
-        self.assertEqual(self.calls, [("run", self.args.process), ("acc", "list")])
+        self.assertEqual(self.calls, [("run", self.args.process), ("acc", "list", "--json")])
 
     def test_selection_is_required_even_for_one_process(self):
         self.responses[("proc", "list")] = ["nested/main"]
@@ -113,7 +113,7 @@ class ProducerTests(unittest.TestCase):
 
     def test_collects_ready_and_skips_missing_guides_and_problem_states(self):
         self.args.inspect_only = True
-        self.responses[("acc", "list")] = [
+        self.responses[("acc", "list", "--json")] = [
             {"artifact_id": "ready.ts", "state": "pending", "guide_path": "guide.md"},
             {"artifact_id": "no-guide.ts", "state": "pending", "guide_path": None},
             {"artifact_id": "lost-guide.ts", "state": "missing_guide", "guide_path": "lost.md"},
@@ -133,13 +133,13 @@ class ProducerTests(unittest.TestCase):
         self.assertEqual(items["conflict.ts"]["status"], "blocked")
         self.assertNotIn("done.ts", items)
         self.assertEqual(self.calls, [
-            ("acc", "list"), ("acc", "guide", "ready.ts"),
+            ("acc", "list", "--json"), ("acc", "guide", "ready.ts"),
             ("acc", "diff", "ready.ts"), ("acc", "content", "ready.ts"),
         ])
 
     def test_inspection_failure_does_not_prevent_other_artifacts(self):
         self.args.inspect_only = True
-        self.responses[("acc", "list")] = [
+        self.responses[("acc", "list", "--json")] = [
             {"artifact_id": "a.ts", "state": "pending", "guide_path": "guide.md"},
             {"artifact_id": "b.ts", "state": "pending", "guide_path": "guide.md"},
         ]
@@ -156,12 +156,12 @@ class ProducerTests(unittest.TestCase):
 
     def test_empty_guide_stays_pending(self):
         self.args.inspect_only = True
-        self.responses[("acc", "list")] = [
+        self.responses[("acc", "list", "--json")] = [
             {"artifact_id": "a.ts", "state": "pending", "guide_path": "empty.md"},
         ]
         self.responses[("acc", "guide", "a.ts")] = " \n"
         self.assertEqual(Producer(self.args).run()["artifacts"][0]["status"], "needs_guide")
-        self.assertEqual(self.calls, [("acc", "list"), ("acc", "guide", "a.ts")])
+        self.assertEqual(self.calls, [("acc", "list", "--json"), ("acc", "guide", "a.ts")])
 
 
 if __name__ == "__main__":

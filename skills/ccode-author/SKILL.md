@@ -114,8 +114,14 @@ When execution is needed to verify the requested authoring work, use
 `ccode-produce` with the **exact changed process**. That skill owns generation,
 guide-driven output changes, validation, and artifact resolution. If it is not
 installed, use `ccode run <process>` with the same path options/environment,
-inspect the resulting outputs and `ccode acc list`, and report pending artifacts
+inspect the resulting outputs and `ccode acc list --json`, and report pending artifacts
 for production follow-up. Do not resolve them as part of authoring alone.
+
+When inspecting individual accelerator metadata, explicitly use
+`ccode acc show <artifactId> --json` so the response is JSON rather than the
+default YAML. Use `ccode acc list --json` for structured artifact lists.
+Read guides separately with `ccode acc guide <artifactId>`; it returns only the
+guide's Markdown, without a path or JSON wrapper.
 
 Report initialized or changed inputs, checks performed, and whether the process
 was executed. Preserve unrelated work and accelerator state. Do not include live

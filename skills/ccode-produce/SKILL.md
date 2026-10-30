@@ -52,7 +52,7 @@ and ask the user to select one, even if there is only one. Resume with `--proces
 after their answer. If no processes exist, report that and stop.
 
 The helper stops immediately on a process execution error; do not apply or resolve
-accelerators after a failed run. After success it calls `ccode acc list`, then
+accelerators after a failed run. After success it calls `ccode acc list --json`, then
 collects each usable pending artifact's guide, diff, and generated snapshot via:
 
 ```bash
@@ -66,6 +66,12 @@ The current guide command is `acc guide`, not `get guide`. The report's
 calls. Set the reported environment for each call; do not change the parent shell
 permanently. stdout is a JSON report; command logs go to stderr. Exit code 1 means
 failure, while exit code 0 requires checking the report's `status` and artifacts.
+
+For individual artifact metadata, always request JSON explicitly with
+`ccode acc show <artifactId> --json`; the default output is YAML. Always use
+`ccode acc list --json` when parsing an artifact list. Read guides separately with
+`ccode acc guide <artifactId>`; it returns only Markdown, without a path or JSON
+wrapper. Use the content and diff commands above to inspect the generated snapshot.
 
 ## Apply, validate, and resolve
 
