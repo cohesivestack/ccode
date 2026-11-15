@@ -21,7 +21,7 @@ func TestAccelerator_AccelerateWritesArtifactAndState(t *testing.T) {
 	value, err := ctx.runtime.RunString(`({ name: "Carlos" })`)
 	require.NoError(t, err)
 
-	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value))
+	require.NoError(t, ctx.Accelerate("templates/handlers.tpl", "handlers", value))
 
 	outputFilePath := filepath.Join(ctx.ccodeContext.config.OutputPath, "handlers")
 	require.FileExists(t, outputFilePath)
@@ -69,7 +69,7 @@ func TestAccelerator_AccelerateStoresRelativeGuidePath(t *testing.T) {
 	require.NoError(t, err)
 
 	absoluteGuidePath := filepath.Join(ctx.ccodeContext.config.CCodePath, "guides", "handlers.md")
-	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value, absoluteGuidePath))
+	require.NoError(t, ctx.Accelerate("templates/handlers.tpl", "handlers", value, absoluteGuidePath))
 
 	artifacts := readAcceleratorArtifactsForTest(t, ctx.ccodeContext)
 	require.Len(t, artifacts, 1)
@@ -87,13 +87,13 @@ func TestAccelerator_AccelerateSkipsOverwriteForModifiedFile(t *testing.T) {
 	value, err := ctx.runtime.RunString(`({})`)
 	require.NoError(t, err)
 
-	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value))
+	require.NoError(t, ctx.Accelerate("templates/handlers.tpl", "handlers", value))
 
 	outputFilePath := filepath.Join(ctx.ccodeContext.config.OutputPath, "handlers")
 	require.NoError(t, os.WriteFile(outputFilePath, []byte("manually changed"), 0644))
 	require.NoError(t, os.WriteFile(templatePath, []byte("Second"), 0644))
 
-	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value))
+	require.NoError(t, ctx.Accelerate("templates/handlers.tpl", "handlers", value))
 
 	content, readErr := os.ReadFile(outputFilePath)
 	require.NoError(t, readErr)
@@ -115,10 +115,10 @@ func TestAccelerator_AccelerateAllowsOverwriteWhenContentMatchesLastGeneratedVer
 
 	value, err := ctx.runtime.RunString(`({})`)
 	require.NoError(t, err)
-	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value))
+	require.NoError(t, ctx.Accelerate("templates/handlers.tpl", "handlers", value))
 
 	require.NoError(t, os.WriteFile(templatePath, []byte("Second"), 0644))
-	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value))
+	require.NoError(t, ctx.Accelerate("templates/handlers.tpl", "handlers", value))
 
 	outputFilePath := filepath.Join(ctx.ccodeContext.config.OutputPath, "handlers")
 	content, err := os.ReadFile(outputFilePath)
@@ -140,12 +140,12 @@ func TestAccelerator_AccelerateSkipsOverwriteWhenRenderedContentMatchesPreviousS
 
 	value, err := ctx.runtime.RunString(`({})`)
 	require.NoError(t, err)
-	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value))
+	require.NoError(t, ctx.Accelerate("templates/handlers.tpl", "handlers", value))
 
 	artifactsBefore := readAcceleratorArtifactsForTest(t, ctx.ccodeContext)
 	contentBefore := artifactsBefore[0].Content
 
-	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value))
+	require.NoError(t, ctx.Accelerate("templates/handlers.tpl", "handlers", value))
 
 	artifactsAfter := readAcceleratorArtifactsForTest(t, ctx.ccodeContext)
 	assert.Equal(t, contentBefore, artifactsAfter[0].Content)
@@ -163,7 +163,7 @@ func TestAccelerator_AccelerateSkipsWhenExistingFileIsNotTracked(t *testing.T) {
 
 	value, err := ctx.runtime.RunString(`({})`)
 	require.NoError(t, err)
-	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value))
+	require.NoError(t, ctx.Accelerate("templates/handlers.tpl", "handlers", value))
 
 	content, err := os.ReadFile(outputFilePath)
 	require.NoError(t, err)
@@ -183,12 +183,12 @@ func TestAccelerator_AcceleratePreservesStateWhenGeneratedMetadataMatches(t *tes
 
 	value, err := ctx.runtime.RunString(`({})`)
 	require.NoError(t, err)
-	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value))
+	require.NoError(t, ctx.Accelerate("templates/handlers.tpl", "handlers", value))
 
 	artifactID := "handlers"
 	require.NoError(t, ctx.MarkAcceleratorAsResolved(&artifactID))
 
-	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value))
+	require.NoError(t, ctx.Accelerate("templates/handlers.tpl", "handlers", value))
 
 	artifacts := readAcceleratorArtifactsForTest(t, ctx.ccodeContext)
 	require.Len(t, artifacts, 1)
@@ -206,13 +206,13 @@ func TestAccelerator_AccelerateResetsStateWhenGuideChecksumChanges(t *testing.T)
 
 	value, err := ctx.runtime.RunString(`({})`)
 	require.NoError(t, err)
-	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value, "guides/handlers.md"))
+	require.NoError(t, ctx.Accelerate("templates/handlers.tpl", "handlers", value, "guides/handlers.md"))
 
 	artifactID := "handlers"
 	require.NoError(t, ctx.MarkAcceleratorAsResolved(&artifactID))
 
 	require.NoError(t, os.WriteFile(guideFilePath, []byte("Second guide"), 0644))
-	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value, "guides/handlers.md"))
+	require.NoError(t, ctx.Accelerate("templates/handlers.tpl", "handlers", value, "guides/handlers.md"))
 
 	artifacts := readAcceleratorArtifactsForTest(t, ctx.ccodeContext)
 	require.Len(t, artifacts, 1)
@@ -227,7 +227,7 @@ func TestAccelerator_AccelerateCleansDuplicatedIdenticalStateLines(t *testing.T)
 
 	value, err := ctx.runtime.RunString(`({})`)
 	require.NoError(t, err)
-	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value))
+	require.NoError(t, ctx.Accelerate("templates/handlers.tpl", "handlers", value))
 
 	artifactID := "handlers"
 	require.NoError(t, ctx.MarkAcceleratorAsResolved(&artifactID))
@@ -238,7 +238,7 @@ func TestAccelerator_AccelerateCleansDuplicatedIdenticalStateLines(t *testing.T)
 	trimmedStateLine := strings.TrimSpace(string(stateFileContent))
 	require.NoError(t, os.WriteFile(stateFilePath, []byte(trimmedStateLine+"\n"+trimmedStateLine+"\n"), 0644))
 
-	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value))
+	require.NoError(t, ctx.Accelerate("templates/handlers.tpl", "handlers", value))
 
 	cleanedContent, err := os.ReadFile(stateFilePath)
 	require.NoError(t, err)
@@ -257,7 +257,7 @@ func TestAccelerator_AccelerateResetsStateWhenMultipleStateLinesDiffer(t *testin
 
 	value, err := ctx.runtime.RunString(`({})`)
 	require.NoError(t, err)
-	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value))
+	require.NoError(t, ctx.Accelerate("templates/handlers.tpl", "handlers", value))
 
 	stateFilePath := filepath.Join(ctx.acceleratorStateFilePath(), "handlers.accelerated.json")
 	stateFileContent, err := os.ReadFile(stateFilePath)
@@ -265,7 +265,7 @@ func TestAccelerator_AccelerateResetsStateWhenMultipleStateLinesDiffer(t *testin
 	trimmedStateLine := strings.TrimSpace(string(stateFileContent))
 	require.NoError(t, os.WriteFile(stateFilePath, []byte(trimmedStateLine+"\n"+`{"pending":false,"guide":"","accelerated_checksum":"sha256:different","guide_checksum":"","code":"RGlmZmVyZW50"}`+"\n"), 0644))
 
-	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value))
+	require.NoError(t, ctx.Accelerate("templates/handlers.tpl", "handlers", value))
 
 	stateFileContent, err = os.ReadFile(stateFilePath)
 	require.NoError(t, err)
@@ -288,7 +288,7 @@ func TestAccelerator_AccelerateResetsStateWhenStateFileIsCorrupt(t *testing.T) {
 
 	value, err := ctx.runtime.RunString(`({})`)
 	require.NoError(t, err)
-	require.NoError(t, ctx.Accelerate("handlers", "templates/handlers.tpl", value))
+	require.NoError(t, ctx.Accelerate("templates/handlers.tpl", "handlers", value))
 
 	artifacts := readAcceleratorArtifactsForTest(t, ctx.ccodeContext)
 	require.Len(t, artifacts, 1)
@@ -303,7 +303,7 @@ func TestAccelerator_RunStoresStateByArtifactID(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Join(projectDir, "templates"), 0755))
 	require.NoError(t, os.WriteFile(filepath.Join(projectDir, "templates", "handlers.tpl"), []byte("handlers"), 0644))
 	require.NoError(t, os.WriteFile(filepath.Join(projectDir, "templates", "service.tpl"), []byte("service"), 0644))
-	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/context\";\n\nexport default function main(ctx: Context) {\n\tctx.accelerate(\"handlers\", \"templates/handlers.tpl\", {});\n\tctx.accelerate(\"generated/service\", \"templates/service.tpl\", {});\n}\n"), 0644))
+	require.NoError(t, os.WriteFile(processFile, []byte("import type { Context } from \"@ccode/context\";\n\nexport default function main(ctx: Context) {\n\tctx.accelerate(\"templates/handlers.tpl\", \"handlers\", {});\n\tctx.accelerate(\"templates/service.tpl\", \"generated/service\", {});\n}\n"), 0644))
 
 	require.NoError(t, ctx.Run("x/generate-api"))
 

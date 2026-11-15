@@ -8,8 +8,8 @@ export interface Context {
   renderTemplate: (templatePath: string, data: any) => string;
   generate: (templatePath: string, filePath: string, data: any) => void;
   accelerate: (
-    id: string,
     templatePath: string,
+    id: string,
     data: any,
     guidePath?: string,
   ) => void;

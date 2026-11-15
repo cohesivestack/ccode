@@ -74,7 +74,7 @@ type inspectedAcceleratorArtifact struct {
 	Message    string
 }
 
-func (ctx *RunnerContext) Accelerate(id string, templatePath string, data goja.Value, guidePath ...string) error {
+func (ctx *RunnerContext) Accelerate(templatePath string, id string, data goja.Value, guidePath ...string) error {
 	if ctx == nil || ctx.ccodeContext == nil {
 		return fmt.Errorf("runner context is not initialized")
 	}

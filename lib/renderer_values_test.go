@@ -200,7 +200,7 @@ export default function main(ctx: Context) {
  const api = ctx.loadOpenAPIFromString('{"openapi":"3.1.0","info":{"title":"Users","version":"1"},"paths":{"/users":{"get":{"responses":{}}}}}');
  ctx.println(ctx.renderTemplate("templates/api.tpl",api));
  ctx.generate("templates/api.tpl","api.txt",api);
- ctx.accelerate("handler.txt","templates/api.tpl",api);
+ ctx.accelerate("templates/api.tpl","handler.txt",api);
 }`), 0644))
 	var output bytes.Buffer
 	ctx.stdout = &output

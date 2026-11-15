@@ -16,16 +16,16 @@ func TestPrune_RemovesMatchingFilesAndStateButPreservesCurrentArtifacts(t *testi
 	writePruneTestFile(t, filepath.Join(ctx.ccodeContext.config.CCodePath, "artifact.tpl"), "generated")
 	data := ctx.runtime.ToValue(map[string]any{})
 
-	require.NoError(t, ctx.Accelerate("nested/stale.acc.go", "artifact.tpl", data))
+	require.NoError(t, ctx.Accelerate("artifact.tpl", "nested/stale.acc.go", data))
 	writePruneTestFile(t, filepath.Join(root, "nested/stale.acc.go"), "edited obsolete artifact")
 	ctx.ccodeContext.runArtifacts = nil // Begin a new run.
 
 	require.NoError(t, ctx.Generate("artifact.tpl", "nested/./current.gen.go", data))
-	require.NoError(t, ctx.Accelerate("nested/current.acc.go", "artifact.tpl", data))
+	require.NoError(t, ctx.Accelerate("artifact.tpl", "nested/current.acc.go", data))
 	writePruneTestFile(t, filepath.Join(root, "nested/current.acc.go"), "edited current artifact")
-	require.NoError(t, ctx.Accelerate("nested/current.acc.go", "artifact.tpl", data))
+	require.NoError(t, ctx.Accelerate("artifact.tpl", "nested/current.acc.go", data))
 	writePruneTestFile(t, filepath.Join(root, "nested/untracked.acc.go"), "existing untracked artifact")
-	require.NoError(t, ctx.Accelerate("nested/untracked.acc.go", "artifact.tpl", data))
+	require.NoError(t, ctx.Accelerate("artifact.tpl", "nested/untracked.acc.go", data))
 	writePruneTestFile(t, filepath.Join(root, "nested/stale.gen.go"), "stale generated file")
 	writePruneTestFile(t, filepath.Join(root, "nested/manual.go"), "manual file")
 	writePruneTestFile(t, filepath.Join(root, "elsewhere/stale.gen.go"), "out of pattern scope")
@@ -79,7 +79,7 @@ func TestPrune_ProtectsActiveStateInsideOutputPath(t *testing.T) {
 	ctx.ccodeContext.config.HiddenPath = filepath.Join(root, ".ccode")
 	writePruneTestFile(t, filepath.Join(ctx.ccodeContext.config.CCodePath, "artifact.tpl"), "generated")
 	data := ctx.runtime.ToValue(map[string]any{})
-	require.NoError(t, ctx.Accelerate("active.acc.go", "artifact.tpl", data))
+	require.NoError(t, ctx.Accelerate("artifact.tpl", "active.acc.go", data))
 
 	require.NoError(t, ctx.Prune([]string{`.*`}))
 	assert.FileExists(t, filepath.Join(root, "active.acc.go"))
@@ -132,7 +132,7 @@ export default function main(ctx: Context) {
 }`)
 	writePruneTestFile(t, filepath.Join(projectDir, "grandchild.proc.ts"), `import type { Context } from "@ccode/context";
 export default function main(ctx: Context) {
-  ctx.accelerate("grandchild.acc.go", "artifact.tpl", {});
+  ctx.accelerate("artifact.tpl", "grandchild.acc.go", {});
 }`)
 	writePruneTestFile(t, filepath.Join(projectDir, "prune.proc.ts"), `import type { Context } from "@ccode/context";
 export default function main(ctx: Context) {
