@@ -19,8 +19,8 @@ export default function main(ctx: Context) {
   ctx.generate("templates/summary.tpl", "generated/summary.gen.md", { spec });
 
   ctx.accelerate(
-    "handlers.acc.ts",
     "templates/handlers.tpl",
+    "handlers.acc.ts",
     { spec },
     "guides/handlers.md",
   );

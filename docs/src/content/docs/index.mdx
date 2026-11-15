@@ -64,8 +64,8 @@ import { docsSidebar } from '../../data/sidebar.mjs';
 
     ctx.generate("templates/summary.tpl", "generated/summary.gen.md", { spec });
     ctx.accelerate(
-      "handlers.acc.ts",
       "templates/handlers.tpl",
+      "handlers.acc.ts",
       { spec },
       "guides/handlers.md",
     );

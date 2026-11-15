@@ -27,8 +27,8 @@ export default function main(ctx: Context) {
   };
 
   ctx.accelerate(
-    "handlers.acc.go",
     "templates/handlers.tpl",
+    "handlers.acc.go",
     model,
     "guides/handlers.md",
   );

@@ -191,7 +191,7 @@ Template paths resolve relative to `ccode_path`.
 ```ts
 ctx.renderTemplate("templates/readme.tpl", model);
 ctx.generate("templates/readme.tpl", "README.gen.md", model);
-ctx.accelerate("src/handlers.acc.ts", "templates/handlers.tpl", model);
+ctx.accelerate("templates/handlers.tpl", "src/handlers.acc.ts", model);
 ```
 
 ## Data rules

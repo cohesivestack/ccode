@@ -32,7 +32,7 @@ export default function main(ctx: Context) {
   const model = ctx.parseJSONFromFile("data/model.json");
 
   ctx.generate("templates/model.tpl", "src/model.gen.go", model);
-  ctx.accelerate("src/handler.acc.go", "templates/handler.tpl", model);
+  ctx.accelerate("templates/handler.tpl", "src/handler.acc.go", model);
   ctx.runProcess("api/generate");
 
   ctx.prune(["\\.gen\\.go$", "\\.acc\\.go$"]);

@@ -22,8 +22,8 @@ interface Context {
   renderTemplate(templatePath: string, data: any): string;
   generate(templatePath: string, filePath: string, data: any): void;
   accelerate(
-    id: string,
     templatePath: string,
+    id: string,
     data: any,
     guidePath?: string,
   ): void;
@@ -484,7 +484,7 @@ ctx.generate("templates/readme.tpl", "README.gen.md", model);
 Renders a template, tracks generated state, and writes safely to `output_path/<id>`.
 
 ```ts
-ctx.accelerate("src/handlers.acc.ts", "templates/handlers.tpl", model, "guides/handlers.md");
+ctx.accelerate("templates/handlers.tpl", "src/handlers.acc.ts", model, "guides/handlers.md");
 ```
 
 ## prune

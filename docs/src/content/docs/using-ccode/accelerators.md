@@ -8,7 +8,7 @@ Accelerators are Cohesive Code's resolvement workflow. They let a process propos
 ## API
 
 ```ts
-ctx.accelerate(id, templatePath, data, guidePath?);
+ctx.accelerate(templatePath, id, data, guidePath?);
 ```
 
 The runtime:
@@ -44,8 +44,8 @@ An optional guide file can be attached to an artifact:
 
 ```ts
 ctx.accelerate(
-  "handlers.acc.go",
   "templates/handlers.tpl",
+  "handlers.acc.go",
   model,
   "guides/handlers.md",
 );

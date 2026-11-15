@@ -11,9 +11,10 @@ older examples. Report version mismatches rather than silently using stale APIs.
 - Parse each input once, shape template data in TypeScript, and keep Gonja
   templates focused on presentation. The root template variable is `data`.
 - `ctx.generate(templatePath, outputPath, data)` owns a file the generator may
-  overwrite. `ctx.accelerate(id, templatePath, data, guidePath?)` proposes a file
-  whose later human or agent edits must be preserved. Note the different argument
-  order. Templates and guides resolve under `ccode_path`; outputs under `output_path`.
+  overwrite. `ctx.accelerate(templatePath, id, data, guidePath?)` proposes a file
+  whose later human or agent edits must be preserved. Both take the template path
+  first and the output path second. Templates and guides resolve under `ccode_path`;
+  outputs under `output_path`.
 - `ctx.runProcess("api/generate")` invokes a child synchronously with the same
   configuration. Avoid cycles. Inspect pruning semantics before adding destructive
   cleanup; place pruning after the relevant processes have emitted their outputs.
@@ -29,7 +30,7 @@ export default function run(ctx: Context) {
   const data = ctx.parseJSONFromFile("data/service.json");
   ctx.generate("templates/model.tpl", "src/model.gen.ts", data);
   ctx.accelerate(
-    "src/handler.ts", "templates/handler.tpl", data, "guides/handler.md",
+    "templates/handler.tpl", "src/handler.ts", data, "guides/handler.md",
   );
 }
 ```

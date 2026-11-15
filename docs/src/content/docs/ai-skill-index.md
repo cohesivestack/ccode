@@ -111,7 +111,7 @@ or JSON wrapper. Retrieve snapshots and diffs with the separate commands above.
 ctx.println(message)
 ctx.renderTemplate(templatePath, data)
 ctx.generate(templatePath, filePath, data)
-ctx.accelerate(id, templatePath, data, guidePath?)
+ctx.accelerate(templatePath, id, data, guidePath?)
 ctx.prune(pathPatterns)
 ctx.parseJSONFromBytes(jsonBytes)
 ctx.parseJSONFromString(jsonString)
